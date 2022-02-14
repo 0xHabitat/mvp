@@ -6,12 +6,12 @@ interface ITreasuryVotingPower {
   struct TreasuryVotingPower {
     address votingPowerManager;// StakeContract in general case and Setter of signers in a.k.a. multisig case
     mapping(address => uint) votingPower;
-    // that address has voted. each proposal has deadline.
-    uint totalAmountOfVotingPower; // if totalAmountOfVotes < minimumQuorum -> noone is able to create proposals
-    uint minimumQuorum; // constructor parameter
-    uint thresholdForProposal; // constructor parameter - percentage
-    uint128 thresholdForInitiator; // constructor parameter - percentage
-    uint128 precision; // constructor parameter e.g. 10000
+    uint totalAmountOfVotingPower; // if totalAmountOfVotes < minimumQuorum * maxTotalAmountOfVotingPower-> noone is able to create proposals
+    uint maxAmountOfVotingPower; // init parameter
+    uint64 minimumQuorum; // init parameter - percentage
+    uint64 thresholdForProposal; // init parameter - percentage
+    uint64 thresholdForInitiator; // init parameter - percentage
+    uint64 precision; // init parameter e.g. 10000
   }
   // increasing voting power
   function increaseVotingPower(address voter, uint amount) external;

@@ -58,12 +58,12 @@ contract TreasuryVotingPowerFacet is ITreasuryVotingPower {
 
   function getMinimumQuorum() external view override returns(uint) {
     TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    return tvp.minimumQuorum;
+    return uint(tvp.minimumQuorum) * tvp.maxAmountOfVotingPower / uint(tvp.precision);
   }
 
   function isQourum() external view override returns(bool) {
     TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    return tvp.totalAmountOfVotingPower >= tvp.minimumQuorum;
+    return uint(tvp.minimumQuorum) * tvp.maxAmountOfVotingPower / uint(tvp.precision) <= tvp.totalAmountOfVotingPower;
   }
 
   function isEnoughVotingPower(address holder) external view override returns(bool) {
@@ -74,6 +74,6 @@ contract TreasuryVotingPowerFacet is ITreasuryVotingPower {
 
   function isProposalThresholdReached(uint amountOfVotes) external view override returns(bool) {
     TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    return amountOfVotes >= (tvp.thresholdForProposal * tvp.totalAmountOfVotingPower / uint(tvp.precision));
+    return amountOfVotes >= (uint(tvp.thresholdForProposal) * tvp.totalAmountOfVotingPower / uint(tvp.precision));
   }
 }

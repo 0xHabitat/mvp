@@ -36,7 +36,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     if (deadlineTimestamp == uint128(0) || deadlineTimestamp > uint128(block.timestamp) + maxDuration) {
       proposalVoting.deadlineTimestamp = uint(maxDuration) + block.timestamp;
     } else {
-      proposalVoting.deadlineTimestamp = deadlineTimestamp;
+      proposalVoting.deadlineTimestamp = uint(deadlineTimestamp);
     }
 
     // initiator votes

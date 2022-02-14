@@ -58,12 +58,12 @@ library LibTreasuryVotingPower {
 
   function _getMinimumQuorum() internal view returns(uint) {
     ITreasuryVotingPower.TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    return tvp.minimumQuorum;
+    return uint(tvp.minimumQuorum) * tvp.maxAmountOfVotingPower / uint(tvp.precision);
   }
 
   function _isQuorum() internal view returns(bool) {
     ITreasuryVotingPower.TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    return tvp.minimumQuorum >= tvp.totalAmountOfVotingPower;
+    return uint(tvp.minimumQuorum) * tvp.maxAmountOfVotingPower / uint(tvp.precision) <= tvp.totalAmountOfVotingPower;
   }
 
   function _isEnoughVotingPower(address holder) internal view returns(bool) {
@@ -74,6 +74,6 @@ library LibTreasuryVotingPower {
 
   function _isProposalThresholdReached(uint amountOfVotes) internal view returns(bool) {
     ITreasuryVotingPower.TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    return amountOfVotes >= (tvp.thresholdForProposal * tvp.totalAmountOfVotingPower / uint(tvp.precision));
+    return amountOfVotes >= (uint(tvp.thresholdForProposal) * tvp.totalAmountOfVotingPower / uint(tvp.precision));
   }
 }
