@@ -18,6 +18,18 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     require(LibTreasuryVotingPower._isQuorum(), "There is no quorum yet.");
     // threshold for creating proposals
     require(LibTreasuryVotingPower._isEnoughVotingPower(msg.sender), "Not enough voting power to create proposal.");
+    if (destination == address(this)) {
+      bytes4 destSelector = bytes4(callData[0:4]);
+      // allow to call diamond only as ERC20 functionallity
+      //(transfer(address,uint256), approve(address,uint256), increaseAllowance, decreaseAllowance)
+      require(
+        destSelector == 0xa9059cbb ||
+        destSelector == 0x095ea7b3 ||
+        destSelector == 0x39509351 ||
+        destSelector == 0xa457c2d7,
+        "Treasury proposals are related only to governance token."
+      );
+    }
     // think what else requirements can be
     // start creating proposal
     uint proposalId = _getTreasuryFreeProposalId();
