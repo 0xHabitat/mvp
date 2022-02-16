@@ -46,6 +46,11 @@ contract TreasuryVotingPowerFacet is ITreasuryVotingPower {
 
   // View functions
 
+  function getTreasuryVotingPowerManager() external view override returns(address) {
+    TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
+    return tvp.votingPowerManager;
+  }
+
   function getVoterVotingPower(address voter) public view override returns(uint) {
     TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
     return tvp.votingPower[voter];
@@ -54,6 +59,31 @@ contract TreasuryVotingPowerFacet is ITreasuryVotingPower {
   function getTotalAmountOfVotingPower() external view override returns(uint) {
     TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
     return tvp.totalAmountOfVotingPower;
+  }
+
+  function getMaxAmountOfVotingPower() external view override returns(uint) {
+    TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
+    return tvp.maxAmountOfVotingPower;
+  }
+
+  function minimumQuorumNumerator() external view override returns(uint64) {
+    TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
+    return tvp.minimumQuorum;
+  }
+
+  function thresholdForProposalNumerator() external view override returns(uint64) {
+    TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
+    return tvp.thresholdForProposal;
+  }
+
+  function thresholdForInitiatorNumerator() external view override returns(uint64) {
+    TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
+    return tvp.thresholdForInitiator;
+  }
+
+  function denominator() external view override returns(uint64) {
+    TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
+    return tvp.precision;
   }
 
   function getMinimumQuorum() external view override returns(uint) {
@@ -77,8 +107,4 @@ contract TreasuryVotingPowerFacet is ITreasuryVotingPower {
     return amountOfVotes >= (uint(tvp.thresholdForProposal) * tvp.totalAmountOfVotingPower / uint(tvp.precision));
   }
 
-  function getTreasuryVotingPowerManager() external view override returns(address) {
-    TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    return tvp.votingPowerManager;
-  }
 }

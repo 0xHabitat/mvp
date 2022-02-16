@@ -4,14 +4,14 @@ pragma solidity ^0.8.0;
 interface ITreasuryVotingPower {
 
   struct TreasuryVotingPower {
-    address votingPowerManager;// StakeContract in general case and Setter of signers in a.k.a. multisig case
+    address votingPowerManager;
     mapping(address => uint) votingPower;
-    uint totalAmountOfVotingPower; // if totalAmountOfVotes < minimumQuorum * maxTotalAmountOfVotingPower-> noone is able to create proposals
-    uint maxAmountOfVotingPower; // init parameter
-    uint64 minimumQuorum; // init parameter - percentage
-    uint64 thresholdForProposal; // init parameter - percentage
-    uint64 thresholdForInitiator; // init parameter - percentage
-    uint64 precision; // init parameter e.g. 10000
+    uint totalAmountOfVotingPower;
+    uint maxAmountOfVotingPower;
+    uint64 minimumQuorum;
+    uint64 thresholdForProposal;
+    uint64 thresholdForInitiator;
+    uint64 precision;
   }
   // increasing voting power
   function increaseVotingPower(address voter, uint amount) external;
@@ -22,9 +22,21 @@ interface ITreasuryVotingPower {
   function hasVotedInActiveProposals(address voter) external view returns(bool);
 
   // View functions
+  function getTreasuryVotingPowerManager() external view returns(address);
+
   function getVoterVotingPower(address voter) external view returns(uint);
 
   function getTotalAmountOfVotingPower() external view returns(uint);
+
+  function getMaxAmountOfVotingPower() external view returns(uint);
+
+  function minimumQuorumNumerator() external view returns(uint64);
+
+  function thresholdForProposalNumerator() external view returns(uint64);
+
+  function thresholdForInitiatorNumerator() external view returns(uint64);
+
+  function denominator() external view returns(uint64);
 
   function getMinimumQuorum() external view returns(uint);
 
@@ -34,5 +46,4 @@ interface ITreasuryVotingPower {
 
   function isProposalThresholdReached(uint amountOfVotes) external view returns(bool);
 
-  function getTreasuryVotingPowerManager() external view returns(address);
 }

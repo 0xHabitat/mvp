@@ -12,17 +12,16 @@ interface ITreasury {
     // FungibleTokenVoting=0, OneAddressOneToken=1
 
     struct Proposal {
-        bool proposalAccepted; // require(true) in executeProposal function
+        bool proposalAccepted;
         address destinationAddress;
         uint value;
         bytes callData;
         bool proposalExecuted;
-        // remove proposal at the end of the executeProposal function if accepted or at the end of acceptOrRejectProposal if rejected
     }
 
     struct ProposalVoting {
-      bool votingStarted; // set true when createProposal and autoset to default false when struct is removed
-      mapping(address => bool) voted; // main issue how to delete (don't want array)
+      bool votingStarted;
+      mapping(address => bool) voted;
       uint deadlineTimestamp;
       uint votesYes;
       uint votesNo;
@@ -31,12 +30,20 @@ interface ITreasury {
     struct Treasury {
         VotingType votingType;
         ITreasuryVotingPower.TreasuryVotingPower treasuryVotingPower; // think where better add struct
-        uint128 maxDuration; // constructor parameter
+        uint128 maxDuration;
         uint128 proposalsCount;
         uint[] activeProposalsIds;
         mapping(uint => Proposal) proposals;
-        mapping(uint => ProposalVoting) proposalVotings; // key is removed at the end of acceptOrRejectProposal
+        mapping(uint => ProposalVoting) proposalVotings;
     }
+
+    function getVotingType() external view returns(VotingType);
+
+    function getTreasuryMaxDuration() external view returns(uint128);
+
+    function getProposalsCount() external view returns(uint128);
+
+    function getActiveProposalsIds() external view returns(uint[] memory);
 
     function getTreasuryProposal(uint proposalId) external view returns(Proposal memory);
     // return ProposalVoting struct
@@ -46,5 +53,4 @@ interface ITreasury {
     function isHolderVotedForProposal(uint proposalId, address holder) external view returns(bool);
     function isVotingForProposalStarted(uint proposalId) external view returns(bool);
 
-    function isProposalThresholdReached(uint proposalId) external view returns(bool);
 }
