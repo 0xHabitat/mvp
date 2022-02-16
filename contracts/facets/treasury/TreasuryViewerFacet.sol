@@ -26,8 +26,4 @@ contract TreasuryViewerFacet {
     return LibTreasury._getTreasuryProposalVoting(proposalId).votingStarted;
   }
 
-  function isProposalThresholdReached(uint proposalId) external view returns(bool) {
-
-  }
-
 }

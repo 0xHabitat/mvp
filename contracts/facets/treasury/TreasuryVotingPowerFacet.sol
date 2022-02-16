@@ -76,4 +76,9 @@ contract TreasuryVotingPowerFacet is ITreasuryVotingPower {
     TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
     return amountOfVotes >= (uint(tvp.thresholdForProposal) * tvp.totalAmountOfVotingPower / uint(tvp.precision));
   }
+
+  function getTreasuryVotingPowerManager() external view override returns(address) {
+    TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
+    return tvp.votingPowerManager;
+  }
 }

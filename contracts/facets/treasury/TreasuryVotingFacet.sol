@@ -191,7 +191,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
 
   function acceptOrRejectSeveralProposals(
     uint[] calldata proposalIds
-  ) external {
+  ) external override {
     for (uint i = 0; i < proposalIds.length; i++) {
       acceptOrRejectProposal(proposalIds[i]);
     }

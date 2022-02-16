@@ -33,4 +33,6 @@ interface ITreasuryVotingPower {
   function isEnoughVotingPower(address holder) external view returns(bool);
 
   function isProposalThresholdReached(uint amountOfVotes) external view returns(bool);
+
+  function getTreasuryVotingPowerManager() external view returns(address);
 }
