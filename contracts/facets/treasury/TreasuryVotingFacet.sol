@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.12;
 
 import { ITreasuryVoting } from "../../interfaces/treasury/ITreasuryVoting.sol";
 import { ITreasury } from "../../interfaces/treasury/ITreasury.sol";
