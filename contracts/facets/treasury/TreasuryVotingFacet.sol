@@ -199,6 +199,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
 
   function _getTreasuryFreeProposalId() internal returns(uint proposalId) {
     ITreasury.Treasury storage ts = LibTreasury.treasuryStorage();
+    require(ts.activeProposalsIds.length < 200, "No more proposals pls");
     ts.proposalsCount = ts.proposalsCount + uint128(1);
     proposalId = uint(ts.proposalsCount);
     ts.activeProposalsIds.push(proposalId);

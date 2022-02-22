@@ -42,4 +42,22 @@ contract TreasuryViewerFacet is ITreasury {
     return LibTreasury._getTreasuryProposalVoting(proposalId).votingStarted;
   }
 
+  function hasVotedInActiveProposals(address voter) external view override returns(bool) {
+    ITreasury.Treasury storage treasury = LibTreasury.treasuryStorage();
+
+    if (treasury.activeProposalsIds.length == 0) {
+      return false;
+    }
+
+    for (uint i = 0; i < treasury.activeProposalsIds.length; i++) {
+      uint proposalId = treasury.activeProposalsIds[i];
+      bool hasVoted = treasury.proposalVotings[proposalId].voted[voter];
+      if (hasVoted) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 }

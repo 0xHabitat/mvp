@@ -53,4 +53,6 @@ interface ITreasury {
     function isHolderVotedForProposal(uint proposalId, address holder) external view returns(bool);
     function isVotingForProposalStarted(uint proposalId) external view returns(bool);
 
+    function hasVotedInActiveProposals(address voter) external view returns(bool);
+
 }

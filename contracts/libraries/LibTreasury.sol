@@ -48,4 +48,22 @@ library LibTreasury {
       ITreasury.Treasury storage ts = treasuryStorage();
       return ts.activeProposalsIds;
     }
+
+    function _hasVotedInActiveProposals(address voter) internal view returns(bool) {
+      ITreasury.Treasury storage treasury = treasuryStorage();
+
+      if (treasury.activeProposalsIds.length == 0) {
+        return false;
+      }
+
+      for (uint i = 0; i < treasury.activeProposalsIds.length; i++) {
+        uint proposalId = treasury.activeProposalsIds[i];
+        bool hasVoted = treasury.proposalVotings[proposalId].voted[voter];
+        if (hasVoted) {
+          return true;
+        }
+      }
+
+      return false;
+    }
 }

@@ -19,8 +19,6 @@ interface ITreasuryVotingPower {
   // decreasing voting power
   function decreaseVotingPower(address voter, uint amount) external;
 
-  function hasVotedInActiveProposals(address voter) external view returns(bool);
-
   // View functions
   function getTreasuryVotingPowerManager() external view returns(address);
 

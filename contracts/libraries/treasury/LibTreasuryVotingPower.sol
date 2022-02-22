@@ -3,7 +3,6 @@ pragma solidity ^0.8.12;
 
 import { ITreasuryVotingPower } from "../../interfaces/treasury/ITreasuryVotingPower.sol";
 import { LibTreasury } from "../LibTreasury.sol";
-import { ITreasury } from "../../interfaces/treasury/ITreasury.sol";
 
 library LibTreasuryVotingPower {
 
@@ -24,24 +23,6 @@ library LibTreasuryVotingPower {
     tvp.totalAmountOfVotingPower -= amount;
     // decrease voter voting power
     tvp.votingPower[voter] -= amount;
-  }
-// this function is under the question maybe moved
-  function _hasVotedInActiveProposals(address voter) internal view returns(bool) {
-    ITreasury.Treasury storage treasury = LibTreasury.treasuryStorage();
-
-    if (treasury.activeProposalsIds.length == 0) {
-      return false;
-    }
-
-    for (uint i = 0; i < treasury.activeProposalsIds.length; i++) {
-      uint proposalId = treasury.activeProposalsIds[i];
-      bool hasVoted = treasury.proposalVotings[proposalId].voted[voter];
-      if (hasVoted) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   // View functions
