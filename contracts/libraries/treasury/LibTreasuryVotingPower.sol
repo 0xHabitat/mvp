@@ -18,7 +18,7 @@ library LibTreasuryVotingPower {
   function _decreaseVotingPower(address voter, uint amount) internal {
     ITreasuryVotingPower.TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
     require(msg.sender == tvp.votingPowerManager);
-    require(!_hasVotedInActiveProposals(voter), "Cannot unstake until proposal is active");
+    require(!LibTreasury._hasVotedInActiveProposals(voter), "Cannot unstake until proposal is active");
     // decrease totalVotingPower
     tvp.totalAmountOfVotingPower -= amount;
     // decrease voter voting power

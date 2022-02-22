@@ -29,8 +29,8 @@ contract TreasuryInit {
       tv.thresholdForInitiator = _thresholdForInitiator;
       tv.precision = _precision;
       // we can even create new contract here, but need to check the gas cost of tx
-      (address _admin, address[] memory _governanceTokens, uint256[] memory coefficients) = abi.decode(votingPowerManagerConstructor, (address, address[], uint256[]));
-      StakeContract stakeContract = new StakeContract(_admin, address(this), _governanceTokens, coefficients);
+      (uint _stakeContrPrecision, address[] memory _governanceTokens, uint256[] memory coefficients) = abi.decode(votingPowerManagerConstructor, (uint256, address[], uint256[]));
+      StakeContract stakeContract = new StakeContract(address(this), _stakeContrPrecision, _governanceTokens, coefficients);
       tv.votingPowerManager = address(stakeContract);
       emit VotingPowerManagerCreated(address(stakeContract), address(this));
     }
