@@ -18,19 +18,9 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     require(LibTreasuryVotingPower._isQuorum(), "There is no quorum yet.");
     // threshold for creating proposals
     require(LibTreasuryVotingPower._isEnoughVotingPower(msg.sender), "Not enough voting power to create proposal.");
-    if (destination == address(this)) {
-      bytes4 destSelector = bytes4(callData[0:4]);
-      // allow to call diamond only as ERC20 functionallity
-      //(transfer(address,uint256), approve(address,uint256), increaseAllowance, decreaseAllowance)
-      require(
-        destSelector == 0xa9059cbb ||
-        destSelector == 0x095ea7b3 ||
-        destSelector == 0x39509351 ||
-        destSelector == 0xa457c2d7,
-        "Treasury proposals are related only to governance token."
-      );
-    }
-    // think what else requirements can be
+    bytes4 destSelector = bytes4(callData[0:4]);
+    _checkIfDestinationIsDiamond(destination, destSelector);
+
     // start creating proposal
     uint proposalId = _getTreasuryFreeProposalId();
     // create proposal
@@ -114,6 +104,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
         // accept proposal
         proposalVoting.votingStarted = false;
         proposal.proposalAccepted = true;
+        _removeProposalIdFromActive(proposalId);
         emit TreasuryProposalAccepted(
           proposalId,
           proposal.destinationAddress,
@@ -124,22 +115,15 @@ contract TreasuryVotingFacet is ITreasuryVoting {
         // check deadlineTimestamp
         if (proposalVoting.deadlineTimestamp <= block.timestamp) {
           // reject proposal
-          delete proposalVoting.votingStarted;
-          delete proposalVoting.deadlineTimestamp;
-          delete proposalVoting.votesYes;
-          delete proposalVoting.votesNo;
           _removeProposalIdFromActive(proposalId);
+          LibTreasury._removeTreasuryPropopalVoting(proposalId);
           emit TreasuryProposalRejected(
             proposalId,
             proposal.destinationAddress,
             proposal.value,
             proposal.callData
           );
-          delete proposal.proposalAccepted;
-          delete proposal.destinationAddress;
-          delete proposal.value;
-          delete proposal.callData;
-          delete proposal.proposalExecuted;
+          LibTreasury._removeTreasuryPropopal(proposalId);
         } else {
           return; // no actions still need to vote and wait deadline
         }
@@ -147,10 +131,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     } else {
       if (LibTreasuryVotingPower._isProposalThresholdReached(proposalVoting.votesNo)) {
         // proposal rejected
-        delete proposalVoting.votingStarted;
-        delete proposalVoting.deadlineTimestamp;
-        delete proposalVoting.votesYes;
-        delete proposalVoting.votesNo;
+        LibTreasury._removeTreasuryPropopalVoting(proposalId);
         _removeProposalIdFromActive(proposalId);
         emit TreasuryProposalRejected(
           proposalId,
@@ -158,18 +139,11 @@ contract TreasuryVotingFacet is ITreasuryVoting {
           proposal.value,
           proposal.callData
         );
-        delete proposal.proposalAccepted;
-        delete proposal.destinationAddress;
-        delete proposal.value;
-        delete proposal.callData;
-        delete proposal.proposalExecuted;
+        LibTreasury._removeTreasuryPropopal(proposalId);
       } else {
         if (proposalVoting.deadlineTimestamp <= block.timestamp) {
           // proposal rejected
-          delete proposalVoting.votingStarted;
-          delete proposalVoting.deadlineTimestamp;
-          delete proposalVoting.votesYes;
-          delete proposalVoting.votesNo;
+          LibTreasury._removeTreasuryPropopalVoting(proposalId);
           _removeProposalIdFromActive(proposalId);
           emit TreasuryProposalRejected(
             proposalId,
@@ -177,11 +151,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
             proposal.value,
             proposal.callData
           );
-          delete proposal.proposalAccepted;
-          delete proposal.destinationAddress;
-          delete proposal.value;
-          delete proposal.callData;
-          delete proposal.proposalExecuted;
+          LibTreasury._removeTreasuryPropopal(proposalId);
         } else {
           return; // no actions still need to vote and wait deadline
         }
@@ -225,4 +195,17 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     }
   }
 
+  function _checkIfDestinationIsDiamond(address _destination, bytes4 _selector) internal {
+    if (_destination == address(this)) {
+      // allow to call diamond only as ERC20 functionallity
+      //(transfer(address,uint256), approve(address,uint256), increaseAllowance, decreaseAllowance)
+      require(
+        _selector == 0xa9059cbb ||
+        _selector == 0x095ea7b3 ||
+        _selector == 0x39509351 ||
+        _selector == 0xa457c2d7,
+        "Treasury proposals are related only to governance token."
+      );
+    }
+  }
 }

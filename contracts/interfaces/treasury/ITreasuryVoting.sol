@@ -4,21 +4,21 @@ pragma solidity ^0.8.12;
 interface ITreasuryVoting {
 
   event TreasuryProposalCreated(
-    uint proposalId,
-    uint deadlineTimestamp
+    uint indexed proposalId,
+    uint indexed deadlineTimestamp
   );
 
   event TreasuryProposalAccepted(
-    uint proposalId,
-    address destination,
-    uint value,
+    uint indexed proposalId,
+    address indexed destination,
+    uint indexed value,
     bytes callData
   );
 
   event TreasuryProposalRejected(
-    uint proposalId,
-    address destination,
-    uint value,
+    uint indexed proposalId,
+    address indexed destination,
+    uint indexed value,
     bytes callData
   );
 

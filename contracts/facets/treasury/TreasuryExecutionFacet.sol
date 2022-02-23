@@ -13,8 +13,6 @@ contract TreasuryExecutionFacet is ITreasuryExecution {
     require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");
     proposal.proposalExecuted = true;
 
-    ITreasury.ProposalVoting storage proposalVoting = LibTreasury._getTreasuryProposalVoting(proposalId);
-
     address destination = proposal.destinationAddress;
     uint value = proposal.value;
     bytes memory callData = proposal.callData;
@@ -27,17 +25,8 @@ contract TreasuryExecutionFacet is ITreasuryExecution {
     // also maybe depend on result delete only proposalVoting if result 0
 
     //remove proposal and proposal voting
-    delete proposal.proposalAccepted;
-    delete proposal.destinationAddress;
-    delete proposal.value;
-    delete proposal.callData;
-    delete proposal.proposalExecuted;
-
-    //delete proposalVoting.voted; // no idea how to delete all keys in a mapping (don't want to store them in an array)
-    delete proposalVoting.votingStarted;
-    delete proposalVoting.deadlineTimestamp;
-    delete proposalVoting.votesYes;
-    delete proposalVoting.votesNo;
+    LibTreasury._removeTreasuryPropopal(proposalId);
+    LibTreasury._removeTreasuryPropopalVoting(proposalId);
 
     emit ProposalExecuted(proposalId, destination, value, callData);
   }

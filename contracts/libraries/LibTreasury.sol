@@ -49,6 +49,23 @@ library LibTreasury {
       return ts.activeProposalsIds;
     }
 
+    function _removeTreasuryPropopal(uint proposalId) internal {
+      ITreasury.Proposal storage proposal = _getTreasuryProposal(proposalId);
+      delete proposal.proposalAccepted;
+      delete proposal.destinationAddress;
+      delete proposal.value;
+      delete proposal.callData;
+      delete proposal.proposalExecuted;
+    }
+
+    function _removeTreasuryPropopalVoting(uint proposalId) internal {
+      ITreasury.ProposalVoting storage proposalVoting = _getTreasuryProposalVoting(proposalId);
+      delete proposalVoting.votingStarted;
+      delete proposalVoting.deadlineTimestamp;
+      delete proposalVoting.votesYes;
+      delete proposalVoting.votesNo;
+    }
+
     function _hasVotedInActiveProposals(address voter) internal view returns(bool) {
       ITreasury.Treasury storage treasury = treasuryStorage();
 
