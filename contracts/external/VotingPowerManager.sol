@@ -3,12 +3,12 @@ pragma solidity ^0.8.12;
 
 import { IERC20 } from "../libraries/openzeppelin/IERC20.sol";
 import { SafeERC20 } from "../libraries/openzeppelin/SafeERC20.sol";
-import { ITreasuryVotingPower } from "../interfaces/treasury/ITreasuryVotingPower.sol";
+import { IVotingPower } from "../interfaces/IVotingPower.sol";
 
 contract StakeContract {
   using SafeERC20 for IERC20;
 
-  ITreasuryVotingPower votingPower;
+  IVotingPower votingPower;
   uint precision;
   // governanceToken => coefficient
   mapping(address => uint256) tokensMultiplier;
@@ -19,7 +19,7 @@ contract StakeContract {
     require(_votingPower != address(0)); // diamond address
     require(_governanceTokens.length == coefficients.length, "Different arrays length");
     precision = _precision;
-    votingPower = ITreasuryVotingPower(_votingPower);
+    votingPower = IVotingPower(_votingPower);
     for (uint i = 0; i < _governanceTokens.length; i++) {
       tokensMultiplier[_governanceTokens[i]] = coefficients[i]; // coefficient - 1000 = 1.0
     }

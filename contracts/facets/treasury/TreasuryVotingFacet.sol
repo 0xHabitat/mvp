@@ -5,6 +5,7 @@ import { ITreasuryVoting } from "../../interfaces/treasury/ITreasuryVoting.sol";
 import { ITreasury } from "../../interfaces/treasury/ITreasury.sol";
 import { LibTreasuryVotingPower } from "../../libraries/treasury/LibTreasuryVotingPower.sol";
 import { LibTreasury } from "../../libraries/LibTreasury.sol";
+import { LibVotingPower } from "../../libraries/LibVotingPower.sol";
 
 contract TreasuryVotingFacet is ITreasuryVoting {
 
@@ -43,7 +44,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
 
     // initiator votes
     proposalVoting.voted[msg.sender] = true;
-    proposalVoting.votesYes += LibTreasuryVotingPower._getVoterVotingPower(msg.sender);
+    proposalVoting.votesYes += LibVotingPower._getVoterVotingPower(msg.sender);
 
     emit TreasuryProposalCreated(proposalId, proposalVoting.deadlineTimestamp);
 
@@ -72,7 +73,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     ITreasury.ProposalVoting storage proposalVoting = LibTreasury._getTreasuryProposalVoting(proposalId);
     require(proposalVoting.votingStarted, "No voting rn.");
     require(!proposalVoting.voted[msg.sender], "Already voted.");
-    uint amountOfVotingPower = LibTreasuryVotingPower._getVoterVotingPower(msg.sender);
+    uint amountOfVotingPower = LibVotingPower._getVoterVotingPower(msg.sender);
     proposalVoting.voted[msg.sender] = true;
     if (vote) {
       proposalVoting.votesYes += amountOfVotingPower;
