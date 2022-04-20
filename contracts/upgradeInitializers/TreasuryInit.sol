@@ -19,7 +19,7 @@ contract TreasuryInit {
       ITreasury.Treasury storage ts = LibTreasury.treasuryStorage();
       ts.votingType = ITreasury.VotingType(0);
       ts.maxDuration = _maxDuration;
-      ts.proposalDelayTime = proposalDelayTime; 
+      ts.proposalDelayTime = _proposalDelayTime; 
       ITreasuryVotingPower.TreasuryVotingPower storage tv = LibTreasury._getTreasuryVotingPower();
 
       tv.minimumQuorum = _minimumQuorum;
