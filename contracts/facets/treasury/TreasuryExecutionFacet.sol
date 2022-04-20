@@ -12,6 +12,7 @@ contract TreasuryExecutionFacet is ITreasuryExecution {
 
     require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");
     proposal.proposalExecuted = true;
+    require(proposal.delayTime <= block.timestamp, "Wait until proposal delay time is expired.");
 
     address destination = proposal.destinationAddress;
     uint value = proposal.value;

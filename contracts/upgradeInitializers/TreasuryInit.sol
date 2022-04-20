@@ -13,11 +13,13 @@ contract TreasuryInit {
       uint64 _minimumQuorum,
       uint64 _thresholdForProposal,
       uint64 _thresholdForInitiator,
-      uint64 _precision
+      uint64 _precision,
+      uint256 _proposalDelayTime
     ) external {
       ITreasury.Treasury storage ts = LibTreasury.treasuryStorage();
       ts.votingType = ITreasury.VotingType(0);
       ts.maxDuration = _maxDuration;
+      ts.proposalDelayTime = proposalDelayTime; 
       ITreasuryVotingPower.TreasuryVotingPower storage tv = LibTreasury._getTreasuryVotingPower();
 
       tv.minimumQuorum = _minimumQuorum;

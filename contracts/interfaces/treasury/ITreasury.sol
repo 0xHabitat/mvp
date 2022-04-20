@@ -17,6 +17,7 @@ interface ITreasury {
         uint value;
         bytes callData;
         bool proposalExecuted;
+        uint delayDeadline;
     }
 
     struct ProposalVoting {
@@ -32,6 +33,7 @@ interface ITreasury {
         ITreasuryVotingPower.TreasuryVotingPower treasuryVotingPower; // think where better add struct
         uint128 maxDuration;
         uint128 proposalsCount;
+        uint256 proposalDelayTime;
         uint[] activeProposalsIds;
         mapping(uint => Proposal) proposals;
         mapping(uint => ProposalVoting) proposalVotings;

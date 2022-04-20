@@ -29,6 +29,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     proposal.destinationAddress = destination;
     proposal.value = value;
     proposal.callData = callData;
+    proposal.delayDeadline = LibTreasury._getTreasuryProposalDelayTime() + block.timestamp;
 
     // create proposalVoting
     ITreasury.ProposalVoting storage proposalVoting = LibTreasury._getTreasuryProposalVoting(proposalId);
