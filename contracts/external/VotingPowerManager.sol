@@ -10,6 +10,7 @@ contract StakeContract {
 
   IVotingPower votingPower;
   uint precision;
+  // 2500HBT 1.25ETH -> 0.000043241Univ2
   // governanceToken => coefficient
   mapping(address => uint256) tokensMultiplier;
   // holder => govToken => staked amount

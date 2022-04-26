@@ -4,10 +4,18 @@ pragma solidity ^0.8.12;
 import { ITreasuryExecution } from "../../interfaces/treasury/ITreasuryExecution.sol";
 import { ITreasury } from "../../interfaces/treasury/ITreasury.sol";
 import { LibTreasury } from "../../libraries/LibTreasury.sol";
+import { SubDAOInit } from "../../upgradeInitializers/SubDAOInit.sol";
+import { LibDAOStorage } from "../../libraries/LibDAOStorage.sol";
+import { LibSubDAO } from "../../libraries/LibSubDAO.sol";
 
-contract TreasuryExecutionFacet is ITreasuryExecution {
+contract SubDAOExecutionFacet is ISubDAOExecution {
 
-  function executeProposal(uint proposalId) external override returns(bool result) {
+  function executeSubDAOProposal(uint proposalId) external override returns(bool result) {
+    // the end of the function after proposal checks
+    SubDAOProposal storage subDAOProposal = LibSubDAO._getSubDAOProposal(proposalId);
+    address subDAOInit = LibDAOStorage._getSubDAOInit();
+    address subDAO = SubDAOInit(subDAOInit).initSubDAOType0(subDAOProposal.amountOfKeys, subDAOProposal.thresholdForProposal, subDAOProposal.keyHolders);
+
     ITreasury.Proposal storage proposal = LibTreasury._getTreasuryProposal(proposalId);
 
     require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");

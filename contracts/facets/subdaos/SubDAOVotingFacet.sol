@@ -65,7 +65,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     }
     return proposalIds;
   }
-  
+  // try to minimize gas here amap
   function voteForOneTreasuryProposal(
     uint proposalId,
     bool vote

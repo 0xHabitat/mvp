@@ -4,17 +4,15 @@ pragma solidity ^0.8.12;
 import { LibTreasury } from "../libraries/LibTreasury.sol";
 import { ITreasury } from "../interfaces/treasury/ITreasury.sol";
 import { ITreasuryVotingPower } from "../interfaces/treasury/ITreasuryVotingPower.sol";
-import { StakeContract } from "../external/VotingPowerManager.sol";
+import { SubDAOContract0 } from "../templates/SubDAOContract.sol";
 
-contract TreasuryInit {
+contract SubDAOInit {
     // default type
-    function initTreasuryType0(
-      uint128 _maxDuration,
-      uint64 _minimumQuorum,
-      uint64 _thresholdForProposal,
-      uint64 _thresholdForInitiator,
-      uint64 _precision
-    ) external {
+    function initSubDAOType0(
+      uint128 _amountOfKeys,
+      uint128 _thresholdForProposal,
+      address[] _keyHolders,
+    ) external returns(address) {
       ITreasury.Treasury storage ts = LibTreasury.treasuryStorage();
       ts.votingType = ITreasury.VotingType(0);
       ts.maxDuration = _maxDuration;
