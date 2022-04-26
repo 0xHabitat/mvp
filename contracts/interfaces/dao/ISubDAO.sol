@@ -11,17 +11,17 @@ interface ISubDAO {
       string info;
       string socials;
       address mainDAO;
-      bytes32 immutable managementSystemPosition;
+      bytes32 managementSystemPosition;
       address[] createdSubDAOs;
     }
 
-    function getSubDAOName() external view returns(string);
+    function getSubDAOName() external view returns(string memory);
 
-    function getSubDAOPurpose() external view returns(string);
+    function getSubDAOPurpose() external view returns(string memory);
 
-    function getSubDAOInfo() external view returns(string);
+    function getSubDAOInfo() external view returns(string memory);
 
-    function getSubDAOSocials() external view returns(string);
+    function getSubDAOSocials() external view returns(string memory);
 
     function getMainDAO() external view returns(address);
 
@@ -35,11 +35,11 @@ interface ISubDAO {
 
     function getManagementSystem() external view returns(IManagementSystem.ManagementSystem memory);
 
-    function getGovernanceVotingSystem() external view returns(IManagementSystem.VotingSystem memory);
+    function getGovernanceVotingSystem() external view returns(IManagementSystem.VotingSystem);
 
-    function getTreasuryVotingSystem() external view returns(IManagementSystem.VotingSystem memory);
+    function getTreasuryVotingSystem() external view returns(IManagementSystem.VotingSystem);
 
-    function getSubDAOCreationVotingSystem() external view returns(IManagementSystem.VotingSystem memory);
+    function getSubDAOCreationVotingSystem() external view returns(IManagementSystem.VotingSystem);
 
     function getVotingPowerManager() external view returns(address);
 

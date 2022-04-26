@@ -30,11 +30,11 @@ interface IDAO {
 
     function getManagementSystem() external view returns(IManagementSystem.ManagementSystem memory);
 
-    function getGovernanceVotingSystem() external view returns(IManagementSystem.VotingSystem memory);
+    function getGovernanceVotingSystem() external view returns(IManagementSystem.VotingSystem);
 
-    function getTreasuryVotingSystem() external view returns(IManagementSystem.VotingSystem memory);
+    function getTreasuryVotingSystem() external view returns(IManagementSystem.VotingSystem);
 
-    function getSubDAOCreationVotingSystem() external view returns(IManagementSystem.VotingSystem memory);
+    function getSubDAOCreationVotingSystem() external view returns(IManagementSystem.VotingSystem);
 
     function getVotingPowerManager() external view returns(address);
 
