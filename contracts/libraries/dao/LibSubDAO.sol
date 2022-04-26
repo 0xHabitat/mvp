@@ -61,7 +61,7 @@ struct SubDAOStorage {
     }
 
     function _isMainDAOFor(address _subDAO) internal view returns(bool) {
-      require(_hasSubDAOs(), "SubDAO has not created subDAOs yet.")
+      require(_hasSubDAOs(), "SubDAO has not created subDAOs yet.");
       ISubDAO.SubDAOStorage storage sds = subDAOStorage();
       // maybe better use Gnosis data structure (nested array) instead of an array
       for (uint i = 0; i < sds.createdSubDAOs.length; i++) {
@@ -76,22 +76,22 @@ struct SubDAOStorage {
       return _mainDAO == _getMainDAO();
     }
 
-    function _getManagementSystem() internal pure returns (IManagementSystem.ManagementSystem storage ms) {
+    function _getManagementSystem() internal view returns (IManagementSystem.ManagementSystem storage ms) {
       ISubDAO.SubDAOStorage storage sds = subDAOStorage();
       ms = LibManagementSystem._getManagementSystemByPosition(sds.managementSystemPosition);
     }
 
-    function _getGovernanceVotingSystem() internal view returns(IManagementSystem.VotingSystem storage gvs) {
+    function _getGovernanceVotingSystem() internal view returns(IManagementSystem.VotingSystem gvs) {
       ISubDAO.SubDAOStorage storage sds = subDAOStorage();
       gvs = LibManagementSystem._getGovernanceVotingSystem(sds.managementSystemPosition);
     }
 
-    function _getTreasuryVotingSystem() internal view returns(IManagementSystem.VotingSystem storage tvs) {
+    function _getTreasuryVotingSystem() internal view returns(IManagementSystem.VotingSystem tvs) {
       ISubDAO.SubDAOStorage storage sds = subDAOStorage();
       tvs = LibManagementSystem._getTreasuryVotingSystem(sds.managementSystemPosition);
     }
 
-    function _getSubDAOCreationVotingSystem() internal view returns(IManagementSystem.VotingSystem storage sdcvs) {
+    function _getSubDAOCreationVotingSystem() internal view returns(IManagementSystem.VotingSystem sdcvs) {
       ISubDAO.SubDAOStorage storage sds = subDAOStorage();
       sdcvs = LibManagementSystem._getSubDAOCreationVotingSystem(sds.managementSystemPosition);
     }

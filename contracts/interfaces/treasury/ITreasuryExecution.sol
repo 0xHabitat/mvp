@@ -12,8 +12,8 @@ interface ITreasuryExecution {
 
   function executeProposal(uint proposalId) external returns(bool result);
 
-  function createSubTreasuryType0() external;
+  //function createSubTreasuryType0() external;
 
-  function createSubTreasuryType1() external;
+  //function createSubTreasuryType1() external;
 
 }

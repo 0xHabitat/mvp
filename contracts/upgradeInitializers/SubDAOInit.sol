@@ -1,3 +1,4 @@
+/*
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
@@ -28,3 +29,4 @@ contract SubDAOInit {
       ts.votingType = ITreasury.VotingType(1);
     }
 }
+*/

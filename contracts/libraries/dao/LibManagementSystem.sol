@@ -22,17 +22,17 @@ struct ManagementSystem {
         }
     }
 
-    function _getGovernanceVotingSystem(bytes32 position) internal view returns(IManagementSystem.VotingSystem storage gvs) {
+    function _getGovernanceVotingSystem(bytes32 position) internal view returns(IManagementSystem.VotingSystem gvs) {
       IManagementSystem.ManagementSystem storage ms = _getManagementSystemByPosition(position);
       gvs = ms.governanceVotingSystem;
     }
 
-    function _getTreasuryVotingSystem(bytes32 position) internal view returns(IManagementSystem.VotingSystem storage tvs) {
+    function _getTreasuryVotingSystem(bytes32 position) internal view returns(IManagementSystem.VotingSystem tvs) {
       IManagementSystem.ManagementSystem storage ms = _getManagementSystemByPosition(position);
       tvs = ms.treasuryVotingSystem;
     }
 
-    function _getSubDAOCreationVotingSystem(bytes32 position) internal view returns(IManagementSystem.VotingSystem storage sdcvs) {
+    function _getSubDAOCreationVotingSystem(bytes32 position) internal view returns(IManagementSystem.VotingSystem sdcvs) {
       IManagementSystem.ManagementSystem storage ms = _getManagementSystemByPosition(position);
       sdcvs = ms.subDAOCreationVotingSystem;
     }
@@ -78,7 +78,7 @@ struct ManagementSystem {
     }
 
     function _isGovernanceSigner(bytes32 position, address _signer) internal view returns(bool) {
-      address[] govSigners = _getGovernanceSigners(position);
+      address[] storage govSigners = _getGovernanceSigners(position);
       // maybe better use Gnosis data structure (nested array) instead of an array
       for (uint i = 0; i < govSigners.length; i++) {
         if (govSigners[i] == _signer) {
@@ -89,7 +89,7 @@ struct ManagementSystem {
     }
 
     function _isTreasurySigner(bytes32 position, address _signer) internal view returns(bool) {
-      address[] treasurySigners = _getTreasurySigners(position)
+      address[] storage treasurySigners = _getTreasurySigners(position);
       // maybe better use Gnosis data structure (nested array) instead of an array
       for (uint i = 0; i < treasurySigners.length; i++) {
         if (treasurySigners[i] == _signer) {
@@ -100,7 +100,7 @@ struct ManagementSystem {
     }
 
     function _isSubDAOCreationSigner(bytes32 position, address _signer) internal view returns(bool) {
-      address[] sdcSigners = _getSubDAOCreationSigners(position)
+      address[] storage sdcSigners = _getSubDAOCreationSigners(position);
       // maybe better use Gnosis data structure (nested array) instead of an array
       for (uint i = 0; i < sdcSigners.length; i++) {
         if (sdcSigners[i] == _signer) {

@@ -55,7 +55,7 @@ struct DAOStorage {
     }
 
     function _isMainDAOFor(address _subDAO) internal view returns(bool) {
-      require(_hasSubDAOs(), "MainDAO has not created subDAOs yet.")
+      require(_hasSubDAOs(), "MainDAO has not created subDAOs yet.");
       IDAO.DAOStorage storage ds = daoStorage();
       for (uint i = 0; i < ds.createdSubDAOs.length; i++) {
         if (ds.createdSubDAOs[i] == _subDAO) {
@@ -65,22 +65,22 @@ struct DAOStorage {
       return false;
     }
 
-    function _getManagementSystem() internal pure returns (IManagementSystem.ManagementSystem storage ms) {
+    function _getManagementSystem() internal view returns (IManagementSystem.ManagementSystem storage ms) {
       IDAO.DAOStorage storage ds = daoStorage();
       ms = LibManagementSystem._getManagementSystemByPosition(ds.managementSystemPosition);
     }
 
-    function _getGovernanceVotingSystem() internal view returns(IManagementSystem.VotingSystem storage gvs) {
+    function _getGovernanceVotingSystem() internal view returns(IManagementSystem.VotingSystem gvs) {
       IDAO.DAOStorage storage ds = daoStorage();
       gvs = LibManagementSystem._getGovernanceVotingSystem(ds.managementSystemPosition);
     }
 
-    function _getTreasuryVotingSystem() internal view returns(IManagementSystem.VotingSystem storage tvs) {
+    function _getTreasuryVotingSystem() internal view returns(IManagementSystem.VotingSystem tvs) {
       IDAO.DAOStorage storage ds = daoStorage();
       tvs = LibManagementSystem._getTreasuryVotingSystem(ds.managementSystemPosition);
     }
 
-    function _getSubDAOCreationVotingSystem() internal view returns(IManagementSystem.VotingSystem storage sdcvs) {
+    function _getSubDAOCreationVotingSystem() internal view returns(IManagementSystem.VotingSystem sdcvs) {
       IDAO.DAOStorage storage ds = daoStorage();
       sdcvs = LibManagementSystem._getSubDAOCreationVotingSystem(ds.managementSystemPosition);
     }
