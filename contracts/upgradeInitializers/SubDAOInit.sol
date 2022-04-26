@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.9;
 
 import { LibTreasury } from "../libraries/LibTreasury.sol";
 import { ITreasury } from "../interfaces/treasury/ITreasury.sol";
 import { ITreasuryVotingPower } from "../interfaces/treasury/ITreasuryVotingPower.sol";
-import { SubDAOContract0 } from "../templates/SubDAOContract.sol";
 
 contract SubDAOInit {
     // default type

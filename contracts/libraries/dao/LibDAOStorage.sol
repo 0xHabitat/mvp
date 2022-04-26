@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.9;
 
 import { IDAO } from "../../interfaces/dao/IDAO.sol";
 import { IManagementSystem } from "../../interfaces/dao/IManagementSystem.sol";

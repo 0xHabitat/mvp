@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.9;
 
 import { IVotingPower } from "../interfaces/IVotingPower.sol";
 import { LibTreasury } from "./LibTreasury.sol";
