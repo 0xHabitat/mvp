@@ -10,9 +10,10 @@ pragma solidity ^0.8.9;
 
 import {LibDiamond} from "./libraries/LibDiamond.sol";
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
+import {IAddressesProvider} from "./interfaces/IAddressesProvider.sol";
 
 contract HabitatDiamond {
-  constructor(address _contractOwner, address _diamondCutFacet) payable {
+  constructor(address addressesProvider, address _contractOwner, address _diamondCutFacet) payable {
     LibDiamond.setContractOwner(_contractOwner);
 
     // Add the diamondCut external function from the diamondCutFacet
