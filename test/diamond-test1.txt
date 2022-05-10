@@ -1,0 +1,511 @@
+const { expect } = require('chai');
+const { deployMockContract } = require('ethereum-waffle');
+const { ethers, waffle } = require('hardhat');
+const { 
+  governanceFacetCut, 
+  diamondFacetCut,
+  hashData, 
+  multisigTX } = require('./libraries/helpers.js');
+
+describe('Diamond', function () {
+  let user1, user2, user3, user4, user5;
+  let diamond, proxy;
+  let facetCuts;
+  let cutterfacet, louperfacet, ownerfacet;
+  let repofacet;
+  let tokenfacet, governancefacet;
+
+  describe('Scenarios', function () {
+
+    before(async function () {
+      [user1, user2, user3, user4, user5] = await ethers.getSigners();
+
+      const facetCuts = await diamondFacetCut();
+
+      //deploy diamond contract
+      const DiamondFactory = await ethers.getContractFactory('Diamond');
+      diamond = await DiamondFactory.connect(user1).deploy(facetCuts); //owned by user1
+      await diamond.deployed()
+
+      cutterfacet = await ethers.getContractAt('DiamondCutFacet', diamond.address)
+      louperfacet = await ethers.getContractAt('DiamondLoupeFacet', diamond.address)
+      ownerfacet = await ethers.getContractAt('OwnershipFacet', diamond.address)
+    });
+
+    describe('Single User', function() {
+
+      it('user clones with new diamond', async function () {
+        // get facets
+        const facets = await louperfacet.facets();
+
+        // convert to facetCuts[] objects
+        let facetCuts = [];
+        let target;
+        let selectors;
+        let action = 0;
+        for (let i = 0; i < facets.length; i++) {
+          target = facets[i].target;
+          selectors = facets[i].selectors;
+          facetCuts.push({
+            target,
+            action,
+            selectors
+          })
+        }
+
+        //deploy new diamond contract with cuts in constructor
+        const NewDiamondFactory = await ethers.getContractFactory('Diamond');
+        const newDiamond = await NewDiamondFactory.connect(user1).deploy(facetCuts);
+        await newDiamond.deployed();
+
+        // functions of diamond are accessible via newdiamond, but newdiamond holds its own state
+        const newDiamond_Owner = await ethers.getContractAt('OwnershipFacet', newDiamond.address)
+        expect(await newDiamond_Owner.owner()).to.equal(user1.address)
+      });
+
+      it('user clones with proxy', async function() {
+        //deploy normal proxy that mirrors diamond
+        const ProxyFactory = await ethers.getContractFactory('DiamondProxy')
+        proxy = await ProxyFactory.connect(user1).deploy(diamond.address);
+        await proxy.deployed()
+
+        // functions of diamond are accessible via proxy, but proxy holds its own state
+        const proxy_ownerfacet = await ethers.getContractAt('OwnershipFacet', proxy.address)
+        expect(await proxy_ownerfacet.owner()).to.equal(user1.address)
+      });
+
+      it('diamond-forwarder makes calls to any diamond', async function() {
+        const DiamondForwarderFactory = await ethers.getContractFactory('DiamondForwarder')
+        const diamondforwarder = await DiamondForwarderFactory.connect(user2).deploy(diamond.address);
+        await diamondforwarder.deployed()
+
+        const ownerproxy = await ethers.getContractAt('OwnershipFacet', diamondforwarder.address)
+        let calldata = ownerproxy.interface.encodeFunctionData("transferOwnership", [user3.address])
+        await expect(
+          diamondforwarder.connect(user1).callStatic.forward(diamond.address, calldata)
+        ).to.be.revertedWith('Ownable: sender must be owner')
+      });
+      
+    });
+
+    describe('Upgrades', function() {
+      let parentMultisig, parentSigners, parentQuorum;
+      let teamMultisig, teamSigners, teamQuorum;
+      let upgradeRegistry;
+      let facetCuts, initgovernance;
+
+      let tx, delivered, event;
+
+      let proposalContract, currentBlock, deadline;
+
+      before(async function () {
+        parentSigners = [user1, user2, user3];
+        parentQuorum = 2;
+
+        ({ facetCuts, initgovernance } = await governanceFacetCut());
+        //predeploy repo contract
+        const Repository = await ethers.getContractFactory('Repository');
+        const repository = await Repository.deploy(parentSigners.map(s=>s.address), parentQuorum);
+        await repository.deployed();
+
+        facetCuts.push(
+          {
+            target: repository.address,
+            action: 0,
+            selectors: Object.keys(repository.interface.functions)
+            .map((fn) => repository.interface.getSighash(fn),
+            ),
+          },
+        );
+
+        await cutterfacet.diamondCut(facetCuts, initgovernance.address, '0xe1c7392a');
+
+        repofacet = await ethers.getContractAt('Repository', diamond.address)
+        tokenfacet = await ethers.getContractAt('Token', diamond.address)
+        governancefacet = await ethers.getContractAt('Governance', diamond.address)
+        
+        parentMultisig = await repofacet.multisig();
+        
+        teamSigners = [user3, user4, user5];
+        teamQuorum = 2;
+        tx = await repofacet.deployTeam(teamSigners.map(s=>s.address), 2);
+        delivered = await tx.wait(); // 0ms, as tx is already confirmed
+        event = delivered.events.find(event => event.event === 'TeamDeployed');
+        const [teamAddr] = event.args;
+        const deployedTeam = await ethers.getContractAt('MultisigWallet', teamAddr)
+        teamMultisig = deployedTeam.address;
+
+        //send team eth funds for gas
+        await user1.sendTransaction({
+          to: teamMultisig,
+          value: 1,
+        });
+
+        //call execute() via governance, grants teamMultisig 1 upgrade credit
+        proposalContract = teamMultisig;
+        currentBlock = await ethers.provider.getBlockNumber();
+        deadline = (await ethers.provider.getBlock(currentBlock)).timestamp + 10;
+
+        await governancefacet.connect(user1).propose(proposalContract, deadline);
+
+        await governancefacet.connect(user2).vote(0, true)
+
+        await network.provider.send("evm_setNextBlockTimestamp", [deadline + 1])
+        await network.provider.send("evm_mine");
+
+        await governancefacet.executeProposal(0);
+        expect(await governancefacet.proposalStatus(0)).to.equal(5);
+
+        //register an upgrade
+        const UpgradeRegistryFactory = await ethers.getContractFactory('UpgradeRegistry')
+        upgradeRegistry = await UpgradeRegistryFactory.deploy();
+        await upgradeRegistry.deployed()
+        // set dummy greeter upgrade in parent contract - for security
+        const GreeterFactory = await ethers.getContractFactory('Greeter')
+        const greeter = await GreeterFactory.deploy();
+        await greeter.deployed()
+        facetCuts = [
+          {
+            target: greeter.address,
+            action: 0,
+            selectors: Object.keys(greeter.interface.functions)
+            .map((fn) => greeter.interface.getSighash(fn),
+            ),
+          },
+        ];
+        await upgradeRegistry.set(diamond.address, facetCuts, ethers.constants.AddressZero, '0x');
+
+        const TestFacet1Factory = await ethers.getContractFactory('TestFacet1')
+        testfacet1 = await TestFacet1Factory.deploy()
+        await testfacet1.deployed()
+
+        const TestFacet2Factory = await ethers.getContractFactory('TestFacet2')
+        testfacet2 = await TestFacet2Factory.deploy()
+        await testfacet2.deployed()
+
+        const TestInit = await ethers.getContractFactory('TestInit')
+        testinit = await TestInit.deploy()
+        await testinit.deployed()
+        facetCuts = [
+          {
+            target: testfacet1.address,
+            action: 0,
+            selectors: Object.keys(testfacet1.interface.functions)
+            .map((fn) => testfacet1.interface.getSighash(fn),
+            ),
+          },
+          {
+            target: testfacet2.address,
+            action: 0,
+            selectors: Object.keys(testfacet2.interface.functions)
+            .map((fn) => testfacet2.interface.getSighash(fn),
+            ),
+          },
+        ];   
+        tx = await upgradeRegistry.register(facetCuts, testinit.address, '0xe1c7392a');
+        delivered = await tx.wait(); // 0ms, as tx is already confirmed
+        event = delivered.events.find(event => event.event === 'UpgradeRegistered');
+        const [ownerAddr, minimalProxyAddr, facetCutArray, initializerAddr, initializerFunc] = event.args;
+
+        //add upgrade to diamond repo (from teamMultisig)
+        const target = diamond.address
+        const { data } = await repofacet.populateTransaction.addUpgrade(minimalProxyAddr)
+        const value = ethers.constants.Zero
+        const delegate = false
+        const contract = await ethers.getContractAt('MultisigWallet', teamMultisig)
+        const signers = teamSigners
+        const address = teamMultisig
+        await multisigTX(target, data, value, delegate, contract, signers, address)
+
+        //propose upgrade
+        proposalContract = minimalProxyAddr;
+        currentBlock = await ethers.provider.getBlockNumber();
+        deadline = (await ethers.provider.getBlock(currentBlock)).timestamp + 10;
+
+        await governancefacet.connect(user1).propose(proposalContract, deadline);
+        await governancefacet.connect(user2).vote(1, true)
+
+        await network.provider.send("evm_setNextBlockTimestamp", [deadline + 1])
+        await network.provider.send("evm_mine");
+
+        //pass upgrade
+        await governancefacet.executeProposal(1);
+
+        // governance proposal passed
+        expect(await governancefacet.proposalStatus(1)).to.equal(5);
+
+        const test1facet = await ethers.getContractAt('TestFacet1', diamond.address)
+        expect(await test1facet.getInitializedValue()).to.equal(true)
+
+        //TODO: create a proposalCounter for each diamond? so you can pass like: executeProposal(count);
+
+      });
+      
+      // it('externally-owned-diamond transfers ownership to multisig', async function () {
+      //   //transfer ownership of diamond to teamRegistry (parent multisig)
+      //   await ownerfacet.connect(user1).transferOwnership(multisig1);
+
+      //   const target = diamond.address
+      //   const { data } = await ownerfacet.populateTransaction.acceptOwnership()
+      //   const value = ethers.constants.Zero
+      //   const delegate = false
+      //   const contract = await ethers.getContractAt('MultisigWallet', multisig1)
+      //   const signers = signers1
+      //   const address = multisig1
+      //   await multisigTX(target, data, value, delegate, contract, signers, address)
+
+      //   // check if diamond owner is multisig
+      //   expect(await ownerfacet.owner()).to.equal(multisig1)
+      // });
+
+      it('creates team', async function () {
+
+      });
+
+      // it('creates new diamond instead of transfering', async function() {
+      //   const facetCuts = await diamondFacetCut()
+
+      //   //deploy new diamond contract with cuts in constructor
+      //   const NewDiamondFactory = await ethers.getContractFactory('Diamond');
+      //   const target = teamRegistry.address;
+      //   const { data } = await NewDiamondFactory.populateTransaction.deploy(facetCuts)
+      //   const value = ethers.constants.Zero;
+      //   const delegate = false;
+      //   const newDiamond = await multisigTX(target, data, value, delegate, teamRegistry, signers, teamRegistry.address);
+
+      //   await newDiamond.deployed();
+
+      //   // functions of diamond are accessible via newdiamond, but newdiamond holds its own state
+      //   const newDiamond_Owner = await ethers.getContractAt('OwnershipFacet', newDiamond.address)
+      //   expect(await newDiamond_Owner.owner()).to.equal(user1.address)
+      // });
+
+      // it('deploys new team wallet for adding upgrades', async function () {
+      //   const tx = await teamRegistry.register(diamond.address, signers.map(fn => fn.address), quorum);
+      //   const delivered = await tx.wait(); // 0ms, as tx is already confirmed
+      //   const event = delivered.events.find(event => event.event === 'TeamRegistered');
+      //   const [daoAddr, teamAddr, teamSigners, teamQuorum] = event.args;
+      //   expect(daoAddr).to.equal(diamond.address)
+      //   const registeredTeam = await ethers.getContractAt('TeamRegistry', teamAddr)
+      //   teamWallet = registeredTeam.address;
+      // })
+
+      // it('can upgrade to governance', async function() {
+
+      //   //declare cuts
+      //   const { facetCuts, initgovernance } = await governanceFacetCut();
+
+      //   // fill transaction data
+      //   const target = diamond.address;
+      //   const { data } = await cutterfacet.populateTransaction.diamondCut(facetCuts, initgovernance.address, '0xe1c7392a')
+      //   const value = ethers.constants.Zero;
+      //   const delegate = false;
+      //   await multisigTX(target, data, value, delegate, teamRegistry, signers, teamRegistry.address);
+
+      //   tokenfacet = await ethers.getContractAt('Token', diamond.address)
+      //   governancefacet = await ethers.getContractAt('Governance', diamond.address)
+
+      //   // diamond owns itself - no going back
+      //   expect(await ownerfacet.owner()).to.equal(diamond.address);
+
+      //   // token functions pass
+      //   expect(await tokenfacet.decimals()).to.equal(8);
+
+      //   // proxy can call token functions too
+      //   const proxy_tokenfacet = await ethers.getContractAt('Token', proxy.address)
+      //   expect(await proxy_tokenfacet.decimals()).to.equal(0)
+
+      // });
+
+      // it('can distribute tokens from multisig', async function() {
+      //     // send multiple - look up multisend via multisig?
+      //     target = diamond.address;
+      //     ({ data } = 
+      //       await tokenfacet.populateTransaction.transfer(user1.address, 300)
+      //     );
+      //     value = ethers.constants.Zero;
+      //     delegate = false;
+      //     await multisigTX(target, data, value, delegate);
+      //     ({ data } = 
+      //       await tokenfacet.populateTransaction.transfer(user2.address, 300)
+      //     );
+      //     await multisigTX(target, data, value, delegate);
+      // });
+    });
+
+    // describe('Governance', function() {
+      
+    //   let upgradeRegistry;
+    //   let teamRegistry;
+
+    //   before(async function(){
+    //     //predeploy UpgradeRegistry
+    //     const UpgradeRegistryFactory = await ethers.getContractFactory('UpgradeRegistry')
+    //     upgradeRegistry = await UpgradeRegistryFactory.deploy();
+    //     await upgradeRegistry.deployed()
+
+    //     // set dummy greeter upgrade in parent contract - for security
+    //     const GreeterFactory = await ethers.getContractFactory('Greeter')
+    //     greeter = await GreeterFactory.deploy();
+    //     await greeter.deployed()
+    //     const facetCuts = [
+    //       {
+    //         target: greeter.address,
+    //         action: 0,
+    //         selectors: Object.keys(greeter.interface.functions)
+    //         .map((fn) => greeter.interface.getSighash(fn),
+    //         ),
+    //       },
+    //     ];
+    //     await upgradeRegistry.set(diamond.address, facetCuts, ethers.constants.AddressZero, '0x');
+
+    //     //deploy teamregistry
+    //     const TeamRegistryFactory = await ethers.getContractFactory('TeamRegistry');
+    //     teamRegistry = await TeamRegistryFactory.deploy();
+    //     await teamRegistry.deployed();
+    //   });
+
+    //   describe('DiamondCuts', function() {
+    //     let testfacet1;
+    //     let testfacet2;
+    //     let testinit;
+
+    //     let proposalContract;
+    //     let teamWallet;
+
+    //     let tx;
+    //     let delivered;
+    //     let event;
+
+    //     before(async function() {
+    //       // some dao's predeployed facet contract
+    //       const TestFacet1Factory = await ethers.getContractFactory('TestFacet1')
+    //       testfacet1 = await TestFacet1Factory.deploy()
+    //       await testfacet1.deployed()
+
+    //       // some dao's predeployed facet contract
+    //       const TestFacet2Factory = await ethers.getContractFactory('TestFacet2')
+    //       testfacet2 = await TestFacet2Factory.deploy()
+    //       await testfacet2.deployed()
+
+    //       //proposer deploys diamondcut initializer - inits state vars of facet
+    //       const TestInit = await ethers.getContractFactory('TestInit')
+    //       testinit = await TestInit.deploy()
+    //       await testinit.deployed()
+    //     })
+
+    //     it('registers team', async function() {
+          
+    //       const signerAddresses = [user1.address, user2.address, user3.address]
+    //       const quorum = 2;
+    //       tx = await teamRegistry.register(diamond.address, signerAddresses, quorum);
+    //       delivered = await tx.wait(); // 0ms, as tx is already confirmed
+    //       event = delivered.events.find(event => event.event === 'TeamRegistered');
+    //       const [daoAddr, teamAddr, teamSigners, teamQuorum] = event.args;
+    //       const registeredTeam = await ethers.getContractAt('TeamRegistry', teamAddr)
+    //       teamWallet = registeredTeam.address;
+    //     });
+
+    //     it('adds available upgrades', async function() {
+    //       const currentBlock = await ethers.provider.getBlockNumber();
+    //       const timestamp = (await ethers.provider.getBlock(currentBlock)).timestamp;
+  
+    //       const deadline = timestamp + 10;
+  
+    //       await governancefacet.connect(user1).propose(teamWallet, deadline);
+  
+    //       await governancefacet.connect(user2).vote(0, true)
+  
+    //       await network.provider.send("evm_setNextBlockTimestamp", [deadline + 1])
+    //       await network.provider.send("evm_mine");
+  
+    //       await governancefacet.executeProposal(0);
+
+    //       // governance proposal passed
+    //       expect(await governancefacet.proposalStatus(0)).to.equal(5);
+    //     });
+
+    //     it('registers facets for governance-use', async function() {
+
+    //       const facetCuts = [
+    //         {
+    //           target: testfacet1.address,
+    //           action: 0,
+    //           selectors: Object.keys(testfacet1.interface.functions)
+    //           .map((fn) => testfacet1.interface.getSighash(fn),
+    //           ),
+    //         },
+    //         {
+    //           target: testfacet2.address,
+    //           action: 0,
+    //           selectors: Object.keys(testfacet2.interface.functions)
+    //           .map((fn) => testfacet2.interface.getSighash(fn),
+    //           ),
+    //         },
+    //       ];   
+    //       tx = await upgradeRegistry.register(facetCuts, testinit.address, '0xe1c7392a');
+    //       delivered = await tx.wait(); // 0ms, as tx is already confirmed
+    //       event = delivered.events.find(event => event.event === 'UpgradeRegistered');
+    //       const [ownerAddr, minimalProxyAddr, facetCutArray, initializerAddr, initializerFunc] = event.args;
+          
+    //       const registeredUpgrade = await ethers.getContractAt('UpgradeRegistry', minimalProxyAddr)
+    //       await registeredUpgrade.addToRepo(diamond.address);
+    //       proposalContract = registeredUpgrade.address;
+
+    //       //TODO: check proposalContract was added to repo
+    //       console.log(await repository.hasUpgrade(proposalContract)) //false rn
+
+    //     });
+
+    //     it('cuts diamond via minimal-proxy proposals', async function() {
+    //       const currentBlock = await ethers.provider.getBlockNumber();
+    //       const timestamp = (await ethers.provider.getBlock(currentBlock)).timestamp;
+  
+    //       const deadline = timestamp + 10;
+  
+    //       await governancefacet.connect(user1).propose(proposalContract, deadline);
+  
+    //       await governancefacet.connect(user2).vote(0, true)
+  
+    //       await network.provider.send("evm_setNextBlockTimestamp", [deadline + 1])
+    //       await network.provider.send("evm_mine");
+  
+    //       await governancefacet.executeProposal(0);
+
+    //       // governance proposal passed
+    //       expect(await governancefacet.proposalStatus(0)).to.equal(5);
+
+    //       const testfacet1 = await ethers.getContractAt('TestFacet1', diamond.address)
+    //       expect(await testfacet1.getInitializedValue()).to.equal(true)
+    //     }); 
+
+    //     it('proposals can mint new token supply', async function() { /// simple proposalContract example
+    //       // predeploy proposalcontract
+    //       const TokenMinterFactory = await ethers.getContractFactory('TokenMinter');
+    //       const tokenminter = await TokenMinterFactory.deploy();
+    //       await tokenminter.deployed();
+    //       proposalContract = tokenminter.address;
+
+    //       const currentBlock = await ethers.provider.getBlockNumber();
+    //       const timestamp = (await ethers.provider.getBlock(currentBlock)).timestamp;
+    //       const deadline = timestamp + 10;
+
+    //       await governancefacet.connect(user1).propose(proposalContract, deadline);
+
+    //       await governancefacet.connect(user2).vote(1, true)
+
+    //       await network.provider.send("evm_setNextBlockTimestamp", [deadline + 1])
+    //       await network.provider.send("evm_mine");
+
+    //       await governancefacet.executeProposal(1);
+
+    //       // governance proposal passed
+    //       expect(await governancefacet.proposalStatus(1)).to.equal(5);
+
+    //       // check that new tokens were minted
+    //       expect(await tokenfacet.totalSupply()).to.be.above(1500)
+    //     });
+    //   });
+    // });
+  });
+});

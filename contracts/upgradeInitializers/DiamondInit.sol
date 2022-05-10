@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.0;
 
 /******************************************************************************\
 * Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
@@ -8,27 +8,35 @@ pragma solidity ^0.8.12;
 * Implementation of a diamond.
 /******************************************************************************/
 
-import {LibDiamond} from "../libraries/LibDiamond.sol";
-import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
-import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
-import { IERC173 } from "../interfaces/IERC173.sol";
-import { IERC165 } from "../interfaces/IERC165.sol";
+import { ERC165Storage } from "@solidstate/contracts/introspection/ERC165Storage.sol";
+import { IDiamondLoupe } from "@solidstate/contracts/proxy/diamond/IDiamondLoupe.sol";
+import { IDiamondCuttable } from "@solidstate/contracts/proxy/diamond/IDiamondCuttable.sol";
+import { IERC173 } from "@solidstate/contracts/access/IERC173.sol";
+import { IERC165 } from "@solidstate/contracts/introspection/IERC165.sol";
+import { RepositoryStorage } from "contracts/storage/RepositoryStorage.sol";
 
-// It is exapected that this contract is customized if you want to deploy your diamond
+// It is expected that this contract is customized if you want to deploy your diamond
 // with data from a deployment script. Use the init function to initialize state variables
 // of your diamond. Add parameters to the init funciton if you need to.
 
+address constant habitatRepo = address(0); // replace with Habitat RepoAddr
+
 contract DiamondInit {    
+    using ERC165Storage for ERC165Storage.Layout;
+    using RepositoryStorage for RepositoryStorage.Layout;
 
     // You can add parameters to this function in order to pass in 
     // data to set your own state variables
     function init() external {
         // adding ERC165 data
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        ds.supportedInterfaces[type(IERC165).interfaceId] = true;
-        ds.supportedInterfaces[type(IDiamondCut).interfaceId] = true;
-        ds.supportedInterfaces[type(IDiamondLoupe).interfaceId] = true;
-        ds.supportedInterfaces[type(IERC173).interfaceId] = true;
+        ERC165Storage.Layout storage l = ERC165Storage.layout();
+        l.supportedInterfaces[type(IERC165).interfaceId] = true;
+        l.supportedInterfaces[type(IDiamondCuttable).interfaceId] = true;
+        l.supportedInterfaces[type(IDiamondLoupe).interfaceId] = true;
+        l.supportedInterfaces[type(IERC173).interfaceId] = true;
+
+        // RepoStorage.Layout storage r = RepoStorage.layout();
+        // r.repo = habitatRepo;
 
         // add your own state variables 
         // EIP-2535 specifies that the `diamondCut` function takes two optional 
