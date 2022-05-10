@@ -1,0 +1,294 @@
+const { expect } = require('chai');
+const { ethers } = require('hardhat');
+
+
+describe('MyDiamond', function () {
+  let dao;
+  let user1
+  let user2;
+  let user3;
+  let diamond;
+  let mytoken;
+  let tokenmanagerfacet;
+  let mygovfacet;
+  let mytreasuryfacet;
+  let mynft;
+
+  let roleRecipients;
+  const TEAM_ROLE = 948317684762828800; // (discord role id#)
+  let roleID = BigInt(TEAM_ROLE);
+
+  describe('#cutFacets', function () {
+
+    before(async function () {
+      [dao, user1, user2, user3] = await ethers.getSigners();
+      roleRecipients = [user1.address, user2.address];
+    });
+  
+    beforeEach(async function () {
+      //deploy diamond contract
+      const MyDiamondFactory = await ethers.getContractFactory('MyDiamond');
+      diamond = await MyDiamondFactory.deploy();
+      await diamond.deployed();
+  
+      //deploy uninitialized token contract
+      const MyTokenFactory = await ethers.getContractFactory('MyToken');
+      mytoken = await MyTokenFactory.deploy();
+      await mytoken.deployed();
+
+      //deploy uninitialized token contract
+      const MyNFTFactory = await ethers.getContractFactory('MyNFT');
+      mynft = await MyNFTFactory.deploy();
+      await mynft.deployed();
+
+      //deploy uninitialized set contract
+      const TokenManagerFactory = await ethers.getContractFactory('TokenManager');
+      const tokenmanager = await TokenManagerFactory.deploy();
+      await tokenmanager.deployed();
+
+      //deploy uninitialized governance contract
+      const GovernanceFactory = await ethers.getContractFactory('Governance');
+      const governance = await GovernanceFactory.deploy();
+      await governance.deployed();
+
+      //deploy uninitialized governance contract
+      const TreasuryFactory = await ethers.getContractFactory('Treasury');
+      const treasury = await TreasuryFactory.deploy();
+      await treasury.deployed();
+
+      //declare facets to be cut
+      const facetCuts = [
+        {
+          target: tokenmanager.address,
+          action: 0,
+          selectors: Object.keys(tokenmanager.interface.functions)
+          .filter((fn) => fn != 'supportsInterface(bytes4)') // filter out duplicates
+          .map((fn) => tokenmanager.interface.getSighash(fn),
+          ),
+        },
+        {
+          target: governance.address,
+          action: 0,
+          selectors: Object.keys(governance.interface.functions)
+          .map((fn) => governance.interface.getSighash(fn),  // INTERFACE
+          ),
+        },
+        {
+          target: treasury.address,
+          action: 0,
+          selectors: Object.keys(treasury.interface.functions)
+          .map((fn) => treasury.interface.getSighash(fn),  // INTERFACE
+          ),
+        },
+
+      ];
+  
+      //do the cut
+      await diamond
+        .connect(dao)
+        .diamondCut(facetCuts, ethers.constants.AddressZero, '0x');
+
+      // //get the instance of the new MyToken facet
+      // mytokenfacet = await ethers.getContractAt('MyToken', diamond.address);
+      //get the instance of the new TokenMananger facet
+      tokenmanagerfacet = await ethers.getContractAt('TokenManager', diamond.address);
+
+      mygovfacet = await ethers.getContractAt('Governance', diamond.address);
+
+      mytreasuryfacet = await ethers.getContractAt('Treasury', diamond.address);
+
+    });
+
+    describe('TokenManager facet', function() {
+
+      it('inits tokenmanager with storage', async function() {
+
+        const team = [user1.address, user2.address];
+        const teamID = roleID;
+        const contributors = [user3.address];
+        const contributorID = BigInt(111317611162828111);
+
+        const roles = [
+          {
+            name: 'Team',
+            id: teamID,
+            owners: team,
+            amount: team.length,
+            share: 50 // 40% of total vote
+          },
+          {
+            name: 'Contributors',
+            id: contributorID,
+            owners: contributors,
+            amount: contributors.length,
+            share: 30 // 30% of total vote
+          },
+        ];
+        const classes = [
+          {
+            name: 'ClassA', // ClassB, ClassC, etc
+            tokens: [mytoken.address],
+            share: 20 // 20% of total vote
+          },
+        ];
+
+        const pie = 100; // total vote
+
+        await tokenmanagerfacet.initTokenManager(
+          roles, 
+          classes,
+          pie,
+        );
+
+        // console.log(await tokenmanagerfacet.getTokenShareByDomain(teamID, 0));
+        // console.log(await tokenmanagerfacet.getTokenShareByDomain(contributorID, 0));
+        // const mytokenid = await tokenmanagerfacet.getTokenID(mytoken.address);
+        // console.log(await tokenmanagerfacet.getTokenShareByDomain(mytokenid, 0));
+
+        await mytoken.connect(user1).initMyToken();
+
+        console.log(await mytoken.__balanceOf(user1.address));
+
+        await mytoken.connect(user1).approve(tokenmanagerfacet.address, 100);
+
+        await tokenmanagerfacet.connect(user1).deposit(mytoken.address, user1.address, 50);
+
+        // console.log(await tokenmanagerfacet.getStakedBalanceOfToken(user1.address, mytoken.address));
+
+        // // get voting power in domain
+        // console.log(await tokenmanagerfacet.getVotingPowerByDomain(1, user1.address))
+
+        
+
+        
+        /*TODO: figure out how to make rolePower relative to total amount of voting power
+        - should all add up to 'pie' amount?
+        - BIG QUESTION: how do we tally up the votes? use percentages?
+        when you hold a vote, you want-
+        - majority
+        - who's going to pay the most
+          */
+
+
+        /* //NFT acceptance testing
+        await mynft.connect(user1).initNFT();
+        await mynft.connect(user1).approve(tokenmanagerfacet.address, 99);
+        await tokenmanagerfacet.connect(user1).deposit(mynft.address, user1.address, 1); */
+
+
+      });
+
+      // it('governs (cuts) the diamond', async function() {
+      //   let contract = mytoken;
+
+      //   //initialize members/roles
+      //   await tokenmanagerfacet.initRoles(roleRecipients, roleID, roleRecipients.length);
+
+      //   //init governance timelock vars - not used in test for time's sake
+      //   await mygovfacet.initGovernance(1);
+
+      //   //prepare the cut
+      //   let target = contract.address;
+      //   let action = 0; //0=add, 1=replace, 2=remove
+      //   let selectors = Object.keys(contract.interface.functions)
+      //       .map((fn) => contract.interface.getSighash(fn));
+
+      //   const block = await ethers.provider.getBlockNumber();
+      //   const timestamp = (await ethers.provider.getBlock(block)).timestamp;
+
+      //   //propose facet that will be added with the cut params
+      //   //user1 can propose bc they are a member - msg.sender automatically votes
+      //   await mygovfacet.connect(user1).propose(target, selectors, action, timestamp + 10);
+
+      //   //check proposal was added with facetname address
+      //   expect(Object.values(await mygovfacet.proposal(0))[0]).to.equal(mytoken.address);
+
+      //   //vote
+      //   await mygovfacet.connect(user2).vote(0, true);
+      //   for(const [key, val] of Object.entries(await mygovfacet.proposal(0))) {
+      //       if (key == 'votesYes') { expect(val).to.equal(BigInt(2)) }
+      //   }
+
+      //   //unvote
+      //   await mygovfacet.connect(user2).unvote(0);
+      //   for(const [key, val] of Object.entries(await mygovfacet.proposal(0))) {
+      //     if (key == 'votesYes') { expect(val).to.equal(BigInt(1)) }
+      //   }
+
+      //   // increase time past deadlineTimestamp
+      //   await network.provider.send("evm_setNextBlockTimestamp", [timestamp + 11])
+      //   await network.provider.send("evm_mine");
+
+      //   // execute proposal - diamondCut - pass initializer func to initialize state
+      //   tx = await mygovfacet.connect(user1).executeProposal(0, "initMyToken()");
+      //   tx.wait();
+
+      //   // mytoken functions are now callable through the diamond fallback
+      //   mytokenfacet = await ethers.getContractAt('MyToken', diamond.address); 
+      //   expect(await mytokenfacet.__balanceOf(user1.address)).to.equal(100);
+
+      //   //check proposal status is 'PASSED'
+      //   expect(await mygovfacet.proposalStatus(0)).to.equal(5);
+      // });
+
+
+      // it('initializes staking, assigns voting power, votes in treasury', async function() {
+      //   let contract = mytoken;
+
+      //   //initialize members/roles
+      //   await tokenmanagerfacet.initRoles(roleRecipients, roleID, roleRecipients.length);
+
+      //   //init governance timelock vars - not used in test for time's sake
+      //   await mygovfacet.initGovernance(1);
+
+      //   //prepare the cut
+      //   let target = contract.address;
+      //   let action = 0; //0=add, 1=replace, 2=remove
+      //   let selectors = Object.keys(contract.interface.functions)
+      //       .map((fn) => contract.interface.getSighash(fn));
+
+      //   const block = await ethers.provider.getBlockNumber();
+      //   const timestamp = (await ethers.provider.getBlock(block)).timestamp;
+
+      //   //propose facet that will be added with the cut params
+      //   //user1 can propose bc they are a member - msg.sender automatically votes
+      //   await mygovfacet.connect(user1).propose(target, selectors, action, timestamp + 10);
+
+      //   //check proposal was added with facetname address
+      //   expect(Object.values(await mygovfacet.proposal(0))[0]).to.equal(mytoken.address);
+
+      //   // increase time past deadlineTimestamp
+      //   await network.provider.send("evm_setNextBlockTimestamp", [timestamp + 11])
+      //   await network.provider.send("evm_mine");
+
+      //   // execute proposal - diamondCut - pass initializer func to initialize state
+      //   tx = await mygovfacet.connect(user1).executeProposal(0, "initMyToken()");
+      //   tx.wait();
+
+      //   // mytoken functions are now callable through the diamond fallback
+      //   mytokenfacet = await ethers.getContractAt('MyToken', diamond.address); 
+      //   expect(await mytokenfacet.__balanceOf(user1.address)).to.equal(100);
+
+      //   ///// TEST /////
+
+      //   const tokens = [mytokenfacet.address];
+      //   const coefficients = [110];
+
+      //   //initialize TokenManager's token storage
+      //   await tokenmanagerfacet.connect(dao).initStaking(tokens, coefficients);
+
+      //   // send gov token
+      //   await mytokenfacet.connect(user1).approve(tokenmanagerfacet.address, 50);
+      //   await tokenmanagerfacet.connect(user1).deposit(mytokenfacet.address, user1.address, 50);
+        
+      //   // observe voting power increase via multiplier
+      //   console.log(await tokenmanagerfacet.getStakedBalanceOfToken(user1.address, mytokenfacet.address));
+      //   console.log(await tokenmanagerfacet.balanceOf(user1.address, 2)); // cheaper if you know the ID!
+      //   console.log(await tokenmanagerfacet.getVotingPower(user1.address));
+
+
+        
+      // });
+    });
+  });
+});

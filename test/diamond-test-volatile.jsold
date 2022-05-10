@@ -1,0 +1,100 @@
+const { expect, assert } = require("chai");
+const { ethers } = require("hardhat");
+const { getSelectors, FacetCutAction, getSelector } = require('./libraries/diamond.js')
+
+const SourcifyJS = require('sourcify-js');
+
+const {
+  getDiamondJson,
+} = require('../tasks/lib/utils.js')
+
+const { promises: { rm } } = require('fs');
+const TEST_FILE = 'test.diamond.json'
+const CHAIN_ID = 1337
+
+async function updateDiamond() {
+  const diamondJson = await getDiamondJson(TEST_FILE)
+  const sourcify = new SourcifyJS.default('http://localhost:8990', 'http://localhost:5500')
+  const accounts = await ethers.getSigners()
+  const contractOwner = accounts[0]
+
+
+  let abis = []
+  for (let FacetName in diamondJson.contracts) {
+    const facet = diamondJson.contracts[FacetName]
+    const { abi } = await sourcify.getABI(facet.address, CHAIN_ID)
+
+    abis = abis.concat(abi.filter((abiElement, index, abi) => {
+      if (abiElement.type === "constructor") {
+        return false;
+      }
+
+      return true;
+    }))
+  }
+
+  return new ethers.Contract(diamondJson.address, abis, contractOwner)
+}
+
+describe("Diamond test", async function () {
+  let commands = []
+  let diamond
+  it("sould deploy new diamond", async function () {
+
+    commands.push('npx hardhat diamond:deploy --new')
+    await hre.run('diamond:deploy', {
+      new: true,
+      o: TEST_FILE
+    })
+
+  });
+
+  it("should add facets Diamond", async function () {
+
+    commands.push('npx hardhat diamond:add --local --name LocalFacet')
+    await hre.run('diamond:add', {
+      local: true,
+      name: 'LocalFacet',
+      o: TEST_FILE
+    })
+
+    commands.push('npx hardhat diamond:add --local --name LocalFacetTest')
+    await hre.run('diamond:add', {
+      local: true,
+      name: 'LocalFacetTest',
+      o: TEST_FILE
+    })
+
+    commands.push('npx hardhat diamond:cut')
+    await hre.run('diamond:cut', {
+      o: TEST_FILE
+    })
+
+    diamond = await updateDiamond()
+
+  })
+
+  it("should increment facets Diamond", async function () {
+
+    let counterValue = await diamond.local2Func3()
+    expect(counterValue).to.be.eq(0)
+    
+    // this increment diamond's storage counter by 1
+    await diamond.setStorage()
+    
+    counterValue = await diamond.local2Func3()
+    expect(counterValue).to.be.eq(1)
+
+  })
+
+  after('finishing', async () => {
+    await rm(`./${TEST_FILE}`)
+    console.log(`
+
+You can run these commands to publish this diamond:
+
+${commands.join('\n')}
+    `)
+
+  })
+});
