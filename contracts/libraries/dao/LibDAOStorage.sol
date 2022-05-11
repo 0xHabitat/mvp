@@ -99,11 +99,6 @@ struct DAOStorage {
     vpm = LibManagementSystem._getVotingPowerManager(ds.managementSystemPosition);
   }
 
-  function _getGovernanceERC20Token() internal view returns (address gerc20t) {
-    IDAO.DAOStorage storage ds = daoStorage();
-    gerc20t = LibManagementSystem._getGovernanceERC20Token(ds.managementSystemPosition);
-  }
-
   function _getGovernanceSigners() internal view returns (address[] storage gs) {
     IDAO.DAOStorage storage ds = daoStorage();
     gs = LibManagementSystem._getGovernanceSigners(ds.managementSystemPosition);

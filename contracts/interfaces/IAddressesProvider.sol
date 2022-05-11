@@ -7,6 +7,10 @@ pragma solidity 0.8.9;
  * @notice Defines the basic interface for an Addresses Provider.
  **/
 interface IAddressesProvider {
+  struct Facet {
+    address facetAddress;
+    bytes4[] functionSelectors;
+  }
 
   /**
    * @dev Emitted when a new non-proxied contract address is registered.
@@ -45,6 +49,41 @@ interface IAddressesProvider {
   event SubDAOInitUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
+   * @dev Emitted when the WETH is updated.
+   * @param oldAddress The old address of the WETH
+   * @param newAddress The new address of the WETH
+   */
+  event WETHUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
+   * @dev Emitted when the UniswapV2Factory is updated.
+   * @param oldAddress The old address of the UniswapV2Factory
+   * @param newAddress The new address of the UniswapV2Factory
+   */
+  event UniswapV2FactoryUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
+   * @dev Emitted when the SushiV2Factory is updated.
+   * @param oldAddress The old address of the SushiV2Factory
+   * @param newAddress The new address of the SushiV2Factory
+   */
+  event SushiV2FactoryUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
+   * @dev Emitted when the HabitatDiamondFactory is updated.
+   * @param oldAddress The old address of the HabitatDiamondFactory
+   * @param newAddress The new address of the HabitatDiamondFactory
+   */
+  event HabitatDiamondFactoryUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
+   * @dev Emitted when the DiamondCutFacet is updated.
+   * @param oldAddress The old address of the DiamondCutFacet
+   * @param newAddress The new address of the DiamondCutFacet
+   */
+  event DiamondCutFacetUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
    * @notice Returns an address by its identifier.
    * @dev The returned address must be a contract
    * @dev It returns ZERO if there is no registered address with the given id
@@ -52,6 +91,14 @@ interface IAddressesProvider {
    * @return The address of the registered for the specified id
    */
   function getAddress(bytes32 id) external view returns (address);
+
+  /**
+   * @notice Returns an array of facet selectors by facet address.
+   * @dev It returns empty array if there is no registered selectors with the given facet
+   * @param facet The facet address
+   * @return An array of the registered selectors for the specified facet
+   */
+  function getSelectors(address facet) external view returns (bytes4[] memory);
 
   /**
    * @notice Returns the address of the voting power init contract.
@@ -76,6 +123,54 @@ interface IAddressesProvider {
    * @return The address of the SubDAOInit
    */
   function getSubDAOInit() external view returns (address);
+
+  /**
+   * @notice Returns the address of the WETH contract.
+   * @return The address of the WETH
+   */
+  function getWETH() external view returns (address);
+
+  /**
+   * @notice Returns the address of the UniswapV2Factory contract.
+   * @return The address of the UniswapV2Factory
+   */
+  function getUniswapV2Factory() external view returns (address);
+
+  /**
+   * @notice Returns the address of the SushiV2Factory contract.
+   * @return The address of the SushiV2Factory
+   */
+  function getSushiV2Factory() external view returns (address);
+
+  /**
+   * @notice Returns the address of the HabitatDiamondFactory contract.
+   * @return The address of the HabitatDiamondFactory
+   */
+  function getHabitatDiamondFactory() external view returns (address);
+
+  /**
+   * @notice Returns the address of the diamond cut facet contract.
+   * @return The address of the DiamondCutFacet
+   */
+  function getDiamondCutFacetAddress() external view returns (address);
+
+  /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the DiamondCutFacet
+   */
+  function getDiamondCutFacet() external view returns (Facet memory);
+
+  /**
+   * @notice Returns the address of the voting power facet contract.
+   * @return The address of the VotingPowerFacet
+   */
+  function getVotingPowerFacetAddress() external view returns (address);
+
+  /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the VotingPower
+   */
+  function getVotingPowerFacet() external view returns (Facet memory);
 
   /**
    * @notice Sets an address for an id replacing the address saved in the addresses map.
@@ -108,4 +203,40 @@ interface IAddressesProvider {
    * @param newSubDAOInit The address of the new SubDAOInit
    */
   function setSubDAOInit(address newSubDAOInit) external;
+
+  /**
+   * @notice Updates the address of the WETH.
+   * @param newWETH The address of the new WETH
+   */
+  function setWETH(address newWETH) external;
+
+  /**
+   * @notice Updates the address of the UniswapV2Factory.
+   * @param newUniswapV2Factory The address of the new UniswapV2Factory
+   */
+  function setUniswapV2Factory(address newUniswapV2Factory) external;
+
+  /**
+   * @notice Updates the address of the SushiV2Factory.
+   * @param newSushiV2Factory The address of the new SushiV2Factory
+   */
+  function setSushiV2Factory(address newSushiV2Factory) external;
+
+  /**
+   * @notice Updates the address of the HabitatDiamondFactory.
+   * @param newHabitatDiamondFactory The address of the new HabitatDiamondFactory
+   */
+  function setHabitatDiamondFactory(address newHabitatDiamondFactory) external;
+
+  /**
+   * @notice Updates the address of the diamond cut facet.
+   * @param newDiamondCutFacet The address of the new DiamondCutFacet
+   */
+  function setDiamondCutFacet(address newDiamondCutFacet, bytes4[] memory selectors) external;
+
+  /**
+   * @notice Updates the address of the voting power facet.
+   * @param newVotingPowerFacet The address of the new VotingPowerFacet
+   */
+  function setVotingPowerFacet(address newVotingPowerFacet, bytes4[] memory selectors) external;
 }

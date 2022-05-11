@@ -110,11 +110,6 @@ struct SubDAOStorage {
     vpm = LibManagementSystem._getVotingPowerManager(sds.managementSystemPosition);
   }
 
-  function _getGovernanceERC20Token() internal view returns (address gerc20t) {
-    ISubDAO.SubDAOStorage storage sds = subDAOStorage();
-    gerc20t = LibManagementSystem._getGovernanceERC20Token(sds.managementSystemPosition);
-  }
-
   function _getGovernanceSigners() internal view returns (address[] storage gs) {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     gs = LibManagementSystem._getGovernanceSigners(sds.managementSystemPosition);

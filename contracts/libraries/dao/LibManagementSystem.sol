@@ -1,20 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IManagementSystem} from "../../interfaces/dao/ISubDAO.sol";
+import {IManagementSystem} from "../../interfaces/dao/IManagementSystem.sol";
 
 library LibManagementSystem {
   /*
-struct ManagementSystem {
-  VotingSystem governanceVotingSystem;
-  VotingSystem treasuryVotingSystem;
-  VotingSystem subDAOCreationVotingSystem;
-  address votingPowerManager;
-  address governanceERC20Token;
-  address[] governanceSigners;
-  address[] treasurySigners;
-  address[] subDAOCreationSigners;
-}
+  struct ManagementSystem {
+    VotingSystem governanceVotingSystem;
+    VotingSystem treasuryVotingSystem;
+    VotingSystem subDAOCreationVotingSystem;
+    VotingSystem changeManagementSystem;
+    // VotingSystem bountyCreation;
+    bytes32 managementDataPosition;
+  }
+
+  struct ManagementData {
+    address votingPowerManager;
+    address[] governanceSigners;
+    address[] treasurySigners;
+    address[] subDAOCreationSigners;
+    //address governanceERC20Token;
+    //address[] signers; // maybe better use Gnosis data structure (nested array) instead of array
+  }
 */
   function _getManagementSystemByPosition(bytes32 position)
     internal
@@ -23,6 +30,16 @@ struct ManagementSystem {
   {
     assembly {
       ms.slot := position
+    }
+  }
+
+  function _getManagementDataByPosition(bytes32 position)
+    internal
+    pure
+    returns (IManagementSystem.ManagementData storage md)
+  {
+    assembly {
+      md.slot := position
     }
   }
 
@@ -61,19 +78,8 @@ struct ManagementSystem {
         uint8(ms.subDAOCreationVotingSystem) == uint8(0),
       "None of the management systems use votingPowerManager"
     );
-    return ms.votingPowerManager;
-  }
-
-  function _getGovernanceERC20Token(bytes32 position) internal view returns (address) {
-    IManagementSystem.ManagementSystem storage ms = _getManagementSystemByPosition(position);
-    require(
-      uint8(ms.governanceVotingSystem) == uint8(IManagementSystem.VotingSystem.ERC20PureVoting) ||
-        uint8(ms.treasuryVotingSystem) == uint8(IManagementSystem.VotingSystem.ERC20PureVoting) ||
-        uint8(ms.subDAOCreationVotingSystem) ==
-        uint8(IManagementSystem.VotingSystem.ERC20PureVoting),
-      "None of the management systems use ERC20PureVoting"
-    );
-    return ms.governanceERC20Token;
+    IManagementSystem.ManagementData storage md = _getManagementDataByPosition(ms.managementDataPosition);
+    return md.votingPowerManager;
   }
 
   function _getGovernanceSigners(bytes32 position) internal view returns (address[] storage) {
@@ -82,7 +88,8 @@ struct ManagementSystem {
       ms.governanceVotingSystem == IManagementSystem.VotingSystem.Signers,
       "Governance voting system is not Signers."
     );
-    return ms.governanceSigners;
+    IManagementSystem.ManagementData storage md = _getManagementDataByPosition(ms.managementDataPosition);
+    return md.governanceSigners;
   }
 
   function _getTreasurySigners(bytes32 position) internal view returns (address[] storage) {
@@ -91,7 +98,8 @@ struct ManagementSystem {
       ms.treasuryVotingSystem == IManagementSystem.VotingSystem.Signers,
       "Treasury voting system is not Signers."
     );
-    return ms.treasurySigners;
+    IManagementSystem.ManagementData storage md = _getManagementDataByPosition(ms.managementDataPosition);
+    return md.treasurySigners;
   }
 
   function _getSubDAOCreationSigners(bytes32 position) internal view returns (address[] storage) {
@@ -100,7 +108,8 @@ struct ManagementSystem {
       ms.subDAOCreationVotingSystem == IManagementSystem.VotingSystem.Signers,
       "SubDAOCreation voting system is not Signers."
     );
-    return ms.subDAOCreationSigners;
+    IManagementSystem.ManagementData storage md = _getManagementDataByPosition(ms.managementDataPosition);
+    return md.subDAOCreationSigners;
   }
 
   function _isGovernanceSigner(bytes32 position, address _signer) internal view returns (bool) {
