@@ -3,12 +3,20 @@
     {
       "files": "*.sol",
       "options": {
-        "printWidth": 150,
-        "tabWidth": 4,
+        "printWidth": 100,
+        "tabWidth": 2,
         "useTabs": false,
         "singleQuote": false,
         "bracketSpacing": false,
         "explicitTypes": "always"
+      }
+    },
+    {
+      "files": "*.ts",
+      "options": {
+        "printWidth": 100,
+        "tabWidth": 2,
+        "singleQuote": true
       }
     }
   ]

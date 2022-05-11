@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.9;
 
-import { ITreasuryExecution } from "../../interfaces/treasury/ITreasuryExecution.sol";
-import { ITreasury } from "../../interfaces/treasury/ITreasury.sol";
-import { LibTreasury } from "../../libraries/LibTreasury.sol";
+import {ITreasuryExecution} from "../../interfaces/treasury/ITreasuryExecution.sol";
+import {ITreasury} from "../../interfaces/treasury/ITreasury.sol";
+import {LibTreasury} from "../../libraries/LibTreasury.sol";
 
 contract TreasuryExecutionFacet is ITreasuryExecution {
-
-  function executeProposal(uint proposalId) external override returns(bool result) {
+  function executeProposal(uint256 proposalId) external override returns (bool result) {
     ITreasury.Proposal storage proposal = LibTreasury._getTreasuryProposal(proposalId);
 
     require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");
@@ -15,7 +14,7 @@ contract TreasuryExecutionFacet is ITreasuryExecution {
     require(proposal.delayDeadline <= block.timestamp, "Wait until proposal delay time is expired.");
 
     address destination = proposal.destinationAddress;
-    uint value = proposal.value;
+    uint256 value = proposal.value;
     bytes memory callData = proposal.callData;
 
     assembly {
@@ -31,13 +30,4 @@ contract TreasuryExecutionFacet is ITreasuryExecution {
 
     emit ProposalExecuted(proposalId, destination, value, callData);
   }
-
-  function createSubTreasuryType0() external override {
-
-  }
-
-  function createSubTreasuryType1() external override {
-
-  }
-
 }

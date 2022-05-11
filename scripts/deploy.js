@@ -14,8 +14,8 @@ async function deployDiamond () {
   console.log('DiamondCutFacet deployed:', diamondCutFacet.address)
 
   // deploy Diamond
-  const Diamond = await ethers.getContractFactory('Diamond')
-  const diamond = await Diamond.deploy(contractOwner.address, diamondCutFacet.address)
+  const HabitatDiamond = await ethers.getContractFactory('HabitatDiamond')
+  const diamond = await HabitatDiamond.deploy(contractOwner.address, diamondCutFacet.address)
   await diamond.deployed()
   console.log('Diamond deployed:', diamond.address)
 

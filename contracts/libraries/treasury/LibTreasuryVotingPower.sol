@@ -1,35 +1,40 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.9;
 
-import { ITreasuryVotingPower } from "../../interfaces/treasury/ITreasuryVotingPower.sol";
-import { LibTreasury } from "../LibTreasury.sol";
-import { LibVotingPower } from "../LibVotingPower.sol";
+import {ITreasuryVotingPower} from "../../interfaces/treasury/ITreasuryVotingPower.sol";
+import {LibTreasury} from "../LibTreasury.sol";
+import {LibVotingPower} from "../LibVotingPower.sol";
 
 library LibTreasuryVotingPower {
-
-  function _getMinimumQuorum() internal view returns(uint) {
+  function _getMinimumQuorum() internal view returns (uint256) {
     ITreasuryVotingPower.TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    uint maxAmountOfVotingPower = LibVotingPower._getMaxAmountOfVotingPower();
-    return uint(tvp.minimumQuorum) * maxAmountOfVotingPower / uint(tvp.precision);
+    uint256 maxAmountOfVotingPower = LibVotingPower._getMaxAmountOfVotingPower();
+    return (uint256(tvp.minimumQuorum) * maxAmountOfVotingPower) / uint256(tvp.precision);
   }
 
-  function _isQuorum() internal view returns(bool) {
+  function _isQuorum() internal view returns (bool) {
     ITreasuryVotingPower.TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    uint maxAmountOfVotingPower = LibVotingPower._getMaxAmountOfVotingPower();
-    uint totalAmountOfVotingPower = LibVotingPower._getTotalAmountOfVotingPower();
-    return uint(tvp.minimumQuorum) * maxAmountOfVotingPower / uint(tvp.precision) <= totalAmountOfVotingPower;
+    uint256 maxAmountOfVotingPower = LibVotingPower._getMaxAmountOfVotingPower();
+    uint256 totalAmountOfVotingPower = LibVotingPower._getTotalAmountOfVotingPower();
+    return
+      (uint256(tvp.minimumQuorum) * maxAmountOfVotingPower) / uint256(tvp.precision) <=
+      totalAmountOfVotingPower;
   }
 
-  function _isEnoughVotingPower(address holder) internal view returns(bool) {
+  function _isEnoughVotingPower(address holder) internal view returns (bool) {
     ITreasuryVotingPower.TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    uint voterPower = LibVotingPower._getVoterVotingPower(holder);
-    uint totalAmountOfVotingPower = LibVotingPower._getTotalAmountOfVotingPower();
-    return voterPower >= (uint(tvp.thresholdForInitiator) * totalAmountOfVotingPower / uint(tvp.precision));
+    uint256 voterPower = LibVotingPower._getVoterVotingPower(holder);
+    uint256 totalAmountOfVotingPower = LibVotingPower._getTotalAmountOfVotingPower();
+    return
+      voterPower >=
+      ((uint256(tvp.thresholdForInitiator) * totalAmountOfVotingPower) / uint256(tvp.precision));
   }
 
-  function _isProposalThresholdReached(uint amountOfVotes) internal view returns(bool) {
+  function _isProposalThresholdReached(uint256 amountOfVotes) internal view returns (bool) {
     ITreasuryVotingPower.TreasuryVotingPower storage tvp = LibTreasury._getTreasuryVotingPower();
-    uint totalAmountOfVotingPower = LibVotingPower._getTotalAmountOfVotingPower();
-    return amountOfVotes >= (uint(tvp.thresholdForProposal) * totalAmountOfVotingPower / uint(tvp.precision));
+    uint256 totalAmountOfVotingPower = LibVotingPower._getTotalAmountOfVotingPower();
+    return
+      amountOfVotes >=
+      ((uint256(tvp.thresholdForProposal) * totalAmountOfVotingPower) / uint256(tvp.precision));
   }
 }

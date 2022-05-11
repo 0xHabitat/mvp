@@ -1,31 +1,54 @@
 {
-  "name": "contracts-starter",
-  "version": "1.0.0",
-  "description": "Template for contract projects.",
+  "name": "HabitatMVP",
+  "version": "0.0.1",
+  "description": "Like United Nations, but better.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run --network localhost scripts/deploy.js",
+    "tsc": "tsc && cp typechain/*.d.ts dist/typechain/",
+    "clean": "hardhat clean && rm -rf dist",
+    "lint::typescript": "eslint './**/*.ts' --ext .ts",
+    "prettier::typescript": "prettier --write './**/*.ts'",
+    "lint::solidity": "solhint 'contracts/**/*.sol'",
+    "prettier::solidity": "prettier --write 'contracts/**/*.sol'",
+    "lint": "yarn run lint::typescript && yarn run lint::solidity",
+    "prettier": "yarn run prettier::typescript && yarn run prettier::solidity"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mudgen/contracts-starter.git"
+    "url": "git+https://github.com/0xHabitat/mvp.git"
   },
-  "author": "Nick Mudge",
-  "license": "MIT",
+  "author": "Max",
+  "license": "CPL3",
   "bugs": {
-    "url": "https://github.com/mudgen/contracts-starter/issues"
+    "url": "https://github.com/0xHabitat/mvp/issues"
   },
-  "homepage": "https://github.com/mudgen/contracts-starter#readme",
+  "homepage": "https://0xhabitat.org/",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "chai": "^4.3.4",
+    "@typechain/hardhat": "^6.0.0",
+    "@types/chai": "^4.3.1",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^17.0.27",
+    "@typescript-eslint/eslint-plugin": "^5.21.0",
+    "@typescript-eslint/parser": "^5.21.0",
+    "chai": "^4.3.6",
     "dotenv": "^8.6.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.1",
-    "hardhat": "^2.4.1",
-    "prettier": "^2.3.2",
+    "hardhat": "^2.9.3",
+    "hardhat-ethers": "^1.0.1",
+    "prettier": "^2.6.2",
     "prettier-plugin-solidity": "^1.0.0-beta.13",
-    "standard": "^16.0.3"
+    "solhint": "^3.3.7",
+    "solhint-plugin-prettier": "^0.0.5",
+    "standard": "^16.0.3",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.3"
   }
 }

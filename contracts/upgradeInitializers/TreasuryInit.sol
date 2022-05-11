@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.9;
 
-import { LibTreasury } from "../libraries/LibTreasury.sol";
-import { ITreasury } from "../interfaces/treasury/ITreasury.sol";
-import { ITreasuryVotingPower } from "../interfaces/treasury/ITreasuryVotingPower.sol";
-import { StakeContract } from "../external/VotingPowerManager.sol";
+import {LibTreasury} from "../libraries/LibTreasury.sol";
+import {ITreasury} from "../interfaces/treasury/ITreasury.sol";
+import {ITreasuryVotingPower} from "../interfaces/treasury/ITreasuryVotingPower.sol";
+import {StakeContract} from "../external/VotingPowerManager.sol";
 
 contract TreasuryInit {
     // default type
@@ -22,14 +22,15 @@ contract TreasuryInit {
       ts.proposalDelayTime = _proposalDelayTime; 
       ITreasuryVotingPower.TreasuryVotingPower storage tv = LibTreasury._getTreasuryVotingPower();
 
-      tv.minimumQuorum = _minimumQuorum;
-      tv.thresholdForProposal = _thresholdForProposal;
-      tv.thresholdForInitiator = _thresholdForInitiator;
-      tv.precision = _precision;
-    }
+    tv.minimumQuorum = _minimumQuorum;
+    tv.thresholdForProposal = _thresholdForProposal;
+    tv.thresholdForInitiator = _thresholdForInitiator;
+    tv.precision = _precision;
+  }
 
-    function initTreasuryType1() external {
-      ITreasury.Treasury storage ts = LibTreasury.treasuryStorage();
-      ts.votingType = ITreasury.VotingType(1);
-    }
+  // signers
+  function initTreasuryType1() external {
+    ITreasury.Treasury storage ts = LibTreasury.treasuryStorage();
+    ts.votingType = ITreasury.VotingType(1);
+  }
 }
