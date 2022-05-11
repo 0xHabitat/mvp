@@ -1,0 +1,157 @@
+import { ethers } from 'hardhat';
+import { Signer } from 'ethers';
+const { expect, assert } = require("chai");
+const timeMachine = require('ether-time-traveler');
+const { getSelectors, FacetCutAction, getSelector } = require('./libraries/diamond.js')
+
+const SourcifyJS = require('sourcify-js');
+
+const {
+  getDiamondJson,
+} = require('../tasks/lib/utils.js')
+
+const { promises: { rm } } = require('fs');
+const { getContractFactory } = require("@nomiclabs/hardhat-ethers/types");
+const TEST_FILE = 'test.diamond.json'
+const CHAIN_ID = 1337;
+
+
+async function updateDiamond() {
+  const diamondJson = await getDiamondJson(TEST_FILE)
+  const sourcify = new SourcifyJS.default('http://localhost:8990', 'http://localhost:5500')
+
+
+  let abis:object[] = [];
+  for (let FacetName in diamondJson.contracts) {
+    const facet = diamondJson.contracts[FacetName]
+    const { abi } = await sourcify.getABI(facet.address, CHAIN_ID)
+
+    abis = abis.concat(abi.filter((abiElement: any, index: number, abi: object[]) => {
+      if (abiElement.type === "constructor") {
+        return false;
+      }
+
+      return true;
+    }))
+  }
+
+  const accounts = await ethers.getSigners();
+  return new ethers.Contract(diamondJson.address, abis, accounts[0]);
+}
+
+
+let contractOwner: Signer;
+let user1: Signer;
+let user2: Signer;
+let user3: Signer;
+
+before(async function () {
+  [contractOwner, user1, user2, user3] = await ethers.getSigners();
+});
+
+describe("Diamond test", async function () {
+  
+  let diamond: any;
+  let stakeContract;
+  let liquidityProvider;
+  it("sould deploy new diamond", async function () {
+    const address = await hre.run('diamond:deploy', {
+      o: TEST_FILE
+    })
+    diamond = await updateDiamond();
+  });
+
+  it("should deploy stake contract", async function() {
+    const diamond = await updateDiamond()
+
+    await diamond.initMyToken();
+
+    const maxDuration = 10;
+    const minimumQuorum = 0;
+    const thresholdForProposal = 10;
+    const thresholdForInitiator = 10;
+    const precision = 100;
+
+    await diamond.initTreasury(
+      maxDuration,
+      minimumQuorum,
+      thresholdForProposal,
+      thresholdForInitiator,
+      precision
+    );
+
+    console.log(await diamond.totalSupply())
+    
+    const StakeContract = await ethers.getContractFactory("StakeContract");
+    stakeContract = await StakeContract.deploy(diamond.address, 1000, [
+      diamond.address
+    ], [
+      1000
+    ]);
+
+    // TODO: distribute MyToken to user1, user2, user3 and stake
+
+    await diamond.approve(stakeContract.address, 10)
+
+    console.log(await diamond.balanceOf(contractOwner.address))
+
+    await stakeContract.stake(diamond.address, 10)
+
+    console.log(await diamond.balanceOf(contractOwner.address))
+  })
+
+
+  it("should deploy Treasury and accept proposals", async function () {
+    let tx;
+    let receipt;
+    const block = await ethers.provider.getBlockNumber();
+    const timestamp = (await ethers.provider.getBlock(block)).timestamp;
+
+    const destination = user1.address;
+    let value = 500;
+    // let callData = 0x095ea7b3; //approve
+    let callData = 0xa9059cbb;
+    const deadlineTimestamp = timestamp + 10;
+
+    //createTreasuryProposal
+    tx = await diamond.createTreasuryProposal(
+      destination,
+      value,
+      callData,
+      deadlineTimestamp
+    )
+    const proposal = await tx.wait();
+    const event = proposal.events.find(event => event.event === 'TreasuryProposalCreated')
+    const [proposalId, deadline] = event.args;
+    console.log('Proposal Created:', proposalId, deadline);
+
+    //getProposalsCount
+    console.log('Proposals Count:', await diamond.getTreasuryProposalsCount());
+
+    //getActiveProposalIds
+    console.log('Active Proposal Ids:', await diamond.getActiveProposalsIds());
+
+    //voteForTreasuryProposal
+    await diamond.connect(user1).voteForOneTreasuryProposal(proposalId, true);
+    await diamond.connect(user2).voteForOneTreasuryProposal(proposalId, true);
+
+    await timeMachine.advanceBlockAndSetTime(ethers.provider, deadlineTimestamp + 1);
+
+    //getTreasuryProposal
+    console.log('Get Proposal by Id:', await diamond.getTreasuryProposal(proposalId));
+
+    //acceptOrRejectProposal (accept)
+    tx = await diamond.acceptOrRejectTreasuryProposal(proposalId);
+    receipt = await tx.wait();
+    console.log('event emitted: ', receipt.events);
+
+    tx = await diamond.executeTreasuryProposal(proposalId);
+    receipt = await tx.wait();
+    // console.log('proposal executed?:', receipt)
+    console.log('event emitted: ', receipt.events);
+
+    // get allowance for user1
+    console.log(await diamond.balanceOf(user1.address));
+
+  })
+});
