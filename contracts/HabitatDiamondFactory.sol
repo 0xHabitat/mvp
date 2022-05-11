@@ -31,7 +31,6 @@ contract HabitatDiamondFactory {
   function deployHabitatDiamond(
     address addressesProvider,
     IManagementSystem.VotingSystems memory _vs,
-    IManagementSystem.Signers memory _s,
     bytes memory habitatDiamondConstructorArgs,
     ETHPair ethPair
   ) external payable returns(address habitatDiamond) {
