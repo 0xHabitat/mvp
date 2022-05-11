@@ -14,6 +14,7 @@ library LibTreasury {
         TreasuryVotingPower treasuryVotingPower;
         uint128 maxDeadLine;
         uint128 proposalsCount;
+        uint256 proposalDelayTime;
         uint[] activeProposalsIds;
         mapping(uint => Proposal) proposals;
         mapping(uint => ProposalVoting) proposalVotings;
@@ -95,6 +96,8 @@ library LibTreasury {
       }
     }
 
-    return false;
-  }
+    function _getTreasuryProposalDelayTime() internal view returns(uint256 delayTime) {
+      ITreasury.Treasury storage ts = treasuryStorage();
+      delayTime = ts.proposalDelayTime;
+    }
 }
