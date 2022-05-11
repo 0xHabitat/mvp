@@ -95,9 +95,11 @@ library LibTreasury {
         return true;
       }
     }
+    return true;
+  }
 
-    function _getTreasuryProposalDelayTime() internal view returns(uint256 delayTime) {
-      ITreasury.Treasury storage ts = treasuryStorage();
-      delayTime = ts.proposalDelayTime;
-    }
+  function _getTreasuryProposalDelayTime() internal view returns(uint256 delayTime) {
+    ITreasury.Treasury storage ts = treasuryStorage();
+    delayTime = ts.proposalDelayTime;
+  }
 }

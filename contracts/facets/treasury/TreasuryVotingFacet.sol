@@ -210,7 +210,7 @@ contract TreasuryVotingFacet is ITreasuryVoting {
     }
   }
 
-  function _checkIfDestinationIsDiamond(address _destination, bytes4 _selector) internal {
+  function _checkIfDestinationIsDiamond(address _destination, bytes4 _selector) private view {
     if (_destination == address(this)) {
       // allow to call diamond only as ERC20 functionallity
       //(transfer(address,uint256), approve(address,uint256), increaseAllowance, decreaseAllowance)
