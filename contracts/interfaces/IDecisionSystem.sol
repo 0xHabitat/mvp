@@ -73,12 +73,6 @@ interface IDecisionSystem {
   ) external returns (uint256 proposalId);
 
   /**
-   * @dev The nonce uniquely describes each vote. it is increased when a vote finalizes.
-   * votes have to finalize in series.
-   */    
-  function getNonce() external view returns (uint256);
-
-  /**
    * @dev Mapping to keep track of all vote hashes that have been approved by ALL REQUIRED voters
    */    
   function getFinalizedVote(bytes32) external view returns (bytes32);
@@ -120,9 +114,5 @@ interface IDecisionSystem {
    */
   function approveVote(bytes32 hashToApprove) external;
 
-  /// @dev Returns the chain id used by this contract.
-  function getChainId()  external view returns (uint256);
-
-  function domainSeparator()  external view returns (bytes32);
 
 }

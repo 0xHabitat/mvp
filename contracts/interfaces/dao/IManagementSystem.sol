@@ -78,9 +78,10 @@ interface IManagementSystem {
 
   /**
    * @dev Setup function sets initial storage of contract.
-   * @param _data abstract blob of data.
+   * @param _owners List of Safe owners.
+   * @param _threshold Number of required confirmations for a Safe transaction.
    */
-  function setup(bytes calldata _data) external;
+  function setup(address[] calldata _owners, uint256 _threshold) external;
 
   /**
    * @dev Setup function sets initial storage of contract.
@@ -93,7 +94,7 @@ interface IManagementSystem {
    * @dev The nonce uniquely describes each task. it is increased when a task is finalized.
    * tasks have to finalize in series.
    */    
-  function getTaskNonce() external view returns (uint256);
+  function nonce() external view returns (uint256);
 
   /**
    * @dev Returns the chain id used by this contract.

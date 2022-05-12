@@ -21,17 +21,20 @@ contract ManagementSystem is IManagementSystem {
   bytes32 private constant HABITAT_TX_TYPEHASH = 0xea9a950a3f2990c87607be7c3b10b226fbf619b18c7b0a15190148349a300faa;
 
 
-  uint256 private nonce;
+  uint256 private taskNonce;
 
   IDecisionSystem public decider;
 
   /**
    * @dev Setup function sets initial storage of contract.
-   * @param _data abstract blob of data.
+   * @param _owners List of Safe owners.
+   * @param _threshold Number of required confirmations for a Safe transaction.
    */
-  function setup(bytes calldata _data) external {
+  function setup(address[] calldata _owners, uint256 _threshold) external {
 
   }
+
+
 
   /**
    * @dev Setup function sets initial storage of contract.
@@ -47,8 +50,8 @@ contract ManagementSystem is IManagementSystem {
    * @dev The nonce uniquely describes each task. it is increased when a task is finalized.
    * tasks have to finalize in series.
    */    
-  function getTaskNonce() public view override returns (uint256){
-    return nonce;
+  function nonce() public view override returns (uint256){
+    return taskNonce;
   }
 
   /// @dev Returns the chain id used by this contract.
@@ -237,10 +240,10 @@ contract ManagementSystem is IManagementSystem {
                   gasToken,
                   refundReceiver,
                   // Signature info
-                  nonce
+                  taskNonce
               );
           // Increase nonce and execute transaction.
-          nonce++;
+          taskNonce++;
           txHash = keccak256(txHashData);
           decider.checkSignatures(txHash, txHashData, signatures);
       }
