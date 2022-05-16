@@ -10,6 +10,7 @@ interface ISubDAO {
     string info;
     string socials;
     address mainDAO;
+    address addressesProvider;
     bytes32 managementSystemPosition;
     address[] createdSubDAOs;
   }
@@ -21,6 +22,8 @@ interface ISubDAO {
   function getSubDAOInfo() external view returns (string memory);
 
   function getSubDAOSocials() external view returns (string memory);
+
+  function getSubDAOAddressesProvider() external view returns (address);
 
   function getMainDAO() external view returns (address);
 

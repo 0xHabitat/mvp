@@ -15,6 +15,7 @@ struct SubDAOStorage {
   string info;
   string socials;
   address mainDAO;
+  address addressesProvider;
   address[] createdSubDAOs;
   bytes32 managementSystemPosition;
 }
@@ -44,6 +45,11 @@ struct SubDAOStorage {
   function _getSubDAOSocials() internal view returns (string storage subDAOSocials) {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     subDAOSocials = sds.info;
+  }
+
+  function _getSubDAOAddressesProvider() internal view returns (address addressesProvider) {
+    IDAO.DAOStorage storage ds = daoStorage();
+    addressesProvider = ds.addressesProvider;
   }
 
   function _getMainDAO() internal view returns (address) {

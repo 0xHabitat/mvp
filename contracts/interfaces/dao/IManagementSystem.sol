@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 interface IManagementSystem {
   enum VotingSystem {
     None,
+    OnlyOwner,
     VotingPowerManagerERC20, //stake contract
     Signers // Gnosis
     // ERC20PureVoting // Compound

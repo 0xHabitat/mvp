@@ -9,8 +9,16 @@ interface IDAO {
     string purpose;
     string info;
     string socials;
+    address addressesProvider;
     bytes32 managementSystemPosition;
     address[] createdSubDAOs;
+  }
+
+  struct DAOMeta {
+    string daoName;
+    string purpose;
+    string info;
+    string socials;
   }
 
   function getDAOName() external view returns (string memory);
@@ -20,6 +28,8 @@ interface IDAO {
   function getDAOInfo() external view returns (string memory);
 
   function getDAOSocials() external view returns (string memory);
+
+  function getDAOAddressesProvider() external view returns (address);
 
   function hasSubDAOs() external view returns (bool);
 
@@ -36,8 +46,6 @@ interface IDAO {
   function getSubDAOCreationVotingSystem() external view returns (IManagementSystem.VotingSystem);
 
   function getVotingPowerManager() external view returns (address);
-
-  function getGovernanceERC20Token() external view returns (address);
 
   function getGovernanceSigners() external view returns (address[] memory);
 

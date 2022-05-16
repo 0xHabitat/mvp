@@ -42,6 +42,13 @@ interface IAddressesProvider {
   event GovernanceInitUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
+   * @dev Emitted when the dao init is updated.
+   * @param oldAddress The old address of the DAOInit
+   * @param newAddress The new address of the DAOInit
+   */
+  event DAOInitUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
    * @dev Emitted when the sub dao init is updated.
    * @param oldAddress The old address of the SubDAOInit
    * @param newAddress The new address of the SubDAOInit
@@ -84,6 +91,13 @@ interface IAddressesProvider {
   event DiamondCutFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
+   * @dev Emitted when the dao viewer facet is updated.
+   * @param oldAddress The old address of the DAOViewerFacet
+   * @param newAddress The new address of the DAOViewerFacet
+   */
+  event DAOViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
    * @notice Returns an address by its identifier.
    * @dev The returned address must be a contract
    * @dev It returns ZERO if there is no registered address with the given id
@@ -117,6 +131,12 @@ interface IAddressesProvider {
    * @return The address of the GovernanceInit
    */
   function getGovernanceInit() external view returns (address);
+
+  /**
+   * @notice Returns the address of the dao init contract.
+   * @return The address of the DAOInit
+   */
+  function getDAOInit() external view returns (address);
 
   /**
    * @notice Returns the address of the sub dao init contract.
@@ -173,6 +193,12 @@ interface IAddressesProvider {
   function getVotingPowerFacet() external view returns (Facet memory);
 
   /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the DAOViewerFacet
+   */
+  function getDAOViewerFacet() external view returns (Facet memory);
+
+  /**
    * @notice Sets an address for an id replacing the address saved in the addresses map.
    * @dev IMPORTANT Use this function carefully, as it will do a hard replacement
    * @param id The id
@@ -197,6 +223,12 @@ interface IAddressesProvider {
    * @param newGovernanceInit The address of the new GovernanceInit
    */
   function setGovernanceInit(address newGovernanceInit) external;
+
+  /**
+   * @notice Updates the address of the dao init.
+   * @param newSubDAOInit The address of the new DAOInit
+   */
+  function setDAOInit(address newDAOInit) external;
 
   /**
    * @notice Updates the address of the sub dao init.
@@ -239,4 +271,10 @@ interface IAddressesProvider {
    * @param newVotingPowerFacet The address of the new VotingPowerFacet
    */
   function setVotingPowerFacet(address newVotingPowerFacet, bytes4[] memory selectors) external;
+
+  /**
+   * @notice Updates the address of the DAO viewer facet.
+   * @param newDAOViewerFacet The address of the new DAOViewerFacet
+   */
+  function setDAOViewerFacet(address newDAOViewerFacet, bytes4[] memory selectors) external;
 }

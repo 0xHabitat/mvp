@@ -45,6 +45,11 @@ struct DAOStorage {
     daoSocials = ds.socials;
   }
 
+  function _getDAOAddressesProvider() internal view returns (address addressesProvider) {
+    IDAO.DAOStorage storage ds = daoStorage();
+    addressesProvider = ds.addressesProvider;
+  }
+
   function _hasSubDAOs() internal view returns (bool) {
     IDAO.DAOStorage storage ds = daoStorage();
     return ds.createdSubDAOs.length > 0;
