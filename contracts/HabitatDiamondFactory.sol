@@ -46,7 +46,6 @@ contract HabitatDiamondFactory {
     address addressesProvider,
     IDAO.DAOMeta memory daoMetaData,
     IManagementSystem.VotingSystems memory _vs,
-    IManagementSystem.Signers memory _s,
     bytes memory habitatDiamondConstructorArgs,
     ETHPair ethPair
   ) external payable returns(address habitatDiamond) {
