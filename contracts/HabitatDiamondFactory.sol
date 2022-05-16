@@ -18,6 +18,9 @@ import {IUniswapV2Pair} from "./interfaces/token/IUniswapV2Pair.sol";
 import {IWETH} from "./interfaces/token/IWETH.sol";
 import {IERC20} from "./libraries/openzeppelin/IERC20.sol";
 
+struct Token {
+  string tokenName;
+}
 
 enum ETHPair {
   None,
@@ -25,22 +28,37 @@ enum ETHPair {
   Sushi,
   UniPlusSushi
 }
+/*
+struct VPMTokens {
+  VPMToken nativeGovernanceToken;
+  VPMToken uniDerivative;
+  VPMToken sushiDerivative;
+}
 
+struct VPMToken {
+  uint coefficient;
+  //uint price
+}
+*/
 contract HabitatDiamondFactory {
 
   function deployHabitatDiamond(
     address addressesProvider,
+    IDAO.DAOMeta memory daoMetaData,
     IManagementSystem.VotingSystems memory _vs,
     bytes memory habitatDiamondConstructorArgs,
     ETHPair ethPair
   ) external payable returns(address habitatDiamond) {
-    // deploy HabitatDiamond with all set up from params
+    // deploy HabitatDiamond
     // first param contractOwner - setting Factory as contractOwner and at the end of call move ownership to msg.sender -> later need to adjust replacing ownership logic to voting logic (a.k.a. Diamond is owner of itself)
-    //bytes memory habitatDiamondConstructorArgs = abi.encode(address(this), addressesProvider,ethPair,);
+    bytes memory habitatDiamondConstructorArgs = abi.encode(address(this), addressesProvider, daoMetaData);
     bytes memory bytecode = bytes.concat(type(HabitatDiamond).creationCode, habitatDiamondConstructorArgs);
     assembly {
       habitatDiamond := create(0, add(bytecode, 32), mload(bytecode))
     }
+    // second deploy HBT token
+
+
     // deploy ETHPair
     address uniV2Pair;
     uint uniV2coefficient;

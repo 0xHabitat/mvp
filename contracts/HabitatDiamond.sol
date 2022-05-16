@@ -9,55 +9,19 @@ pragma solidity ^0.8.9;
 /******************************************************************************/
 
 import {LibDiamond} from "./libraries/LibDiamond.sol";
-import {LibDAOStorage} from "./libraries/dao/LibDAOStorage.sol";
-import {IDAO} from "./interfaces/dao/IDAO.sol";
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
 import {IAddressesProvider} from "./interfaces/IAddressesProvider.sol";
-import {IManagementSystem} from "./interfaces/dao/IManagementSystem.sol";
-import {IUniswapV2Factory} from "./interfaces/token/IUniswapV2Factory.sol";
-import {IUniswapV2Pair} from "./interfaces/token/IUniswapV2Pair.sol";
-import {IWETH} from "./interfaces/token/IWETH.sol";
-import {IERC20} from "./libraries/openzeppelin/IERC20.sol";
-
-enum ETHPair {
-  None,
-  UniV2,
-  Sushi,
-  UniPlusSushi
-}
-
-struct VPMToken {
-  uint coefficient;
-  //uint price
-}
-
-struct Token {
-  string tokenName;
-}
-
-struct VPMTokens {
-  VPMToken nativeGovernanceToken;
-  VPMToken uniDerivative;
-  VPMToken sushiDerivative;
-}
-
-struct DAOMeta {
-  string daoName;
-  string purpose;
-  string info;
-  string socials;
-}
+import {IDAO} from "./interfaces/dao/IDAO.sol";
 
 contract HabitatDiamond {
   constructor(
-    address _contractOwner,//???
+    address _contractOwner,
     address addressesProvider,
-    DAOMeta memory daoMetaData,
-    IManagementSystem.VotingSystems memory _vs
+    IDAO.DAOMeta memory daoMetaData
   ) payable {
 
-    LibDiamond.setContractOwner(_contractOwner); //???
-    //???
+    LibDiamond.setContractOwner(_contractOwner); // another branch: work on diamondCut and replace owner with diamondGovernance
+
     // Add the diamondCut external function from the diamondCutFacet
     IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
     IAddressesProvider.Facet memory diamondCutFacet = IAddressesProvider(addressesProvider).getDiamondCutFacet();
@@ -67,15 +31,25 @@ contract HabitatDiamond {
       functionSelectors: diamondCutFacet.functionSelectors
     });
     LibDiamond.diamondCut(cut, address(0), "");
-    //???
-    // DAO first
-    IDAO.DAOStorage storage daoStruct = LibDAOStorage.daoStorage();
-    daoStruct.daoName = daoMetaData.daoName;
-    daoStruct.purpose = daoMetaData.purpose;
-    daoStruct.info = daoMetaData.info;
-    daoStruct.socials = daoMetaData.socials;
-    daoStruct.managementSystemPosition = keccak256(bytes.concat(bytes(daoMetaData.daoName), bytes(daoMetaData.purpose), bytes(daoMetaData.info), bytes(daoMetaData.socials)));
 
+    // DAO first
+    IDiamondCut.FacetCut[] memory cutDAO = new IDiamondCut.FacetCut[](1); // when have more dao related facets than extend an array
+    address daoInit = IAddressesProvider(addressesProvider).getDAOInit();
+    IAddressesProvider.Facet memory daoViewerFacet = IAddressesProvider(addressesProvider).getDAOViewerFacet();
+    cutDAO[0] = IDiamondCut.FacetCut({
+      facetAddress: daoViewerFacet.facetAddress,
+      action: IDiamondCut.FacetCutAction.Add,
+      functionSelectors: daoViewerFacet.functionSelectors
+    });
+    bytes memory daoInitCalldata = abi.encodeWithSignature(
+      'initDAO(string,string,string,string,address)',
+      daoMetaData.daoName,
+      daoMetaData.purpose,
+      daoMetaData.info,
+      daoMetaData.socials,
+      addressesProvider
+    );
+    LibDiamond.diamondCut(cutDAO, daoInit, daoInitCalldata);
   }
 
   // Find facet for function that is called and execute the

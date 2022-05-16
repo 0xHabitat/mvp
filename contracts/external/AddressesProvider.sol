@@ -10,6 +10,7 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   bytes32 private constant VOTING_POWER_INIT = 'VOTING_POWER_INIT';
   bytes32 private constant TREASUTY_INIT = 'TREASUTY_INIT';
   bytes32 private constant GOVERNANCE_INIT = 'GOVERNANCE_INIT';
+  bytes32 private constant DAO_INIT = 'DAO_INIT';
   bytes32 private constant SUBDAO_INIT = 'SUBDAO_INIT';
   // governance tokens
   bytes32 private constant WETH = 'WETH';
@@ -19,6 +20,7 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   // later add facets
   bytes32 private constant DIAMOND_CUT_FACET = 'DIAMOND_CUT_FACET';
   bytes32 private constant VOTING_POWER_FACET = 'VOTING_POWER_FACET';
+  bytes32 private constant DAO_VIEWER_FACET = 'DAO_VIEWER_FACET';
 
 
   // Map of registered addresses (identifier => registeredAddress)
@@ -56,6 +58,11 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
+  function getDAOInit() external view override returns(address) {
+    return getAddress(DAO_INIT);
+  }
+
+  /// @inheritdoc IAddressesProvider
   function getSubDAOInit() external view override returns(address) {
     return getAddress(SUBDAO_INIT);
   }
@@ -83,6 +90,20 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   /// @inheritdoc IAddressesProvider
   function getDiamondCutFacetAddress() external view override returns(address) {
     return getAddress(DIAMOND_CUT_FACET);
+  }
+
+  // add to i
+  function getDAOViewerFacetAddress() external view returns(address) {
+    return getAddress(DAO_VIEWER_FACET);
+  }
+
+  /// @inheritdoc IAddressesProvider
+  function getDAOViewerFacet() external view override returns(Facet memory) {
+    address daoViewerFacet = getAddress(DAO_VIEWER_FACET);
+    return Facet({
+      facetAddress: daoViewerFacet,
+      functionSelectors: getSelectors(daoViewerFacet)
+    });
   }
 
   /// @inheritdoc IAddressesProvider
@@ -141,6 +162,14 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
+  function setDAOInit(address newDAOInit) external override {
+    require(msg.sender == owner, "Only owner can call.");
+    address oldDAOInit = _addresses[DAO_INIT];
+    _addresses[DAO_INIT] = newDAOInit;
+    emit DAOInitUpdated(oldDAOInit, newDAOInit);
+  }
+
+  /// @inheritdoc IAddressesProvider
   function setSubDAOInit(address newSubDAOInit) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldSubDAOInit = _addresses[SUBDAO_INIT];
@@ -196,6 +225,15 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     _addresses[VOTING_POWER_FACET] = newVotingPowerFacet;
     _selectors[newVotingPowerFacet] = selectors;
     emit DiamondCutFacetUpdated(oldVotingPowerFacet, newVotingPowerFacet);
+  }
+
+  /// @inheritdoc IAddressesProvider
+  function setDAOViewerFacet(address newDAOViewerFacet, bytes4[] memory selectors) external override {
+    require(msg.sender == owner, "Only owner can call.");
+    address oldDAOViewerFacet = _addresses[DAO_VIEWER_FACET];
+    _addresses[DAO_VIEWER_FACET] = newDAOViewerFacet;
+    _selectors[newDAOViewerFacet] = selectors;
+    emit DAOViewerFacetUpdated(oldDAOViewerFacet, newDAOViewerFacet);
   }
 
   function setNewOwner(address newOwner) external {
