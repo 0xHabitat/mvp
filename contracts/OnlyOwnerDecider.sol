@@ -21,11 +21,12 @@ contract OnlyOwnerDecider is IDecisionSystem {
    * @dev Setup function sets initial storage of contract.
    * @param _data abstract blob of data.
    */
-  function setup(bytes calldata _data) external{
-    address addr;
-    assembly {
-      calldatacopy(addr,_data.offset,20)
-    } 
+  function setup(bytes calldata _data) external {
+    address addr = abi.decode(_data, (address[]))[0];
+    // address addr;
+    // assembly {
+    //   calldatacopy(addr,_data.offset,20)
+    // } 
     require (addr != address(0x0), 'error');
     owner = addr;
   }
@@ -35,8 +36,8 @@ contract OnlyOwnerDecider is IDecisionSystem {
    * this returns true if setup was successful. the return data can encode 
    * stuff like voting delay, voting period and quorum
    */
-  function isSetupComplete()  external view returns (bool, bytes memory){
-    return ((owner != address(0x0)), "");
+  function isSetupComplete()  external view returns (bool){
+    return (owner != address(0x0));
   }
 
   /**
@@ -57,13 +58,13 @@ contract OnlyOwnerDecider is IDecisionSystem {
   /**
    * @dev Mapping to keep track of all vote hashes that have been approved by ALL REQUIRED voters
    */    
-  function getFinalizedVote(bytes32) external view returns (bytes32) {
+  function getFinalizedDecision(bytes32) external view returns (bytes memory) {
     revert("not implemented");
   }
   /**
    * @dev Mapping to keep track of all hashes (message or transaction) that have been approved by ANY voters
    */ 
-  function getApprovedVotes(address, bytes32, uint256 blockNumber) external view returns (bytes32) {
+  function getApprovedDecision(address, bytes32, uint256 blockNumber) external view returns (bytes32) {
     revert("not implemented");
   }
 
@@ -192,10 +193,10 @@ contract OnlyOwnerDecider is IDecisionSystem {
 
 
   /**
-   * @dev Marks a vote as approved. This can be used to validate a hash that is used by a signature.
+   * @dev Marks a decision as approved. This can be used to validate a hash that is used by a signature.
    * @param hashToApprove The hash that should be marked as approved for signatures that are verified by this contract.
    */
-  function approveVote(bytes32 hashToApprove) external {
+  function approveDecision(bytes32 hashToApprove) external {
     require(owner == msg.sender, "GS030");
     approvedHashes[msg.sender][hashToApprove] = 1;
     emit ApproveHash(hashToApprove, msg.sender);

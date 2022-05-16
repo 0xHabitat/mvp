@@ -21,11 +21,20 @@ export const compatFallbackHandlerContract = async () => {
     return await hre.ethers.getContractFactory("CompatibilityFallbackHandler");
 }
 
-export const getSafeSingleton = async () => {
+export const getHabitatSingleton = async () => {
     await deployments.fixture('ManagementSystem');
-    const SafeDeployment = await ethers.getContract('ManagementSystem');
-    const Safe = await hre.ethers.getContractFactory(safeContractUnderTest());
-    return Safe.attach(SafeDeployment.address);
+    const HabitatDeployment = await ethers.getContract('ManagementSystem');
+    const Habitat = await hre.ethers.getContractFactory(safeContractUnderTest());
+    return Habitat.attach(HabitatDeployment.address);
+}
+
+export const getOwnerDecider = async (owners: string[]) => {
+    await deployments.fixture('OnlyOwnerDecider');
+    const DeciderDeployment = await ethers.getContract('OnlyOwnerDecider');
+    const Decider = await hre.ethers.getContractFactory("OnlyOwnerDecider");
+    let abiCoder = ethers.utils.defaultAbiCoder;
+    await DeciderDeployment.setup(abiCoder.encode([ "address[]" ], [ owners ]));
+    return Decider.attach(DeciderDeployment.address);
 }
 
 export const getFactory = async () => {
@@ -68,20 +77,21 @@ export const getMock = async () => {
     return await Mock.deploy();
 }
 
-export const getSafeTemplate = async () => {
-    const singleton = await getSafeSingleton()
-    const factory = await getFactory()
-    const template = await factory.callStatic.createProxy(singleton.address, "0x")
-    await factory.createProxy(singleton.address, "0x").then((tx: any) => tx.wait())
-    const Safe = await hre.ethers.getContractFactory(safeContractUnderTest());
-    return Safe.attach(template);
+export const getHabitatTemplate = async () => {
+    const singleton = await getHabitatSingleton();
+    const factory = await getFactory();
+    const template = await factory.callStatic.createProxy(singleton.address, "0x");
+    await factory.createProxy(singleton.address, "0x").then((tx: any) => tx.wait());
+    const Habitat = await hre.ethers.getContractFactory(safeContractUnderTest());
+    return Habitat.attach(template);
 }
 
-export const getSafeWithOwners = async (owners: string[], threshold?: number, fallbackHandler?: string, logGasUsage?: boolean) => {
-    const template = await getSafeTemplate()
+export const getHabitatWithOwners = async (owners: string[], threshold?: number, fallbackHandler?: string, logGasUsage?: boolean) => {
+    const template = await getHabitatTemplate();
+    const decider = await getOwnerDecider(owners);
     await logGas(
-        `Setup Safe with ${owners.length} owner(s)${fallbackHandler && fallbackHandler !== AddressZero ? " and fallback handler" : ""}`, 
-        template.setup(owners, threshold || owners.length),
+        `Setup Habitat with ${owners.length} owner(s)${fallbackHandler && fallbackHandler !== AddressZero ? " and fallback handler" : ""}`, 
+        template.setup(decider.address),
         !logGasUsage
     )
     return template

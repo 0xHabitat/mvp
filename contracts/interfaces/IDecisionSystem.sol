@@ -3,16 +3,32 @@ pragma solidity ^0.8.9;
 
 /**
  * @title Decision System - an abstract interface that can haldle onlyOwner, multisig,
- *   erc20, and potentially other voting processes.
- * The interface supports votes that can be either completely offline, follwing this order:
+ *   erc20, and potentially other decision making processes.
+ * The interface supports decision processes that can be either completely offline, 
+ * follwing this order:
  *  - next operation-nonce is read of the Management system
- *  - 
+ *  - a decision is created including execution data + nonce and hashed
+ *  - signatures are collected offchain or through approveVote() function
+ *  - checkNSignatures() is invoked through
  * or partially online, following this order:
  *  - 
  * @author Johba - <extraterrestrialintelligence@gmail.com>
  */
 
 interface IDecisionSystem {
+
+
+  enum DecisionType {
+    None,
+    OnlyOwner,
+    VotingPowerManagerERC20, //stake contract
+    Signers // Gnosis
+    // ERC20PureVoting // Compound
+    // ElectedSignersByVPManager
+    // VotingPowerManagerERC721
+    // VotingPowerManagerERC1155
+    // BountyCreation - gardener, worker, reviewer - 3 signers
+  }
 
   /**
    * @dev Setup function sets initial storage of contract.
@@ -25,7 +41,7 @@ interface IDecisionSystem {
    * this returns true if setup was successful. the return data can encode 
    * stuff like voting delay, voting period and quorum
    */
-  function isSetupComplete()  external view returns (bool, bytes memory);
+  function isSetupComplete()  external view returns (bool);
 
   /**
    * @dev Emitted when a decision is created.
@@ -44,14 +60,14 @@ interface IDecisionSystem {
 
 
   /**
-   * @dev Emitted when a proposal is canceled.
+   * @dev Emitted when a decision is canceled.
    */
-  event ProposalCanceled(bytes32 proposalHash);
+  event DecisionCanceled(bytes32 proposalHash);
 
   /**
-   * @dev Emitted when a proposal is executed.
+   * @dev Emitted when a decision is executed.
    */
-  event ProposalExecuted(bytes32 proposalHash);
+  event DecisionExecuted(bytes32 proposalHash);
 
   /**
    * @dev Emitted when a vote is cast.
@@ -75,12 +91,12 @@ interface IDecisionSystem {
   /**
    * @dev Mapping to keep track of all vote hashes that have been approved by ALL REQUIRED voters
    */    
-  function getFinalizedVote(bytes32) external view returns (bytes32);
+  function getFinalizedDecision(bytes32) external view returns (bytes memory);
 
   /**
    * @dev Mapping to keep track of all hashes (message or transaction) that have been approved by ANY voters
    */ 
-  function getApprovedVotes(address, bytes32, uint256 blockNumber) external view returns (bytes32);
+  function getApprovedDecision(address, bytes32, uint256 blockNumber) external view returns (bytes32);
 
   /**
    * @dev Checks whether the signature provided is valid for the provided data, hash. Will revert otherwise.
@@ -109,10 +125,10 @@ interface IDecisionSystem {
   ) external view returns (bool);
 
   /**
-   * @dev Marks a vote as approved. This can be used to validate a hash that is used by a signature.
+   * @dev Marks a decision as approved. This can be used to validate a hash that is used by a signature.
    * @param hashToApprove The hash that should be marked as approved for signatures that are verified by this contract.
    */
-  function approveVote(bytes32 hashToApprove) external;
+  function approveDecision(bytes32 hashToApprove) external;
 
 
 }

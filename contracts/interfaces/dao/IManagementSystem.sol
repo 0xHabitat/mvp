@@ -1,18 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-interface IManagementSystem {
+import {IDecisionSystem} from "../IDecisionSystem.sol";
 
-  enum VotingSystem {
-    None,
-    VotingPowerManagerERC20, //stake contract
-    Signers // Gnosis
-    // ERC20PureVoting // Compound
-    // ElectedSignersByVPManager
-    // VotingPowerManagerERC721
-    // VotingPowerManagerERC1155
-    // BountyCreation - gardener, worker, reviewer - 3 signers
-  }
+interface IManagementSystem {
 
   struct ManagementSystem {
     VotingSystem governanceVotingSystem;
@@ -78,10 +69,9 @@ interface IManagementSystem {
 
   /**
    * @dev Setup function sets initial storage of contract.
-   * @param _owners List of Safe owners.
-   * @param _threshold Number of required confirmations for a Safe transaction.
+   * @param _decider initialized decider contract
    */
-  function setup(address[] calldata _owners, uint256 _threshold) external;
+  function setup(IDecisionSystem _decider) external;
 
   /**
    * @dev Setup function sets initial storage of contract.
@@ -89,6 +79,8 @@ interface IManagementSystem {
    * stuff like voting delay, voting period and quorum and meta data.
    */
   function isSetupComplete() external view returns (bool, bytes memory);
+
+  function getDecider() external view returns (address);
 
   /**
    * @dev The nonce uniquely describes each task. it is increased when a task is finalized.

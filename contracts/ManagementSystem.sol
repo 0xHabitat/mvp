@@ -23,15 +23,15 @@ contract ManagementSystem is IManagementSystem {
 
   uint256 private taskNonce;
 
-  IDecisionSystem public decider;
+  DecisionType public deciderType;
 
   /**
    * @dev Setup function sets initial storage of contract.
-   * @param _owners List of Safe owners.
-   * @param _threshold Number of required confirmations for a Safe transaction.
+   * @param _decider initialized decider contract
    */
-  function setup(address[] calldata _owners, uint256 _threshold) external {
-
+  function setup(IDecisionSystem _decider) external {
+    require(_decider.isSetupComplete(), "decider not configured");
+    decider = _decider;
   }
 
 

@@ -39,7 +39,7 @@ export interface MetaTransaction {
     operation: number,
 }
 
-export interface SafeTransaction extends MetaTransaction {
+export interface HabitatTransaction extends MetaTransaction {
     txGas: string | number,
     baseGas: string | number,
     gasPrice: string | number,
@@ -48,33 +48,33 @@ export interface SafeTransaction extends MetaTransaction {
     nonce: string | number
 }
 
-export interface SafeSignature {
+export interface HabitatSignature {
     signer: string,
     data: string
 }
 
-export const calculateSafeDomainSeparator = (safe: Contract, chainId: BigNumberish): string => {
-    return utils._TypedDataEncoder.hashDomain({ verifyingContract: safe.address, chainId })
+export const calculateHabitatDomainSeparator = (habitat: Contract, chainId: BigNumberish): string => {
+    return utils._TypedDataEncoder.hashDomain({ verifyingContract: habitat.address, chainId })
 }
 
-export const preimageSafeTransactionHash = (safe: Contract, safeTx: SafeTransaction, chainId: BigNumberish): string => {
-    return utils._TypedDataEncoder.encode({ verifyingContract: safe.address, chainId }, EIP712_SAFE_TX_TYPE, safeTx)
+export const preimageHabitatTransactionHash = (habitat: Contract, habitatTx: HabitatTransaction, chainId: BigNumberish): string => {
+    return utils._TypedDataEncoder.encode({ verifyingContract: habitat.address, chainId }, EIP712_SAFE_TX_TYPE, habitatTx)
 }
 
-export const calculateSafeTransactionHash = (safe: Contract, safeTx: SafeTransaction, chainId: BigNumberish): string => {
-    return utils._TypedDataEncoder.hash({ verifyingContract: safe.address, chainId }, EIP712_SAFE_TX_TYPE, safeTx)
+export const calculateHabitatTransactionHash = (habitat: Contract, habitatTx: HabitatTransaction, chainId: BigNumberish): string => {
+    return utils._TypedDataEncoder.hash({ verifyingContract: habitat.address, chainId }, EIP712_SAFE_TX_TYPE, habitatTx)
 }
 
-export const calculateSafeMessageHash = (safe: Contract, message: string, chainId: BigNumberish): string => {
-    return utils._TypedDataEncoder.hash({ verifyingContract: safe.address, chainId }, EIP712_SAFE_MESSAGE_TYPE, { message })
+export const calculateSafeMessageHash = (habitat: Contract, message: string, chainId: BigNumberish): string => {
+    return utils._TypedDataEncoder.hash({ verifyingContract: habitat.address, chainId }, EIP712_SAFE_MESSAGE_TYPE, { message })
 }
 
-export const safeApproveHash = async (signer: Signer, safe: Contract, safeTx: SafeTransaction, skipOnChainApproval?: boolean): Promise<SafeSignature> => {
+export const habitatApproveHash = async (signer: Signer, habitat: Contract, habitatTx: HabitatTransaction, skipOnChainApproval?: boolean): Promise<HabitatSignature> => {
     if (!skipOnChainApproval) {
         if (!signer.provider) throw Error("Provider required for on-chain approval")
         const chainId = (await signer.provider.getNetwork()).chainId
-        const typedDataHash = utils.arrayify(calculateSafeTransactionHash(safe, safeTx, chainId))
-        const signerSafe = safe.connect(signer)
+        const typedDataHash = utils.arrayify(calculateHabitatTransactionHash(habitat, habitatTx, chainId))
+        const signerSafe = habitat.connect(signer)
         await signerSafe.approveHash(typedDataHash)
     }
     const signerAddress = await signer.getAddress()
@@ -84,17 +84,17 @@ export const safeApproveHash = async (signer: Signer, safe: Contract, safeTx: Sa
     }
 }
 
-export const safeSignTypedData = async (signer: Signer & TypedDataSigner, safe: Contract, safeTx: SafeTransaction, chainId?: BigNumberish): Promise<SafeSignature> => {
+export const habitatSignTypedData = async (signer: Signer & TypedDataSigner, habitat: Contract, habitatTx: HabitatTransaction, chainId?: BigNumberish): Promise<HabitatSignature> => {
     if (!chainId && !signer.provider) throw Error("Provider required to retrieve chainId")
     const cid = chainId || (await signer.provider!!.getNetwork()).chainId
     const signerAddress = await signer.getAddress()
     return {
         signer: signerAddress,
-        data: await signer._signTypedData({ verifyingContract: safe.address, chainId: cid }, EIP712_SAFE_TX_TYPE, safeTx)
+        data: await signer._signTypedData({ verifyingContract: habitat.address, chainId: cid }, EIP712_SAFE_TX_TYPE, habitatTx)
     }
 }
 
-export const signHash = async (signer: Signer, hash: string): Promise<SafeSignature> => {
+export const signHash = async (signer: Signer, hash: string): Promise<HabitatSignature> => {
     const typedDataHash = utils.arrayify(hash)
     const signerAddress = await signer.getAddress()
     return {
@@ -103,12 +103,12 @@ export const signHash = async (signer: Signer, hash: string): Promise<SafeSignat
     }
 }
 
-export const safeSignMessage = async (signer: Signer, safe: Contract, safeTx: SafeTransaction, chainId?: BigNumberish): Promise<SafeSignature> => {
+export const habitatSignMessage = async (signer: Signer, habitat: Contract, habitatTx: HabitatTransaction, chainId?: BigNumberish): Promise<HabitatSignature> => {
     const cid = chainId || (await signer.provider!!.getNetwork()).chainId
-    return signHash(signer, calculateSafeTransactionHash(safe, safeTx, cid))
+    return signHash(signer, calculateHabitatTransactionHash(habitat, habitatTx, cid))
 }
 
-export const buildSignatureBytes = (signatures: SafeSignature[]): string => {
+export const buildSignatureBytes = (signatures: HabitatSignature[]): string => {
     signatures.sort((left, right) => left.signer.toLowerCase().localeCompare(right.signer.toLowerCase()))
     let signatureBytes = "0x"
     for (const sig of signatures) {
@@ -125,21 +125,21 @@ export const logGas = async (message: string, tx: Promise<any>, skip?: boolean):
     })
 }
 
-export const executeTx = async (safe: Contract, safeTx: SafeTransaction, signatures: SafeSignature[], overrides?: any): Promise<any> => {
+export const executeTx = async (habitat: Contract, habitatTx: HabitatTransaction, signatures: HabitatSignature[], overrides?: any): Promise<any> => {
     const signatureBytes = buildSignatureBytes(signatures)
-    return safe.execTransaction(safeTx.to, safeTx.value, safeTx.data, safeTx.operation, safeTx.txGas, safeTx.baseGas, safeTx.gasPrice, safeTx.gasToken, safeTx.refundReceiver, signatureBytes, overrides || {})
+    return habitat.execTransaction(habitatTx.to, habitatTx.value, habitatTx.data, habitatTx.operation, habitatTx.txGas, habitatTx.baseGas, habitatTx.gasPrice, habitatTx.gasToken, habitatTx.refundReceiver, signatureBytes, overrides || {})
 }
 
-export const populateExecuteTx = async (safe: Contract, safeTx: SafeTransaction, signatures: SafeSignature[], overrides?: any): Promise<PopulatedTransaction> => {
+export const populateExecuteTx = async (habitat: Contract, habitatTx: HabitatTransaction, signatures: HabitatSignature[], overrides?: any): Promise<PopulatedTransaction> => {
     const signatureBytes = buildSignatureBytes(signatures)
-    return safe.populateTransaction.execTransaction(
-        safeTx.to, safeTx.value, safeTx.data, safeTx.operation, safeTx.txGas, safeTx.baseGas, safeTx.gasPrice, safeTx.gasToken, safeTx.refundReceiver,
+    return habitat.populateTransaction.execTransaction(
+        habitatTx.to, habitatTx.value, habitatTx.data, habitatTx.operation, habitatTx.txGas, habitatTx.baseGas, habitatTx.gasPrice, habitatTx.gasToken, habitatTx.refundReceiver,
         signatureBytes,
         overrides || {}
     )
 }
 
-export const buildContractCall = (contract: Contract, method: string, params: any[], nonce: number, delegateCall?: boolean, overrides?: Partial<SafeTransaction>): SafeTransaction => {
+export const buildContractCall = (contract: Contract, method: string, params: any[], nonce: number, delegateCall?: boolean, overrides?: Partial<HabitatTransaction>): HabitatTransaction => {
     const data = contract.interface.encodeFunctionData(method, params)
     return buildHabitatTask(Object.assign({
         to: contract.address,
@@ -149,20 +149,20 @@ export const buildContractCall = (contract: Contract, method: string, params: an
     }, overrides))
 }
 
-export const executeTxWithSigners = async (safe: Contract, tx: SafeTransaction, signers: Wallet[], overrides?: any) => {
-    const sigs = await Promise.all(signers.map((signer) => safeSignTypedData(signer, safe, tx)))
-    return executeTx(safe, tx, sigs, overrides)
+export const executeTxWithSigners = async (habitat: Contract, tx: HabitatTransaction, signers: Wallet[], overrides?: any) => {
+    const sigs = await Promise.all(signers.map((signer) => habitatSignTypedData(signer, habitat, tx)))
+    return executeTx(habitat, tx, sigs, overrides)
 }
 
-export const executeContractCallWithSigners = async (safe: Contract, contract: Contract, method: string, params: any[], signers: Wallet[], delegateCall?: boolean, overrides?: Partial<SafeTransaction>) => {
-    const tx = buildContractCall(contract, method, params, await safe.nonce(), delegateCall, overrides)
-    return executeTxWithSigners(safe, tx, signers)
+export const executeContractCallWithSigners = async (habitat: Contract, contract: Contract, method: string, params: any[], signers: Wallet[], delegateCall?: boolean, overrides?: Partial<HabitatTransaction>) => {
+    const tx = buildContractCall(contract, method, params, await habitat.nonce(), delegateCall, overrides)
+    return executeTxWithSigners(habitat, tx, signers)
 }
 
 export const buildHabitatTask = (template: {
     to: string, value?: BigNumber | number | string, data?: string, operation?: number, txGas?: number | string,
     baseGas?: number | string, gasPrice?: number | string, gasToken?: string, refundReceiver?: string, nonce: number
-}): SafeTransaction => {
+}): HabitatTransaction => {
     return {
         to: template.to,
         value: template.value || 0,
