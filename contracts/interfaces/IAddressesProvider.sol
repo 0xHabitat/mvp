@@ -226,7 +226,7 @@ interface IAddressesProvider {
 
   /**
    * @notice Updates the address of the dao init.
-   * @param newSubDAOInit The address of the new DAOInit
+   * @param newDAOInit The address of the new DAOInit
    */
   function setDAOInit(address newDAOInit) external;
 

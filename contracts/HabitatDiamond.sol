@@ -33,7 +33,7 @@ contract HabitatDiamond {
     LibDiamond.diamondCut(cut, address(0), "");
 
     // DAO first
-    IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1); // when have more dao related facets than extend an array
+    IDiamondCut.FacetCut[] memory cutDAO = new IDiamondCut.FacetCut[](1); // when have more dao related facets than extend an array
     address daoInit = IAddressesProvider(addressesProvider).getDAOInit();
     IAddressesProvider.Facet memory daoViewerFacet = IAddressesProvider(addressesProvider).getDAOViewerFacet();
     cutDAO[0] = IDiamondCut.FacetCut({

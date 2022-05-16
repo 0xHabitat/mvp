@@ -48,7 +48,7 @@ struct SubDAOStorage {
   }
 
   function _getSubDAOAddressesProvider() internal view returns (address addressesProvider) {
-    IDAO.DAOStorage storage ds = daoStorage();
+    ISubDAO.SubDAOStorage storage ds = subDAOStorage();
     addressesProvider = ds.addressesProvider;
   }
 

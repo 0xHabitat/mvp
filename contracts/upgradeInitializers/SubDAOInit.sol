@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {LibSubDAO} from "../libraries/dao/LibSubDAO.sol";
-import {ISubDAO} from "./interfaces/dao/ISubDAO.sol";
+import {ISubDAO} from "../interfaces/dao/ISubDAO.sol";
 
 contract SubDAOInit {
   // default type

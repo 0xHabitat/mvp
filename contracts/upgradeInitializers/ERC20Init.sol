@@ -5,7 +5,7 @@ import { ERC20MetadataStorage } from "@solidstate/contracts/token/ERC20/metadata
 import { ERC20BaseInternal } from "@solidstate/contracts/token/ERC20/base/ERC20BaseInternal.sol";
 import { ERC20BaseStorage } from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
 
-contract ERC20Init {
+contract ERC20Init is ERC20BaseInternal {
   using ERC20MetadataStorage for ERC20MetadataStorage.Layout;
 
   function initERC20(
@@ -18,7 +18,7 @@ contract ERC20Init {
     tokenMetadata.setName(tokenName);
     tokenMetadata.setSymbol(tokenSymbol);
     tokenMetadata.setDecimals(decimals);
-    _mint(totalSupply, msg.sender);
+    _mint(msg.sender, totalSupply);
 
   }
 }

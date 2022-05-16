@@ -92,8 +92,8 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     return getAddress(DIAMOND_CUT_FACET);
   }
 
-  /// @inheritdoc IAddressesProvider
-  function getDAOViewerFacetAddress() external view override returns(address) {
+  // add to i
+  function getDAOViewerFacetAddress() external view returns(address) {
     return getAddress(DAO_VIEWER_FACET);
   }
 
@@ -232,7 +232,7 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     require(msg.sender == owner, "Only owner can call.");
     address oldDAOViewerFacet = _addresses[DAO_VIEWER_FACET];
     _addresses[DAO_VIEWER_FACET] = newDAOViewerFacet;
-    _selectors[newVotingPowerFacet] = selectors;
+    _selectors[newDAOViewerFacet] = selectors;
     emit DAOViewerFacetUpdated(oldDAOViewerFacet, newDAOViewerFacet);
   }
 

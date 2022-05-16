@@ -21,14 +21,14 @@ import {IERC20} from "./libraries/openzeppelin/IERC20.sol";
 struct Token {
   string tokenName;
 }
-/*
+
 enum ETHPair {
   None,
   UniV2,
   Sushi,
   UniPlusSushi
 }
-
+/*
 struct VPMTokens {
   VPMToken nativeGovernanceToken;
   VPMToken uniDerivative;
