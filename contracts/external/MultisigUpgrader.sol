@@ -4,14 +4,12 @@ pragma solidity ^0.8.0;
 
 import { ECDSA } from '@solidstate/contracts/cryptography/ECDSA.sol';
 import { EnumerableSet } from '@solidstate/contracts/utils/EnumerableSet.sol';
-import { IMultisigWallet } from "contracts/interfaces/IMultisigWallet.sol";
+import { IMultisigUpgrader } from "contracts/interfaces/IMultisigUpgrader.sol";
 import { RepositoryStorage } from "contracts/storage/RepositoryStorage.sol";
 import { GovernanceStorage } from "contracts/storage/GovernanceStorage.sol";
 import { AddressUtils } from "@solidstate/contracts/utils/AddressUtils.sol";
 
-import 'hardhat/console.sol';
-
-contract MultisigWallet is IMultisigWallet {
+contract MultisigUpgrader is IMultisigUpgrader {
     using AddressUtils for address;
     using ECDSA for bytes32;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -35,23 +33,27 @@ contract MultisigWallet is IMultisigWallet {
     EnumerableSet.AddressSet signers;
     mapping(address => mapping(uint256 => bool)) nonces;
 
+
     function initialize(address _diamond, address[] memory _signers, uint256 _quorum) external {
         require(diamond == address(0) && _diamond != address(0), "Multisig: already initialized.");
         for (uint i; i < _signers.length; i++) {
-            require(signers.length() < 256, 'ECDSAMultisigWallet: signer limit reached');
-            require(signers.add(_signers[i]), 'ECDSAMultisigWallet: failed to add signer');
+            require(signers.length() < 256, 'MultisigUpgrader: signer limit reached');
+            require(signers.add(_signers[i]), 'MultisigUpgrader: failed to add signer');
         }
-        require(_quorum <= signers.length(), 'ECDSAMultisigWallet: insufficient signers to meet quorum');
+        require(_quorum <= signers.length(), 'MultisigWallet: insufficient signers to meet quorum');
         quorum = _quorum;
         diamond = _diamond;
     }
 
+    /**
+     * @inheritdoc IMultisigUpgrader
+     */
     function execute(uint256 _proposalId) external { // this wallet can make 1 upgrade
         GovernanceStorage.Proposal storage p = GovernanceStorage.layout().proposals[_proposalId];
         address team = p.proposalContract;
-        require(address(this) == MultisigWallet(payable(team)).diamond(), 
+        require(address(this) == MultisigUpgrader(payable(team)).diamond(), 
         "Multisig: sender should be Diamond");
-        RepositoryStorage.layout().availableUpgrades[team] += 1;
+        RepositoryStorage.layout().upgradeCredits[team] += 1;
     }
 
     function _isInvalidNonce(
@@ -129,7 +131,7 @@ contract MultisigWallet is IMultisigWallet {
         if (parameters.delegate) {
             require(
                 parameters.value == msg.value,
-                'ECDSAMultisigWallet: delegatecall value must match signed amount'
+                'MultisigUpgrader: delegatecall value must match signed amount'
             );
             (success, returndata) = parameters.target.delegatecall(
                 parameters.data
@@ -163,7 +165,7 @@ contract MultisigWallet is IMultisigWallet {
 
         require(
             signatures.length >= quorum,
-            'ECDSAMultisigWallet: quorum not reached'
+            'MultisigUpgrader: quorum not reached'
         );
 
         uint256 signerBitmap;
@@ -180,12 +182,12 @@ contract MultisigWallet is IMultisigWallet {
 
                 require(
                     index < 256,
-                    'ECDSAMultisigWallet: recovered signer not authorized'
+                    'MultisigUpgrader: recovered signer not authorized'
                 );
 
                 require(
                     !_isInvalidNonce(signer, signature.nonce),
-                    'ECDSAMultisigWallet: invalid nonce'
+                    'MultisigUpgrader: invalid nonce'
                 );
 
                 _setInvalidNonce(signer, signature.nonce);
@@ -194,7 +196,7 @@ contract MultisigWallet is IMultisigWallet {
 
                 require(
                     signerBitmap & shift == 0,
-                    'ECDSAMultisigWallet: signer cannot sign more than once'
+                    'MultisigUpgrader: signer cannot sign more than once'
                 );
 
                 signerBitmap |= shift;

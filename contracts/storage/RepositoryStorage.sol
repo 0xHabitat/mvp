@@ -13,7 +13,7 @@ library RepositoryStorage {
     struct Layout {
         EnumerableSet.AddressSet _upgrades;
         //Team multisig => available upgrades
-        mapping(address => uint8) availableUpgrades;
+        mapping(address => uint8) upgradeCredits;
     }
 
     bytes32 internal constant STORAGE_SLOT =
@@ -43,12 +43,14 @@ library RepositoryStorage {
         return upgrades;
     }
 
+    /// @notice add upgrade to the Repository from a multisigUpgrader that has an upgradeCredit with this diamond
     function _addUpgrade(address upgrade) internal {
         require(upgrade.isContract(), 
         "Repository: upgrade must be contract");
         RepositoryStorage.Layout storage l = RepositoryStorage.layout();
-        require(l.availableUpgrades[msg.sender] >= 1, "RepositoryStorage: No upgrade available.");
+        // TODO double check if multisig would be msg.sender or address(this)
+        require(l.upgradeCredits[msg.sender] >= 1, "RepositoryStorage: No upgrade available.");
         l._upgrades.add(upgrade);
-        l.availableUpgrades[msg.sender] -= 1;
+        l.upgradeCredits[msg.sender] -= 1;
     }
 }

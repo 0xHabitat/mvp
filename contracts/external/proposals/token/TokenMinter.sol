@@ -6,9 +6,9 @@ import { ERC20BaseInternal } from "@solidstate/contracts/token/ERC20/base/ERC20B
 
 contract TokenMinter is ERC20BaseInternal {
 
-  /// @notice mints tokens in the context of the calling contract (diamond)
   function execute(uint _proposalId) external {
     if (_proposalId >= 0) {
+      // mint tokens in the context of the calling contract (diamond)
       _mint(address(this), 500);
     }
   }

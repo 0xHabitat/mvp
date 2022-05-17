@@ -4,6 +4,8 @@ pragma solidity ^0.8.12;
 
 library GovernanceStorage {
 
+    ///@dev in order to use the upgrade system, Governance storage must implement a proposalId w/ a proposalContract
+
     struct Voted {        
         uint96 votes;
         bool support;

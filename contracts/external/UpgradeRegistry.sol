@@ -11,22 +11,12 @@ import { IUpgradeRegistry } from "contracts/interfaces/IUpgradeRegistry.sol";
 import { RepositoryStorage } from "contracts/storage/RepositoryStorage.sol";
 import { SafeOwnable, OwnableStorage } from "@solidstate/contracts/access/SafeOwnable.sol";
 
-import 'hardhat/console.sol';
-
-contract UpgradeRegistry is MinimalProxyFactory, SafeOwnable {
+contract UpgradeRegistry is IUpgradeRegistry, MinimalProxyFactory, SafeOwnable {
   
   using DiamondBaseStorage for DiamondBaseStorage.Layout;
   using GovernanceStorage for GovernanceStorage.Layout;
   using OwnableStorage for OwnableStorage.Layout;
   using RepositoryStorage for RepositoryStorage.Layout;
-
-  event UpgradeRegistered (
-    address owner,
-    address upgrade, 
-    IDiamondCuttable.FacetCut[] facetCuts, 
-    address target, 
-    bytes data
-  );
 
   bool private registered;
 
@@ -40,6 +30,9 @@ contract UpgradeRegistry is MinimalProxyFactory, SafeOwnable {
   address public target;
   bytes public data;
 
+  /**
+    * @inheritdoc IUpgradeRegistry
+    */
   function register(
     IDiamondCuttable.FacetCut[] memory _facetCuts, 
     address _target, 
@@ -51,6 +44,9 @@ contract UpgradeRegistry is MinimalProxyFactory, SafeOwnable {
     return _upgrade;
   }
 
+  /**
+    * @inheritdoc IUpgradeRegistry
+    */
   function set(
     address _owner,
     IDiamondCuttable.FacetCut[] memory _facetCuts, 
@@ -72,6 +68,9 @@ contract UpgradeRegistry is MinimalProxyFactory, SafeOwnable {
     registered = true;
   }
 
+  /**
+    * @inheritdoc IUpgradeRegistry
+    */
   function get() 
   external view returns (IDiamondCuttable.FacetCut[] memory, address, bytes memory) {
     uint length = cuts.length;
@@ -86,6 +85,9 @@ contract UpgradeRegistry is MinimalProxyFactory, SafeOwnable {
     return(facetCuts, target, data);
   }
 
+  /**
+    * @inheritdoc IUpgradeRegistry
+    */
   function execute(uint256 _proposalId) external {
     GovernanceStorage.Proposal storage p = GovernanceStorage.layout().proposals[_proposalId];
 

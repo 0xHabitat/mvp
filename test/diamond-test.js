@@ -10,14 +10,18 @@ const {
 describe('Diamond', function () {
   let user1, user2, user3, user4, user5;
   let diamond, proxy;
+  let facetCuts;
   let cutterfacet, louperfacet, ownerfacet;
   let repofacet, tokenfacet, governancefacet;
+
+  // event parsing vars
+  let tx, delivered, evt;
 
   describe('Scenarios', function () {
 
     before(async function () {
       [user1, user2, user3, user4, user5] = await ethers.getSigners();
-      const facetCuts = await diamondFacetCut(); //test helper
+      facetCuts = await diamondFacetCut(); //test helper
 
       //deploy diamond contract
       const DiamondFactory = await ethers.getContractFactory('Diamond');
@@ -36,7 +40,7 @@ describe('Diamond', function () {
         const facets = await louperfacet.facets();
 
         // convert to facetCuts[] objects
-        let facetCuts = [];
+        facetCuts = [];
         let target;
         let selectors;
         let action = 0;
@@ -70,28 +74,12 @@ describe('Diamond', function () {
         const proxy_ownerfacet = await ethers.getContractAt('OwnershipFacet', proxy.address)
         expect(await proxy_ownerfacet.owner()).to.equal(user5.address)
       });
-
-      it('diamond-forwarder makes calls to any diamond', async function() {
-        const DiamondForwarderFactory = await ethers.getContractFactory('DiamondForwarder')
-        const diamondforwarder = await DiamondForwarderFactory.connect(user2).deploy(diamond.address);
-        await diamondforwarder.deployed()
-
-        const forwader_ownerfacet = await ethers.getContractAt('OwnershipFacet', diamondforwarder.address)
-        let calldata = forwader_ownerfacet.interface.encodeFunctionData("transferOwnership", [user3.address])
-        await expect(
-          diamondforwarder.connect(user1).callStatic.forward(diamond.address, calldata)
-        ).to.be.revertedWith('Ownable: sender must be owner')
-      });
-      
     });
 
     describe('Upgrades', function() {
       let multisig, signers, quorum;
       let upgradeRegistry;
-      let facetCuts, initgovernance;
-
-      // event parsing vars
-      let tx, delivered, event;
+      let initgovernance;
 
       //governance proposal vars
       let proposalContract, currentBlock, deadline;
@@ -154,9 +142,9 @@ describe('Diamond', function () {
         quorum = 2;
         tx = await repofacet.deployTeam(signers.map(s=>s.address), 2);
         delivered = await tx.wait(); // 0ms, as tx is already confirmed
-        event = delivered.events.find(event => event.event === 'TeamDeployed');
-        const [teamAddr] = event.args;
-        const deployedTeam = await ethers.getContractAt('MultisigWallet', teamAddr)
+        evt = delivered.events.find(evt => evt.event === 'TeamDeployed');
+        const [teamAddr] = evt.args;
+        const deployedTeam = await ethers.getContractAt('MultisigUpgrader', teamAddr)
         multisig = deployedTeam.address;
       });
 
@@ -207,8 +195,8 @@ describe('Diamond', function () {
         ];   
         tx = await upgradeRegistry.register(facetCuts, testinit.address, '0xe1c7392a');
         delivered = await tx.wait(); // 0ms, as tx is already confirmed
-        event = delivered.events.find(event => event.event === 'UpgradeRegistered');
-        ([ownerAddr, minimalProxyAddr, facetCutArray, initializerAddr, initializerFunc] = event.args)
+        evt = delivered.events.find(evt => evt.event === 'UpgradeRegistered');
+        ([ownerAddr, minimalProxyAddr, facetCutArray, initializerAddr, initializerFunc] = evt.args)
       });
 
       it('team-multisig uses upgrade-credit to add upgrade to repo', async function () {
@@ -216,7 +204,7 @@ describe('Diamond', function () {
         ({ data } = await repofacet.populateTransaction.addUpgrade(minimalProxyAddr)  );
         value = ethers.constants.Zero;
         delegate = false;
-        contract = await ethers.getContractAt('MultisigWallet', multisig);
+        contract = await ethers.getContractAt('MultisigUpgrader', multisig);
         address = multisig;
         await multisigTX(target, data, value, delegate, contract, signers, address);
       });

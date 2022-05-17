@@ -14,36 +14,16 @@ contract TestFacet2 {
     return true;
   }
 
-  function test1Func3() external pure returns (bool) {
+  function test2Func3() external pure returns (bool) {
     return true;
   }
 
-  function test1Func4() external pure returns (bool) {
+  function test2Func4() external pure returns (bool) {
     return true;
   }
 
-  function test1Func5() external pure returns (bool) {
+  function test12Func5() external pure returns (bool) {
     return true;
   }
-
-  // function test1Func6() external pure returns (bool) {
-  //   return true;
-  // }
-
-  // function test1Func7() external pure returns (bool) {
-  //   return true;
-  // }
-
-  // function test1Func8() external pure returns (bool) {
-  //   return true;
-  // }
-
-  // function test1Func9() external pure returns (bool) {
-  //   return true;
-  // }
-
-  // function test1Func10() external pure returns (bool) {
-  //   return true;
-  // }
 
 }

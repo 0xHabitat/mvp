@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import { RepositoryStorage } from "contracts/storage/RepositoryStorage.sol";
 
-import { MultisigWallet, IMultisigWallet } from "contracts/external/MultisigWallet.sol";
+import { MultisigUpgrader, IMultisigUpgrader } from "contracts/external/MultisigUpgrader.sol";
 import { MinimalProxyFactory } from "@solidstate/contracts/factory/MinimalProxyFactory.sol";
 
 import 'hardhat/console.sol';
@@ -11,13 +11,13 @@ import 'hardhat/console.sol';
 
 contract Repository is MinimalProxyFactory {
 
-    event TeamDeployed(address);
+    event TeamDeployed(address team, address diamond);
 
-    address immutable public multisig;
+    address immutable public multisigUpgraderTemplate;
     constructor(address[] memory _signers, uint256 _quorum) {
-        MultisigWallet wallet = new MultisigWallet();
-        IMultisigWallet(wallet).initialize(address(this), _signers, _quorum);
-        multisig = address(wallet);
+        MultisigUpgrader upgrader = new MultisigUpgrader();
+        IMultisigUpgrader(upgrader).initialize(address(this), _signers, _quorum);
+        multisigUpgraderTemplate = address(upgrader);
     }
 
     function hasUpgrade(address upgrade) external view returns (bool) {
@@ -35,9 +35,9 @@ contract Repository is MinimalProxyFactory {
     function deployTeam(
         address[] memory _signers, uint256 _quorum) 
     external returns (address) {
-        address team = _deployMinimalProxy(multisig);
-        IMultisigWallet(team).initialize(address(this), _signers, _quorum);
-        emit TeamDeployed(team);
+        address team = _deployMinimalProxy(multisigUpgraderTemplate);
+        IMultisigUpgrader(team).initialize(address(this), _signers, _quorum);
+        emit TeamDeployed(team, address(this));
         return team;
     }
 }

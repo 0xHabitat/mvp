@@ -3,6 +3,10 @@ pragma solidity ^0.8.0;
 import { OwnableStorage } from "@solidstate/contracts/access/OwnableStorage.sol";
 import { GovernanceStorage } from "contracts/storage/GovernanceStorage.sol"; 
 
+/** 
+* @dev TODO: change `minDuration = 0` to `minDuration = 48` before deployment. used `0` for initial testing env
+*/
+
 contract GovernanceInit {  
     using GovernanceStorage for GovernanceStorage.Layout;
     using OwnableStorage for OwnableStorage.Layout;

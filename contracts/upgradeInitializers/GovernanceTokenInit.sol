@@ -7,6 +7,10 @@ import { ERC20BaseStorage } from "@solidstate/contracts/token/ERC20/base/ERC20Ba
 import { OwnableStorage } from "@solidstate/contracts/access/OwnableStorage.sol";
 import { GovernanceStorage } from "contracts/storage/GovernanceStorage.sol"; 
 
+/** 
+* @dev TODO: change `minDuration = 0` to `minDuration = 48` before deployment. used `0` for initial testing env
+*/
+
 contract GovernanceTokenInit is ERC20BaseInternal {  
     using ERC20MetadataStorage for ERC20MetadataStorage.Layout;
     using ERC20BaseStorage for ERC20BaseStorage.Layout;  
