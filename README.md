@@ -13,7 +13,7 @@ Inspired by Nick Mudge's [governance-token-diamond](https://github.com/mudgen/go
 - Proposal execution [gives team an upgrade credit](./contracts/external/MultisigUpgrader.sol#L51-L57).
 
 - [Register an upgrade](./contracts/external/UpgradeRegistry.sol) to generate an upgrade address.
-> The UpgradeRegistry allows anyone to register a diamondCut (facetCuts[], intializerContractAddress, initializerFunction) and receive an address hosting the registered cut. Through the "UpgradeRegistered" event emissions, a library of diamondCut upgrades can be compiled for reuse.
+> The UpgradeRegistry allows anyone to register a diamondCut (facetCuts[], intializerContractAddress, initializerFunction) and receive an address hosting the registered cut. Proposing this address as an argument for the proposalContract param in Governance.sol will add the upgrade to the diamond once the proposal is passed and executed. Through the "UpgradeRegistered" event emissions, a library of diamondCut upgrades can be compiled for reuse.
  
 - [Add upgrade to repo](./contracts/facets/Repository.sol#L28)... also see the [internal logic](./contracts/storage/RepositoryStorage.sol#L45) for this.
 
