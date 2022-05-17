@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 import { AddressUtils } from "@solidstate/contracts/utils/AddressUtils.sol";
 import { EnumerableSet } from "@solidstate/contracts/utils/EnumerableSet.sol";
 
-import "hardhat/console.sol";
-
 library RepositoryStorage {
     using AddressUtils for address;
     using EnumerableSet for EnumerableSet.AddressSet;

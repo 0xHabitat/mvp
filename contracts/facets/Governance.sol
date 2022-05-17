@@ -5,8 +5,6 @@ import { ERC20BaseStorage } from "@solidstate/contracts/token/ERC20/base/ERC20Ba
 import { GovernanceStorage } from "contracts/storage/GovernanceStorage.sol"; 
 import { AddressUtils } from "@solidstate/contracts/utils/AddressUtils.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @notice contract forked from Nick Mudge's Governance-token-diamond: https://github.com/mudgen/governance-token-diamond
  */

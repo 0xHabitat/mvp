@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 import { DiamondBase, DiamondBaseStorage, IDiamondCuttable } from "@solidstate/contracts/proxy/diamond/DiamondBase.sol";
 import { OwnableStorage } from "@solidstate/contracts/access/OwnableStorage.sol";
-import { RepositoryStorage } from "contracts/storage/RepositoryStorage.sol";
 
 contract Diamond is DiamondBase {
     using DiamondBaseStorage for DiamondBaseStorage.Layout;

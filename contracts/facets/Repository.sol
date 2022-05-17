@@ -6,9 +6,6 @@ import { RepositoryStorage } from "contracts/storage/RepositoryStorage.sol";
 import { MultisigUpgrader, IMultisigUpgrader } from "contracts/external/MultisigUpgrader.sol";
 import { MinimalProxyFactory } from "@solidstate/contracts/factory/MinimalProxyFactory.sol";
 
-import 'hardhat/console.sol';
-
-
 contract Repository is MinimalProxyFactory {
 
     event TeamDeployed(address team, address diamond);
