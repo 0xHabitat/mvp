@@ -32,6 +32,7 @@ contract Repository is MinimalProxyFactory {
         RepositoryStorage._addUpgrade(upgrade);
     }
 
+    ///IDEA require token burn
     function deployTeam(
         address[] memory _signers, uint256 _quorum) 
     external returns (address) {

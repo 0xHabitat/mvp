@@ -4,13 +4,25 @@
 
 Inspired by Nick Mudge's [governance-token-diamond](https://github.com/mudgen/governance-token-diamond). See orginal README [below](#governance-token-diamond).
 
+## DiamondCutting via a Governance System
+- All diamond upgrades are done through the [execute function](./contracts/facets/Governance.sol#L75).
+- [Deploy a "team"](./contracts/facets/Repository.sol#L36), aka a [MultisigUpgrader](./contracts/external/MultisigUpgrader.sol).
+> A MultisigUpgrader is a multisig wallet whose sole purpose is to upgrade the diamond. When someone wants their MultisigUpgrader to receive rights (credits) to upgrade a specific diamond, they propose their "team" address in the diamond's Governance.sol as an argument for the 'proposalContract' param.
+
+- Proposal execution [gives team an upgrade credit](./contracts/external/MultisigUpgrader.sol#L51-L57).
+
+- [Register an upgrade](./contracts/external/UpgradeRegistry.sol) to generate an upgrade address.
+> The UpgradeRegistry allows anyone to register a diamondCut (facetCuts[], intializerContractAddress, initializerFunction) and receive an address hosting the registered cut. Through the "UpgradeRegistered" event emissions, a library of diamondCut upgrades can be compiled for reuse.
+ 
+- [Add upgrade to repo](./contracts/facets/Repository.sol#L31)... also see the [internal logic](./contracts/storage/RepositoryStorage.sol#L47)
+
+
 #### Updated Features:
 1. Uses solidity ^0.8.0.
 2. Uses [Solidstate contracts](https://github.com/solidstate-network/solidstate-solidity) for replaced Diamond(Gem.sol), ERC20Token(Token.sol), and storage syntax.
 > For context, when a proposal is passed in [Governance](./contracts/facets/Governance.sol) the executedProposal function can perform arbitrary functionality by calling the proposal's ***ProposalContract*** that contains the `execute(_proposalId)` function. 
 4. A [ProposalContract](./contracts/upgrades/proposals/TokenMinter.sol) can call back to the diamond's existing functions.
-5. The [Diamantaire contracts](./contracts/upgrades/diamantaires/Diamantaire.sol) are a set of ProposalContracts that can cut any deployed facet. Be sure to read this contract's comments to understand current limitations with this approach.
-6. Removed the `totalSupplyCap` state variable for now.
+5. Removed the `totalSupplyCap` state variable for now.
 
 ---
 # Governance Token Diamond
