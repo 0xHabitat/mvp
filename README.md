@@ -15,7 +15,7 @@ Inspired by Nick Mudge's [governance-token-diamond](https://github.com/mudgen/go
 - [Register an upgrade](./contracts/external/UpgradeRegistry.sol) to generate an upgrade address.
 > The UpgradeRegistry allows anyone to register a diamondCut (facetCuts[], intializerContractAddress, initializerFunction) and receive an address hosting the registered cut. Through the "UpgradeRegistered" event emissions, a library of diamondCut upgrades can be compiled for reuse.
  
-- [Add upgrade to repo](./contracts/facets/Repository.sol#L33)... also see the [internal logic](./contracts/storage/RepositoryStorage.sol#L45)
+- [Add upgrade to repo](./contracts/facets/Repository.sol#L28)... also see the [internal logic](./contracts/storage/RepositoryStorage.sol#L45) for this.
 
 #### Updated Features:
 1. Uses solidity ^0.8.0.
