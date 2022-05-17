@@ -16,13 +16,14 @@ Inspired by Nick Mudge's [governance-token-diamond](https://github.com/mudgen/go
  
 - [Add upgrade to repo](./contracts/facets/Repository.sol#L33)... also see the [internal logic](./contracts/storage/RepositoryStorage.sol#L45)
 
-
 #### Updated Features:
 1. Uses solidity ^0.8.0.
 2. Uses [Solidstate contracts](https://github.com/solidstate-network/solidstate-solidity) for replaced Diamond(Gem.sol), ERC20Token(Token.sol), and storage syntax.
 > For context, when a proposal is passed in [Governance](./contracts/facets/Governance.sol) the executedProposal function can perform arbitrary functionality by calling the proposal's ***ProposalContract*** that contains the `execute(_proposalId)` function. 
 4. A [ProposalContract](./contracts/upgrades/proposals/TokenMinter.sol) can call back to the diamond's existing functions.
 5. Removed the `totalSupplyCap` state variable for now.
+
+![67077FE8-7354-4457-A171-53255C466B2B](https://user-images.githubusercontent.com/62122206/168719359-c690bba9-65a7-479f-9eba-c734fd39e1bb.jpg)
 
 ---
 # Governance Token Diamond
