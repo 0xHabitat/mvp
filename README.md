@@ -5,6 +5,7 @@
 Inspired by Nick Mudge's [governance-token-diamond](https://github.com/mudgen/governance-token-diamond). See orginal README [below](#governance-token-diamond).
 
 ## DiamondCutting via a Governance System
+#### Highlights:
 - All diamond upgrades are done through the [execute function](./contracts/facets/Governance.sol#L75).
 - [Deploy a "team"](./contracts/facets/Repository.sol#L36), aka a [MultisigUpgrader](./contracts/external/MultisigUpgrader.sol).
 > A MultisigUpgrader is a multisig wallet whose sole purpose is to upgrade the diamond. When someone wants their MultisigUpgrader to receive rights (credits) to upgrade a specific diamond, they propose their "team" address in the diamond's Governance.sol as an argument for the 'proposalContract' param.
