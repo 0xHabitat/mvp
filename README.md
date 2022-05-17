@@ -16,6 +16,7 @@ Inspired by Nick Mudge's [governance-token-diamond](https://github.com/mudgen/go
  
 - [Add upgrade to repo](./contracts/facets/Repository.sol#L31)... also see the [internal logic](./contracts/storage/RepositoryStorage.sol#L47)
 
+![67077FE8-7354-4457-A171-53255C466B2B](https://user-images.githubusercontent.com/62122206/168719359-c690bba9-65a7-479f-9eba-c734fd39e1bb.jpg)
 
 #### Updated Features:
 1. Uses solidity ^0.8.0.
