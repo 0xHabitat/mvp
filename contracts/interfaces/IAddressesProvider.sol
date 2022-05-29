@@ -98,6 +98,13 @@ interface IAddressesProvider {
   event DAOViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
+   * @dev Emitted when the storage writer facet is updated.
+   * @param oldAddress The old address of the StorageWriterFacet
+   * @param newAddress The new address of the StorageWriterFacet
+   */
+  event StorageWriterFacetUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
    * @notice Returns an address by its identifier.
    * @dev The returned address must be a contract
    * @dev It returns ZERO if there is no registered address with the given id
@@ -143,6 +150,27 @@ interface IAddressesProvider {
    * @return The address of the SubDAOInit
    */
   function getSubDAOInit() external view returns (address);
+
+  // the getters below can be adjusted
+  /**
+   * @notice Returns the address of the only owner init contract.
+   * @return The address of the OnlyOwnerInit
+   */
+  function getOnlyOwnerInit() external view returns (address);
+
+  /**
+   * @notice Returns the address of the signers init contract.
+   * @return The address of the SignersInit
+   */
+  function getSignersInit() external view returns (address);
+
+  /**
+   * @notice Returns the address and function to call by HabitatDiamondFactory.
+   * @return The address and functionSelector to call by HabitatDiamondFactory.
+   */
+  function getAddressAndFunctionToCall(bytes32 nameOrType) external view returns (address,bytes4);
+
+  // the getters above can be adjusted
 
   /**
    * @notice Returns the address of the WETH contract.
@@ -193,10 +221,28 @@ interface IAddressesProvider {
   function getVotingPowerFacet() external view returns (Facet memory);
 
   /**
+   * @notice Returns the address of the dao viewer facet contract.
+   * @return The address of the DAOViewerFacet
+   */
+  function getDAOViewerFacetAddress() external view returns (address);
+
+  /**
    * @notice Returns Facet (facet address and an array of the facet selectors).
    * @return Facet struct of the DAOViewerFacet
    */
   function getDAOViewerFacet() external view returns (Facet memory);
+
+  /**
+   * @notice Returns the address of the storage writer facet contract.
+   * @return The address of the StorageWriterFacet
+   */
+  function getStorageWriterFacetAddress() external view returns (address);
+
+  /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the StorageWriterFacet
+   */
+  function getStorageWriterFacet() external view returns (Facet memory);
 
   /**
    * @notice Sets an address for an id replacing the address saved in the addresses map.
@@ -277,4 +323,10 @@ interface IAddressesProvider {
    * @param newDAOViewerFacet The address of the new DAOViewerFacet
    */
   function setDAOViewerFacet(address newDAOViewerFacet, bytes4[] memory selectors) external;
+
+  /**
+   * @notice Updates the address of the Storage Writer facet.
+   * @param newStorageWriterFacet The address of the new StorageWriterFacet
+   */
+  function setStorageWriterFacet(address newStorageWriterFacet, bytes4[] memory selectors) external;
 }

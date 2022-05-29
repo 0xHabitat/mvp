@@ -11,7 +11,7 @@ interface ISubDAO {
     string socials;
     address mainDAO;
     address addressesProvider;
-    bytes32 managementSystemPosition;
+    bytes32 managementSystemsPosition;
     address[] createdSubDAOs;
   }
 
@@ -35,8 +35,8 @@ interface ISubDAO {
 
   function isMainDAOFor(address _subDAO) external view returns (bool);
 
-  function getManagementSystem() external view returns (IManagementSystem.ManagementSystem memory);
-
+  function getManagementSystemsPosition() external view returns (bytes32);
+/*
   function getGovernanceVotingSystem() external view returns (IManagementSystem.VotingSystem);
 
   function getTreasuryVotingSystem() external view returns (IManagementSystem.VotingSystem);
@@ -58,4 +58,5 @@ interface ISubDAO {
   function isTreasurySigner(address _signer) external view returns (bool);
 
   function isSubDAOCreationSigner(address _signer) external view returns (bool);
+  */
 }

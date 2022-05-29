@@ -17,7 +17,7 @@ struct SubDAOStorage {
   address mainDAO;
   address addressesProvider;
   address[] createdSubDAOs;
-  bytes32 managementSystemPosition;
+  bytes32 managementSystemsPosition;
 }
 */
   function subDAOStorage() internal pure returns (ISubDAO.SubDAOStorage storage sds) {
@@ -83,15 +83,15 @@ struct SubDAOStorage {
     return _mainDAO == _getMainDAO();
   }
 
-  function _getManagementSystem()
+  function _getManagementSystemsPosition()
     internal
     view
-    returns (IManagementSystem.ManagementSystem storage ms)
+    returns (bytes32)
   {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
-    ms = LibManagementSystem._getManagementSystemByPosition(sds.managementSystemPosition);
+    return sds.managementSystemsPosition;
   }
-
+/*
   function _getGovernanceVotingSystem() internal view returns (IManagementSystem.VotingSystem gvs) {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     gvs = LibManagementSystem._getGovernanceVotingSystem(sds.managementSystemPosition);
@@ -145,4 +145,5 @@ struct SubDAOStorage {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     return LibManagementSystem._isSubDAOCreationSigner(sds.managementSystemPosition, _signer);
   }
+  */
 }

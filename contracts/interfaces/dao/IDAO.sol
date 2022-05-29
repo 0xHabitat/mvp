@@ -8,7 +8,7 @@ interface IDAO {
     string info;
     string socials;
     address addressesProvider;
-    bytes32 managementSystemPosition;
+    bytes32 managementSystemsPosition;
     address[] createdSubDAOs;
   }
 
@@ -35,8 +35,8 @@ interface IDAO {
 
   function isMainDAOFor(address _subDAO) external view returns (bool);
 
-  function getManagementSystems() external view returns (string memory managementSystemsDescriptor);
-
+  function getManagementSystemsPosition() external view returns (bytes32);
+/*
   function getVotingPowerManager() external view returns (address);
 
   function getGovernanceSigners() external view returns (address[] memory);
@@ -50,7 +50,7 @@ interface IDAO {
   function isTreasurySigner(address _signer) external view returns (bool);
 
   function isSubDAOCreationSigner(address _signer) external view returns (bool);
-  /*
+
     function changeManagementSystemForTreasury()
     function changeManagementSystemForGovernance()
     function changeManagementSystemForCreationSubDAOs()

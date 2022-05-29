@@ -35,10 +35,11 @@ contract DAOViewerFacet {
 
   }
 
-  function getManagementSystem() external view returns (IManagementSystem.ManagementSystem memory) {
+  function getManagementSystemsPosition() external view returns (bytes32) {
+    return LibDAOStorage._getManagementSystemsPosition();
 
   }
-
+/*
   function getGovernanceVotingSystem() external view returns (IManagementSystem.VotingSystem) {
 
   }
@@ -78,5 +79,5 @@ contract DAOViewerFacet {
   function isSubDAOCreationSigner(address _signer) external view returns (bool) {
 
   }
-
+*/
 }

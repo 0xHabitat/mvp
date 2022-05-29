@@ -21,6 +21,7 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   bytes32 private constant DIAMOND_CUT_FACET = 'DIAMOND_CUT_FACET';
   bytes32 private constant VOTING_POWER_FACET = 'VOTING_POWER_FACET';
   bytes32 private constant DAO_VIEWER_FACET = 'DAO_VIEWER_FACET';
+  bytes32 private constant STORAGE_WRITER_FACET = 'STORAGE_WRITER_FACET';
 
 
   // Map of registered addresses (identifier => registeredAddress)
@@ -92,7 +93,7 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     return getAddress(DIAMOND_CUT_FACET);
   }
 
-  // add to i
+  /// @inheritdoc IAddressesProvider
   function getDAOViewerFacetAddress() external view returns(address) {
     return getAddress(DAO_VIEWER_FACET);
   }
@@ -103,6 +104,20 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     return Facet({
       facetAddress: daoViewerFacet,
       functionSelectors: getSelectors(daoViewerFacet)
+    });
+  }
+
+  /// @inheritdoc IAddressesProvider
+  function getStorageWriterFacetAddress() external view returns(address) {
+    return getAddress(STORAGE_WRITER_FACET);
+  }
+
+  /// @inheritdoc IAddressesProvider
+  function getStorageWriterFacet() external view override returns(Facet memory) {
+    address storageWriterFacet = getAddress(STORAGE_WRITER_FACET);
+    return Facet({
+      facetAddress: storageWriterFacet,
+      functionSelectors: getSelectors(storageWriterFacet)
     });
   }
 
@@ -236,9 +251,30 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     emit DAOViewerFacetUpdated(oldDAOViewerFacet, newDAOViewerFacet);
   }
 
+  /// @inheritdoc IAddressesProvider
+  function setStorageWriterFacet(address newStorageWriterFacet, bytes4[] memory selectors) external override {
+    require(msg.sender == owner, "Only owner can call.");
+    address oldStorageWriterFacet = _addresses[STORAGE_WRITER_FACET];
+    _addresses[STORAGE_WRITER_FACET] = newStorageWriterFacet;
+    _selectors[newStorageWriterFacet] = selectors;
+    emit StorageWriterFacetUpdated(oldStorageWriterFacet, newStorageWriterFacet);
+  }
+
   function setNewOwner(address newOwner) external {
     require(msg.sender == owner, "Only owner can call.");
     owner = newOwner;
+  }
+  // functions below can be adjusted
+  function getOnlyOwnerInit() external view override returns(address) {
+    revert("not implemented");
+  }
+
+  function getSignersInit() external view override returns(address) {
+    revert("not implemented");
+  }
+
+  function getAddressAndFunctionToCall(bytes32 nameOrType) external view returns (address,bytes4) {
+    revert("not implemented");
   }
 
 }

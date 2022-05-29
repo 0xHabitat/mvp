@@ -14,7 +14,8 @@ struct DAOStorage {
   string purpose;
   string info;
   string socials;
-  bytes32 managementSystemPosition;
+  address addressesProvider;
+  bytes32 managementSystemsPosition;
   address[] createdSubDAOs;
 }
 */
@@ -71,15 +72,15 @@ struct DAOStorage {
     return false;
   }
 
-  function _getManagementSystem()
+  function _getManagementSystemsPosition()
     internal
     view
-    returns (IManagementSystem.ManagementSystem storage ms)
+    returns (bytes32)
   {
     IDAO.DAOStorage storage ds = daoStorage();
-    ms = LibManagementSystem._getManagementSystemByPosition(ds.managementSystemPosition);
+    return ds.managementSystemPosition;
   }
-
+/*
   function _getGovernanceVotingSystem() internal view returns (IManagementSystem.VotingSystem gvs) {
     IDAO.DAOStorage storage ds = daoStorage();
     gvs = LibManagementSystem._getGovernanceVotingSystem(ds.managementSystemPosition);
@@ -133,4 +134,5 @@ struct DAOStorage {
     IDAO.DAOStorage storage ds = daoStorage();
     return LibManagementSystem._isSubDAOCreationSigner(ds.managementSystemPosition, _signer);
   }
+  */
 }
