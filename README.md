@@ -1,146 +1,76 @@
-# Habitat Token Diamond
+# OnTap Git Control System ... A Diamond for Storing Upgrade Presets
 
-### 👋 Reader: we'd love to have you involved. Please consider joining the [Habitat](0xhabitat.org).
+>This is a simple WIP / concept project and there are no immediate plans other than testing, simplifying, and optimizing the contracts further. OnTap is the diamond name we will use for this example. This readme is more digestible if you have some familiarity with EIP2535 and the [Solidstate contract library](https://github.com/solidstate-network/solidstate-solidity).
 
-Inspired by Nick Mudge's [governance-token-diamond](https://github.com/mudgen/governance-token-diamond). See orginal README [below](#governance-token-diamond).
+## The Upgrade contract - storing upgrades
+This is an evolution of the 0xhabitat/mvp governance_experiments branch active June 8, 2022. It uses the same approach of upgrading the diamond by calling an external contract (a minimal proxy of the original Upgrade.sol) that is storing data in the format of a standard diamondCut `( ( address[], uint8, bytes4[] ), initializerAddress, initializerFunction )`. 
 
-## DiamondCutting via a Governance System
-#### Highlights:
-- All diamond upgrades are done through the [execute function](./contracts/facets/Governance.sol#L75).
-- [Deploy a "team"](./contracts/facets/Repository.sol#L36), aka a [MultisigUpgrader](./contracts/external/MultisigUpgrader.sol).
-> A MultisigUpgrader is a multisig wallet whose sole purpose is to upgrade the diamond. When someone wants their MultisigUpgrader to receive rights (credits) to upgrade a specific diamond, they propose their "team" address in the diamond's Governance.sol as an argument for the 'proposalContract' param.
+<img width="675" alt="Screen Shot 2022-06-08 at 12 36 18 AM" src="https://user-images.githubusercontent.com/62122206/172532551-67dda429-36da-49ea-a4ab-ce6522150bb7.png">
 
-- Proposal execution [gives team an upgrade credit](./contracts/external/MultisigUpgrader.sol#L51-L57).
 
-- [Register an upgrade](./contracts/external/UpgradeRegistry.sol) to generate an upgrade address.
-> The UpgradeRegistry allows anyone to register a diamondCut (facetCuts[], intializerContractAddress, initializerFunction) and receive an address hosting the registered cut. Proposing this address as an argument for the proposalContract param in Governance.sol will add the upgrade to the diamond once the proposal is passed and executed. Through the "UpgradeRegistered" event emissions, a library of diamondCut upgrades can be compiled for reuse.
- 
-- [Add upgrade to repo](./contracts/facets/Repository.sol#L28)... also see the [internal logic](./contracts/storage/RepositoryStorage.sol#L45) for this.
+## Storage - A basic data structure
+Moving on from the external [Upgrade.sol](./contracts/external/Upgrade.sol) storage contract; the main [Storage library contract](./contracts/storage/Storage.sol) contains a [solidstate](https://github.com/solidstate-network/solidstate-solidity) compatible storage layout with some internal functions for easy access. 
 
-#### Updated Features:
-1. Uses solidity ^0.8.0.
-2. Uses [Solidstate contracts](https://github.com/solidstate-network/solidstate-solidity) for replaced Diamond(Gem.sol), ERC20Token(Token.sol), and storage syntax.
-> For context, when a proposal is passed in [Governance](./contracts/facets/Governance.sol) the executedProposal function can perform arbitrary functionality by calling the proposal's ***ProposalContract*** that contains the `execute(_proposalId)` function. 
-4. A [ProposalContract](./contracts/upgrades/proposals/TokenMinter.sol) can call back to the diamond's existing functions.
-5. Removed the `totalSupplyCap` state variable for now.
+<img width="629" alt="Screen Shot 2022-06-08 at 12 37 52 AM" src="https://user-images.githubusercontent.com/62122206/172532754-4a8a5b1b-c5f4-4dfb-897d-6f9bb8d1ff39.png">
 
-![67077FE8-7354-4457-A171-53255C466B2B](https://user-images.githubusercontent.com/62122206/168719359-c690bba9-65a7-479f-9eba-c734fd39e1bb.jpg)
+
+## The logic
+The [logic folder](./contracts/logic/) contains the two main facets and a library for sharing code between modules...
+
+### Git contract
+[Git / IGit](./contracts/logic/Git) is the native facet of OnTap. It is the main access point for reading and writing upgrades and presets to this Diamond's storage. 
+
+**Looking at the code:** You can see that upon deployment, an address for the Upgrade.sol model is stored immutably. This address can then be used for cheaply deploying minimal proxies (storage contracts delegating calls to a single logic implementation), as seen in `function commit(...)`. 
+
+<img width="670" alt="Screen Shot 2022-06-08 at 12 47 28 AM" src="https://user-images.githubusercontent.com/62122206/172533865-1127cd98-9034-4354-ac03-9a7143a265d0.png">
+
+
+### Writable contract
+[Writable / IWritable](./contracts/logic/IWritable) is an extended DiamondCutFacet which integrates itself with Git. It is to be used by other diamonds. 
+
+**Looking at the code:** Upon deployment, it stores the Diamond immutably so that our Diamond's git system can be accessed from other diamonds if they've connected this contract as a facet. It has 2 externally available methods for upgrading a diamond...
+1. `function cutAndCommit(..)`: a standard diamondCut that also commits to the caller's repo at 'name' in the OnTap diamond.
+2. `function update(..)`: upgrades to the latest commit at the account arg's 'name'
+
+<img width="684" alt="Screen Shot 2022-06-09 at 3 10 01 PM" src="https://user-images.githubusercontent.com/62122206/172925487-5a152741-6df6-4073-aea7-e45d196548fa.png">
+
+
+### Internal Library contract
+The [Library contract](./contracts/logic/libraries/Library.sol) contains the internal functions that all upgrades can use. These internal functions can be shared among decentralized decision-making modules. For example: when [Governance.sol](./contracts/_library/ontap/governance/logic/Governance.sol) calls `executeProposal(..)`, it calls the `Library._execute(..)` internal function, sending through its 'proposalContract' (a minimal proxy of Upgrade.sol) to make the upgrade. Additionally, since a `diamondCut(..)` function can perform arbitary operations via its 2nd and 3rd params `initializerAddress, initializerFunction`, this method can also do things like mint new tokens, or add/remove/update any data in *your* diamond. 
+
+<img width="685" alt="Screen Shot 2022-06-08 at 2 42 29 PM" src="https://user-images.githubusercontent.com/62122206/172692673-ec764871-5ad1-48b3-8d29-6f0aa2b9574f.png">
+
+
+## The OnTap Diamond
+In the [main diamond](./contracts/OnTap.sol), most of the work is done in the constructor. The workflow of adding each facet can be found in the [deploy script](./scripts/deploy.js). The important bit is; Writable.sol is deployed in the constructor, because it has to store the diamond's address(this) via its *own* constructor. 
+
+<img width="666" alt="Screen Shot 2022-06-08 at 3 05 06 PM" src="https://user-images.githubusercontent.com/62122206/172696482-aaa1f519-ab70-4db3-a187-5517a34b95f3.png">
+
+## The User's Diamond
+The [user's diamond](./contracts/_library/ontap/diamond/Diamond.sol) is a lightweight, simplified solidstate diamond that accepts cuts in its constructor, so that it can use existing facets on deployment.
+
+<img width="672" alt="Screen Shot 2022-06-08 at 1 33 28 AM" src="https://user-images.githubusercontent.com/62122206/172539388-46d6e6bd-9125-42df-b29c-2601b5c7ed9c.png">
+
+
+These contracts have not been thoroughly tested yet, but when they do, the contracts may change slightly. 
+
+#### Extra notes: 
+- The [_library folder](./contracts/_library) can be largely ignored, with the exception of its [governance folder](./contracts/_library/ontap/governance). It just contains any modules that can work with the OnTap diamond.
+- The [init folder](./contracts/init) contains the upgrade initializers. These contracts can perform arbitrary operations on the diamond via the `diamondCut(..)` 2nd and 3rd params `initializerAddress, initializerFunction`.
 
 ---
-# Governance Token Diamond
-
-> Note: A diamond is a contract that uses the code of its "facet" contracts to execute functionality. Diamond implementations follow the [Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535).
-
-This is an ERC20 governance token diamond that can be used to govern a project as well as itself. 
-
-The `GovernanceTokenDiamond` contract is the governance token diamond. It routes function calls to the facets defined in the facets folder.
-
-Features:
-
-1. Implements the ERC20 standard.
-2. Accepts executable proposals.
-3. Allows people to vote on proposals using their ERC20 token balance.
-4. Token holders are rewarded for submitting good proposals and penalized for submitting bad proposals.
-5. Token holders are rewarded for voting by being minted new tokens. This is "governance mining". Safeguards exist to prevent too much inflation. 
-6. Passed proposals are executed on-chain.
-7. Passed proposals are executed using `delegatecall` to enable governance of the governance token diamond itself.
-8. Implements the Diamond Standard so that passed proposals can add/replace/remove functions.
-
-## Executable Proposals
-
-Governance token holders can make proposals to change the project it is governing or change the governance token diamond itself.
-
-A proposal is a contract that implements the `execute(uint256 _proposalId)` function. All functionality of a proposal is executed and/or triggered by this function.
-
-The `execute` function is called with `delegatecall` from the governance token diamond.
-
-> Note: The solidity `delegatecall` opcode enables a contract to execute a function from another contract, but it is executed as if the function was from the calling contract. Essentially `delegatecall` enables a contract to “borrow” another contract’s function. Functions executed with delegatecall affect the storage variables of the calling contract, not the contract where the functions are defined.
-
-Using `delegatecall` to call the `execute` function is what enables governance token holders to govern the governance token diamond.
-
-Using `delegatecall` to call `execute` allows the governance token diamond to be modified in two different ways:
-
-1. The governance token diamond has a number of state variables that are settings for various functionality. The `execute` function can change the values of state variables and therefore can change any of the settings.
-2. The `execute` function can call the `diamondCut` internal function from the Diamond Standard to add new functions to the goverance token diamond, replace existing functions and remove functions.
-
-The `execute` function can of course interact with other contracts on the network in order to cause changes and effects in order to govern a project.
-
-I got the idea of executable proposals from [DerivaDEX](https://derivadex.com) and [Compound's governance token contract](https://github.com/compound-finance/compound-protocol/blob/master/contracts/Governance/Comp.sol).
-
-I got the idea of using the Diamond Standard with an ERC20 governance token from [DerivaDEX](https://derivadex.com).
-
-## Proposals and Voting
-
-A proposal is submitted by calling the `propose(address _proposalContract, uint _endTime)` function on the diamond.
-
-`_proposalContract` is the proposal, which is a contract that has the `execute(uint256 _proposalId)` function.
-
-`_endTime` specifies what time, in seconds, the vote for `_proposalContract` ends. `_endTime` is a timestamp, the number of seconds that have elapsed since January 1, 1970.
-
-For example to specify that the voting period for a proposal is 3 days `_endTime` could be calculated like this: `block.timestamp + 60 * 60 * 24 * 3`. The `minimumVotingTime` and `maximumVotingTime` settings control the minimum and maximum voting time.
-
-In order to submit a proposal a governance token holder must own a certain amount of the governance token. This is controlled by the `proposalThresholdDivisor` setting.
-
-Token holders that submit proposals that pass a vote are rewarded by being minted new governance tokens, and are penalized by losing their entire governance token balance when their proposals lose a vote. This is "governane mining". How much the reward is, is determined by the `proposerAwardDivisor` and `voteAwardCapDivisor` settings. When a proposal loses a vote the proposer's tokens are burned.
-
-Remember that any of the settings can be changed by a proposal.
-
-The voting period for a proposal starts once a proposal is succssfully submitted using the `propose` function mentioned above.
-
-### Voting
-
-Once a proposal is submitted governance token holders can vote on it.
-
-Governance token holders call the `vote(uint _proposalId, bool _support)` function to vote. `_proposalId` is for choosing which proposal to vote on and `_support` is for voting for or against. The value `true` is voting for, and the value `false` is voting against.
-
-The weight of a token holder's vote is how many governance tokens the token holder owns.
-
-A proposal passes a vote when more votes are for it than against it and the total number of votes is greater than a certain amount determined by the `quorumDivisor` setting.
-
-Once a token holder votes on a proposal their tokens become locked until the voting period for the proposal is over. By "locked" is meant token holders will not be able to transfer governance tokens from the address that they used to vote until the voting period for the proposal they voted on is over. However a token holder can vote for multiple proposals when their tokens are locked.
-
-The reason for locking governance tokens after a vote is to prevent double voting with the same tokens.  Holder A could vote and then transfer his/her tokens to another address and vote again. This is prevented by locking the tokens until after a vote is over.
-
-Tokens holders are rewarded for voting by being minted new governance tokens. This is "governance mining". How much the reward is, is determined by the `voterAwardDivisor` setting and the `voteAwardCapDivisor` setting.
-
-Token holders can change their mind and undo their vote for a proposal by calling the `unvote(uint _proposalId)` function. That removes the token holder's votes, removes their reward for voting, and unlocks the token holder's tokens so they can be transferred again.
-
-## Executing a Proposal
-
-After the voting period for a proposal is over it can be executed by anyone by calling the `executeProposal(uint _proposalId)` function on the governance token diamond.
-
-After the voting period for a proposal is over any token holders who voted for or against it will automatically have their governance tokens unlocked so they can transfer them again.
-
-The token holder or address that proposed the proposal will not be able to transfer governance tokens until the `executeProposal` function is called for their proposal.
-
-If a proposal did not pass a vote then calling `executeProposal` will cause the proposer's governance tokens to be burned.
-
-If a proposal did pass a vote then calling `executeProposal` will execute the `execute` function from the proposal contract and will reward the proposer by minting new governance tokens and adding them to the proposer's balance.
-
-If a proposal passes a vote but the proposal reverts when executed then the proposal goes into a `PassedAndExecutionStuck` state and the proposer does not receive the governance token award. A new proposal can fix or replace a stuck proposal by modifying state variables of the diamond.
-
-## Preventing Too Much Inflation
-
-The `totalSupplyCap` state variable exists to put a cap on the total supply of governance tokens.  Once the total supply hits this cap then no more governance tokens are minted and awarded for voting or submitting proposals.
-
-Various state variables or settings such as `proposerAwardDivisor`, `voterAwardDivisor`, and `voteAwardCapDivisor` are used to regulate the rate new governance tokens are minted and set appropriate incentives for governance.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Basic Sample Hardhat Project
+
+This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+
+Try running some of the following tasks:
+
+```shell
+npx hardhat accounts
+npx hardhat compile
+npx hardhat clean
+npx hardhat test
+npx hardhat node
+node scripts/sample-script.js
+npx hardhat help
+```

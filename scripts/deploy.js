@@ -1,75 +1,98 @@
 /* global ethers */
-/* eslint prefer-const: "off" */
 
-const { getSelectors, FacetCutAction } = require('./libraries/diamond.js')
+const { 
+  createAddFacetCut,
+  replaceFacet
+} = require('./libraries/cuts.js');
 
-async function deployDiamond () {
-  const accounts = await ethers.getSigners()
-  const contractOwner = accounts[0]
+const init = '0xe1c7392a';
 
-  // deploy DiamondCutFacet
-  const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet')
-  const diamondCutFacet = await DiamondCutFacet.deploy()
-  await diamondCutFacet.deployed()
-  console.log('DiamondCutFacet deployed:', diamondCutFacet.address)
+// reusable facets - attached facets are prefixed with 'x_';
 
-  // deploy Diamond
-  const Diamond = await ethers.getContractFactory('Diamond')
-  const diamond = await Diamond.deploy(contractOwner.address, diamondCutFacet.address)
-  await diamond.deployed()
-  console.log('Diamond deployed:', diamond.address)
+async function createDiamond(signer, cuts, initAddr) {
 
-  // deploy DiamondInit
-  // DiamondInit provides a function that is called when the diamond is upgraded to initialize state variables
-  // Read about how the diamondCut function works here: https://eips.ethereum.org/EIPS/eip-2535#addingreplacingremoving-functions
-  const DiamondInit = await ethers.getContractFactory('DiamondInit')
-  const diamondInit = await DiamondInit.deploy()
-  await diamondInit.deployed()
-  console.log('DiamondInit deployed:', diamondInit.address)
+  const Diamond = await ethers.getContractFactory('Diamond');
+  const diamond = await Diamond.connect(signer).deploy(cuts, initAddr, init);
+  await diamond.deployed();
+  console.log('💎 Diamond deployed:', diamond.address);
 
-  // deploy facets
-  console.log('')
-  console.log('Deploying facets')
-  const FacetNames = [
-    'DiamondLoupeFacet',
-    'OwnershipFacet'
-  ]
-  const cut = []
-  for (const FacetName of FacetNames) {
-    const Facet = await ethers.getContractFactory(FacetName)
-    const facet = await Facet.deploy()
-    await facet.deployed()
-    console.log(`${FacetName} deployed: ${facet.address}`)
-    cut.push({
-      facetAddress: facet.address,
-      action: FacetCutAction.Add,
-      functionSelectors: getSelectors(facet)
-    })
-  }
-
-  // upgrade diamond with facets
-  console.log('')
-  console.log('Diamond Cut:', cut)
-  const diamondCut = await ethers.getContractAt('IDiamondCut', diamond.address)
-  let tx
-  let receipt
-  // call to init function
-  let functionCall = diamondInit.interface.encodeFunctionData('init')
-  tx = await diamondCut.diamondCut(cut, diamondInit.address, functionCall)
-  console.log('Diamond cut tx: ', tx.hash)
-  receipt = await tx.wait()
-  if (!receipt.status) {
-    throw Error(`Diamond upgrade failed: ${tx.hash}`)
-  }
-  console.log('Completed diamond cut')
-  
-  return diamond.address
+  return diamond;
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
+async function createOntap(cuts) {
+
+  const OnTap = await ethers.getContractFactory('OnTap');
+  const ontap = await OnTap.deploy(cuts, ethers.constants.AddressZero, '0x');
+  await ontap.deployed();
+  console.log('💎 OnTap deployed:', ontap.address);
+
+  return ontap;
+}
+
+async function deploy() {
+
+  console.log('~~~~~  C R E A T I N G   O N T A P  ~~~~~')
+
+  const Readable = await ethers.getContractFactory('Readable');
+  const readable = await Readable.deploy();
+  await readable.deployed();
+  console.log('🔮 Readable deployed:', readable.address);
+
+  const Ownable = await ethers.getContractFactory('Ownership');
+  const ownable = await Ownable.deploy();
+  await ownable.deployed();
+  console.log('💍 Ownable deployed:', ownable.address);
+
+  const ERC165 = await ethers.getContractFactory('Erc165');
+  const erc165 = await ERC165.deploy();
+  await erc165.deployed();
+  console.log('🗺  ERC165 deployed:', erc165.address);
+
+  let cuts = createAddFacetCut([readable, ownable, erc165]);
+
+  const ontap = await createOntap(cuts);
+
+  const x_writable = await ethers.getContractAt('Writable', ontap.address);
+  const x_ownable = await ethers.getContractAt('Ownership', ontap.address);
+  const x_readable = await ethers.getContractAt('Readable', ontap.address);
+
+  const facetAddresses = [ontap.address, readable.address, ownable.address, erc165.address];
+  const writableAddr = (await x_readable.facetAddresses()).filter((x) => {
+    if (facetAddresses.indexOf(x) === -1) return x;
+  })[0];
+  const writable = await ethers.getContractAt('Writable', writableAddr);
+  console.log('🪩  Writable deployed:', writableAddr);
+
+  //deploy greeter
+  const Greeter = await ethers.getContractFactory('Greeter');
+  const greeter = await Greeter.deploy();
+  await greeter.deployed();
+  console.log('👋 Greeter deployed:', greeter.address);
+
+  //deploy git
+  cuts = createAddFacetCut([greeter]);
+  const Git = await ethers.getContractFactory('Git');
+  const git = await Git.deploy(cuts);
+  await git.deployed();
+  console.log('🪬  Git deployed:', git.address);
+
+  cuts = createAddFacetCut([git]);
+
+  //deploy initializer
+  const OnTapInit = await ethers.getContractFactory('OnTapInit');
+  const ontapinit = await OnTapInit.deploy();
+  await ontapinit.deployed();
+  console.log('💠 OnTapInit deployed:', ontapinit.address);
+
+  await x_writable.diamondCut(cuts, ontapinit.address, init);
+
+  console.log('~~~~~~  O N T A P   C R E A T E D  ~~~~~~');
+
+  return [ ontap, readable, ownable, erc165, writable, git, ontapinit ];
+}
+
 if (require.main === module) {
-  deployDiamond()
+  deploy()
     .then(() => process.exit(0))
     .catch(error => {
       console.error(error)
@@ -77,4 +100,5 @@ if (require.main === module) {
     })
 }
 
-exports.deployDiamond = deployDiamond
+exports.deploy = deploy
+exports.createDiamond = createDiamond
