@@ -4,8 +4,9 @@
   "description": "Like United Nations, but better.",
   "main": "index.js",
   "scripts": {
-    "build": "hardhat compile",
+    "build": "hardhat compile --force",
     "test": "hardhat test",
+    "typechain": "hardhat typechain",
     "deploy": "hardhat run --network localhost scripts/deploy.js",
     "tsc": "tsc && cp typechain/*.d.ts dist/typechain/",
     "clean": "hardhat clean && rm -rf dist",
@@ -27,8 +28,8 @@
   },
   "homepage": "https://0xhabitat.org/",
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.12",
+    "@typechain/ethers-v5": "^10.0.0",
     "@typechain/hardhat": "^6.0.0",
     "@types/chai": "^4.3.1",
     "@types/mocha": "^9.1.1",
@@ -36,19 +37,29 @@
     "@typescript-eslint/eslint-plugin": "^5.21.0",
     "@typescript-eslint/parser": "^5.21.0",
     "chai": "^4.3.6",
+    "chai-ethers": "^0.0.1",
     "dotenv": "^8.6.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "ethereum-waffle": "^3.4.0",
+    "ethereum-waffle": "^3.4.4",
     "ethers": "^5.4.1",
     "hardhat": "^2.9.3",
-    "hardhat-ethers": "^1.0.1",
+    "hardhat-deploy": "^0.11.4",
+    "hardhat-deploy-tenderly": "^0.1.1",
+    "hardhat-gas-reporter": "^1.0.8",
     "prettier": "^2.6.2",
     "prettier-plugin-solidity": "^1.0.0-beta.13",
+    "solc": "^0.8.13",
     "solhint": "^3.3.7",
     "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.7.21",
     "standard": "^16.0.3",
     "ts-node": "^10.7.0",
+    "typechain": "^8.0.0",
     "typescript": "^4.6.3"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.6.0",
+    "@solidstate/contracts": "^0.0.32"
   }
 }

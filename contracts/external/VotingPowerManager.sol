@@ -5,7 +5,7 @@ import {IERC20} from "../libraries/openzeppelin/IERC20.sol";
 import {SafeERC20} from "../libraries/openzeppelin/SafeERC20.sol";
 import {IVotingPower} from "../interfaces/IVotingPower.sol";
 
-contract StakeContract {
+contract StakeERC20Contract {
   using SafeERC20 for IERC20;
 
   IVotingPower votingPower;

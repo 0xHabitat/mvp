@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import {LibTreasury} from "../libraries/LibTreasury.sol";
 import {ITreasury} from "../interfaces/treasury/ITreasury.sol";
 import {ITreasuryVotingPower} from "../interfaces/treasury/ITreasuryVotingPower.sol";
-import {StakeContract} from "../external/VotingPowerManager.sol";
 
 contract TreasuryInit {
     // default type

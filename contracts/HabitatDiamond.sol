@@ -10,21 +10,46 @@ pragma solidity ^0.8.9;
 
 import {LibDiamond} from "./libraries/LibDiamond.sol";
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
+import {IAddressesProvider} from "./interfaces/IAddressesProvider.sol";
+import {IDAO} from "./interfaces/dao/IDAO.sol";
 
 contract HabitatDiamond {
-  constructor(address _contractOwner, address _diamondCutFacet) payable {
-    LibDiamond.setContractOwner(_contractOwner);
+  constructor(
+    address _contractOwner,
+    address addressesProvider,
+    IDAO.DAOMeta memory daoMetaData
+  ) payable {
+
+    LibDiamond.setContractOwner(_contractOwner); // another branch: work on diamondCut and replace owner with diamondGovernance
 
     // Add the diamondCut external function from the diamondCutFacet
     IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
-    bytes4[] memory functionSelectors = new bytes4[](1);
-    functionSelectors[0] = IDiamondCut.diamondCut.selector;
+    IAddressesProvider.Facet memory diamondCutFacet = IAddressesProvider(addressesProvider).getDiamondCutFacet();
     cut[0] = IDiamondCut.FacetCut({
-      facetAddress: _diamondCutFacet,
+      facetAddress: diamondCutFacet.facetAddress,
       action: IDiamondCut.FacetCutAction.Add,
-      functionSelectors: functionSelectors
+      functionSelectors: diamondCutFacet.functionSelectors
     });
     LibDiamond.diamondCut(cut, address(0), "");
+
+    // DAO first
+    IDiamondCut.FacetCut[] memory cutDAO = new IDiamondCut.FacetCut[](1); // when have more dao related facets than extend an array
+    address daoInit = IAddressesProvider(addressesProvider).getDAOInit();
+    IAddressesProvider.Facet memory daoViewerFacet = IAddressesProvider(addressesProvider).getDAOViewerFacet();
+    cutDAO[0] = IDiamondCut.FacetCut({
+      facetAddress: daoViewerFacet.facetAddress,
+      action: IDiamondCut.FacetCutAction.Add,
+      functionSelectors: daoViewerFacet.functionSelectors
+    });
+    bytes memory daoInitCalldata = abi.encodeWithSignature(
+      'initDAO(string,string,string,string,address)',
+      daoMetaData.daoName,
+      daoMetaData.purpose,
+      daoMetaData.info,
+      daoMetaData.socials,
+      addressesProvider
+    );
+    LibDiamond.diamondCut(cutDAO, daoInit, daoInitCalldata);
   }
 
   // Find facet for function that is called and execute the

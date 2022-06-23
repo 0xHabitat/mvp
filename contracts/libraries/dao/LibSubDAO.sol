@@ -15,8 +15,9 @@ struct SubDAOStorage {
   string info;
   string socials;
   address mainDAO;
+  address addressesProvider;
   address[] createdSubDAOs;
-  bytes32 managementSystemPosition;
+  bytes32 managementSystemsPosition;
 }
 */
   function subDAOStorage() internal pure returns (ISubDAO.SubDAOStorage storage sds) {
@@ -44,6 +45,11 @@ struct SubDAOStorage {
   function _getSubDAOSocials() internal view returns (string storage subDAOSocials) {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     subDAOSocials = sds.info;
+  }
+
+  function _getSubDAOAddressesProvider() internal view returns (address addressesProvider) {
+    ISubDAO.SubDAOStorage storage ds = subDAOStorage();
+    addressesProvider = ds.addressesProvider;
   }
 
   function _getMainDAO() internal view returns (address) {
@@ -77,15 +83,15 @@ struct SubDAOStorage {
     return _mainDAO == _getMainDAO();
   }
 
-  function _getManagementSystem()
+  function _getManagementSystemsPosition()
     internal
     view
-    returns (IManagementSystem.ManagementSystem storage ms)
+    returns (bytes32)
   {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
-    ms = LibManagementSystem._getManagementSystemByPosition(sds.managementSystemPosition);
+    return sds.managementSystemsPosition;
   }
-
+/*
   function _getGovernanceVotingSystem() internal view returns (IManagementSystem.VotingSystem gvs) {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     gvs = LibManagementSystem._getGovernanceVotingSystem(sds.managementSystemPosition);
@@ -108,11 +114,6 @@ struct SubDAOStorage {
   function _getVotingPowerManager() internal view returns (address vpm) {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     vpm = LibManagementSystem._getVotingPowerManager(sds.managementSystemPosition);
-  }
-
-  function _getGovernanceERC20Token() internal view returns (address gerc20t) {
-    ISubDAO.SubDAOStorage storage sds = subDAOStorage();
-    gerc20t = LibManagementSystem._getGovernanceERC20Token(sds.managementSystemPosition);
   }
 
   function _getGovernanceSigners() internal view returns (address[] storage gs) {
@@ -144,4 +145,5 @@ struct SubDAOStorage {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     return LibManagementSystem._isSubDAOCreationSigner(sds.managementSystemPosition, _signer);
   }
+  */
 }
