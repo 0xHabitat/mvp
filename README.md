@@ -8,7 +8,7 @@ yarn build
 ```
 
 ## test
-
+To run tests you first need to add alchemyToken.json with your alchemyToken.
 ```
 yarn test
 ```
