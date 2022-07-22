@@ -194,6 +194,20 @@ contract StakeContractERC20UniV3 {
     nfPositionManager.safeTransferFrom(address(this), msg.sender, tokenId);
   }
 
+  function stakeMultipleUniV3NFTPositions(uint256[] memory tokenIds) external {
+    require(tokenIds.length < 100);
+    for (uint i = 0; i < tokenIds.length; i++) {
+      stakeUniV3NFTPosition(tokenIds[i]);
+    }
+  }
+
+  function unStakeMultipleUniV3NFTPositions(uint256[] memory tokenIds) external {
+    require(tokenIds.length < 100);
+    for (uint i = 0; i < tokenIds.length; i++) {
+      unstakeUniV3NFTPosition(tokenIds[i]);
+    }
+  }
+
   function increaseVotingPowerByIncreasingLiquidityOfNFTPosition(uint256 tokenId) external {
     revert("not implemented yet.");
   }
