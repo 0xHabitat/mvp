@@ -5,7 +5,7 @@ import {IERC20} from "../libraries/openzeppelin/IERC20.sol";
 import {SafeERC20} from "../libraries/openzeppelin/SafeERC20.sol";
 import {IVotingPower} from "../interfaces/IVotingPower.sol";
 
-contract StakeContract {
+contract StakeContractERC20UniV2 {
   using SafeERC20 for IERC20;
 
   IVotingPower votingPower;
@@ -81,8 +81,4 @@ contract StakeContract {
       unstake(_governanceTokens[i], _amounts[i]);
     }
   }
-}
-
-contract SignersSetter {
-  // a.k.a. gnosis but one votingPower - one address
 }
