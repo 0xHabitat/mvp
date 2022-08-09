@@ -100,6 +100,10 @@ contract StakeContractERC20UniV3 {
     }
   }
 
+  function getLegalPairTokens() external view returns(address[] memory) {
+    return legalPairTokens.values();
+  }
+
   // should give token approval before call
   function stakeGovToken(uint256 _amount) public {
     // receive tokens from holder to stake contract
