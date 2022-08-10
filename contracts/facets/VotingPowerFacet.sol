@@ -13,6 +13,14 @@ contract VotingPowerFacet is IVotingPower {
     LibVotingPower._decreaseVotingPower(voter, amount);
   }
 
+  function delegateVotingPower(address delegatee) external ovveride {
+    LibVotingPower._delegateVotingPower(delegatee);
+  }
+
+  function undelegateVotingPower() external override {
+    LibVotingPower._undelegateVotingPower();
+  }
+
   // View functions
   function getVotingPowerManager() external view override returns (address) {
     return LibVotingPower._getVotingPowerManager();
@@ -28,5 +36,9 @@ contract VotingPowerFacet is IVotingPower {
 
   function getMaxAmountOfVotingPower() external view override returns (uint256) {
     return LibVotingPower._getMaxAmountOfVotingPower();
+  }
+
+  function getTimestampToUnstake(address staker) external view override returns (uint256) {
+    return LibVotingPower._getTimestampToUnstake(staker);
   }
 }

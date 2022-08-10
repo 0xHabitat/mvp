@@ -102,4 +102,11 @@ library LibTreasury {
     ITreasury.Treasury storage ts = treasuryStorage();
     delayTime = ts.proposalDelayTime;
   }
+
+  treasuryActiveProposals
+  governanceActiveProposals
+  voter amount
+
+  mapping(ms => id => ActiveProposal) activeProposals; 
+
 }
