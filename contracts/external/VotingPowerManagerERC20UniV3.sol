@@ -110,6 +110,16 @@ contract StakeContractERC20UniV3 {
     votingPowerHolder.increaseVotingPower(msg.sender, _amount);
   }
 
+  // should give token approval before call
+  function stakeGovInFavorOf(address beneficiary, uint256 _amount) external {
+    // receive tokens from holder to stake contract
+    IERC20(governanceToken).safeTransferFrom(msg.sender, address(this), _amount); // double check
+    // account how much holders tokens are staked
+    _stakedERC20GovToken[beneficiary] += _amount;
+    // give voting power
+    votingPower.increaseVotingPower(beneficiary, _amount);
+  }
+
   function unstakeGovToken(uint256 _amount) public {
     require(
       _stakedERC20GovToken[msg.sender] >= _amount,
