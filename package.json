@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.0",
-    "@uniswap/v3-periphery": "^1.4.1"
+    "@uniswap/v3-periphery": "^1.4.1",
+    "@solidstate/contracts": "^0.0.32"
   }
 }
