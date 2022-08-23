@@ -7,6 +7,8 @@ interface ITreasuryVotingPower {
     uint64 thresholdForProposal;
     uint64 thresholdForInitiator;
     uint64 precision;
+    uint128 secondsProposalVotingPeriod;
+    uint128 secondsProposalDelayExecutionPeriod;
   }
 
   function minimumQuorumNumerator() external view returns (uint64);

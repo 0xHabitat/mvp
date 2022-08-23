@@ -5,7 +5,7 @@ import {ITreasuryVoting} from "../../interfaces/treasury/ITreasuryVoting.sol";
 import {ITreasury} from "../../interfaces/treasury/ITreasury.sol";
 import {LibTreasuryVotingPower} from "../../libraries/treasury/LibTreasuryVotingPower.sol";
 import {LibTreasury} from "../../libraries/LibTreasury.sol";
-import {LibVotingPower} from "../../libraries/LibVotingPower.sol";
+import {LibVotingPower} from "../../libraries/decisionSystem/votingPower/LibVotingPower.sol";
 
 contract TreasuryVotingFacet is ITreasuryVoting {
   function createTreasuryProposal(

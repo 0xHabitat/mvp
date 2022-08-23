@@ -2,30 +2,103 @@
 pragma solidity ^0.8.9;
 
 import {IManagementSystem} from "../../interfaces/dao/ISubDAO.sol";
+import {LibDAOStorage} from "./LibDAOStorage.sol";
 
 library LibManagementSystem {
   /*
-struct ManagementSystem {
-  VotingSystem governanceVotingSystem;
-  VotingSystem treasuryVotingSystem;
-  VotingSystem subDAOCreationVotingSystem;
-  address votingPowerManager;
-  address governanceERC20Token;
-  address[] governanceSigners;
-  address[] treasurySigners;
-  address[] subDAOCreationSigners;
-}
+  struct ManagementSystems {
+    uint numberOfManagementSystems = 5;
+    ManagementSystem setAddChangeManagementSystem;
+    ManagementSystem governance;
+    ManagementSystem treasury;
+    ManagementSystem subDAOsCreation;
+    ManagementSystem launchPad;
+  }
+
+  struct ManagementSystem {
+    string nameMS;
+    DecisionType decisionType;
+    bytes32 dataPosition;
+  }
 */
-  function _getManagementSystemByPosition(bytes32 position)
+  function _getManagementSystems()
     internal
     pure
-    returns (IManagementSystem.ManagementSystem storage ms)
+    returns (IManagementSystem.ManagementSystems storage mss)
   {
+    bytes32 position = LibDAOStorage._getManagementSystemsPosition();
+
     assembly {
-      ms.slot := position
+      mss.slot := position
     }
   }
 
+  function _getManagementSystem(string memory msName)
+    internal
+    pure
+    returns(IManagementSystem.ManagementSystem memory ms)
+  {
+    IManagementSystem.ManagementSystems storage mss = _getManagementSystems();
+    bytes32 bName = keccak256(bytes(msName));
+    if (bName == keccak256(bytes("setAddChangeManagementSystem"))) {
+      ms = mss.setAddChangeManagementSystem;
+    } else if (bName == keccak256(bytes("governance"))) {
+      ms = mss.governance;
+    } else if (bName == keccak256(bytes("treasury"))) {
+      ms = mss.treasury;
+    } else if (bName == keccak256(bytes("subDAOsCreation"))) {
+      ms = mss.subDAOsCreation;
+    } else if ((bName == keccak256(bytes("launchPad"))) {
+      ms = mss.launchPad;
+    } else {
+      if (mss.numberOfManagementSystems > 5) {
+        // look for a name
+        revert("not implemented yet");
+      } else {
+        revert("Mananagement system with input name does not exist.");
+      }
+    }
+  }
+
+  function _getMSData(bytes32 position) internal pure returns(IManagementSystem.MSData storage msData) {
+    assembly {
+      msData.slot := position
+    }
+  }
+
+  function _getMSDataByName(string memory msName) internal pure returns(IManagementSystem.MSData memory msData) {
+    IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
+    msData = _getMSData(ms.dataPosition);
+  }
+
+  // viewers for specific ms
+  function _getDecisionType(string memory msName) internal returns(IManagementSystem.DecisionType) {
+    IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
+    return ms.decisionType;
+  }
+
+  function _getProposal(string memory msName, uint proposalId) internal returns(IProposal.Proposal memory proposal) {
+    IManagementSystem.MSData memory msData = _getMSDataByName(msName);
+    proposal = msData.proposals[proposalId];
+  }
+
+  function _getActiveVotingProposalsIds(string memory msName) internal returns(uint256[] memory) {
+    IManagementSystem.MSData memory msData = _getMSDataByName(msName);
+    return msData.activeVotingProposalsIds;
+  }
+
+  function _getAcceptedProposalsIds(string memory msName) internal returns(uint256[] storage) {
+    IManagementSystem.MSData memory msData = _getMSDataByName(msName);
+    return msData.acceptedProposalsIds;
+  }
+
+  function _getProposalsCount(string memory msName) internal returns(uint256) {
+    IManagementSystem.MSData memory msData = _getMSDataByName(msName);
+    return msData.proposalsCounter;
+  }
+
+
+/*
   function _getGovernanceVotingSystem(bytes32 position)
     internal
     view
@@ -135,4 +208,43 @@ struct ManagementSystem {
     }
     return false;
   }
+
+  function _getManagementSystem(string memory msName)
+    internal
+    pure
+    returns(IManagementSystem.ManagementSystem memory ms)
+  {
+    bytes32 position = LibDAOStorage._getManagementSystemsPosition(); // am i getting a number by this slot
+    uint numberOfManagementSystems;
+    assembly {
+      numberOfManagementSystems := sload(position)
+    }
+    uint index;
+    bool exist;
+    uint pos = uint(position) + 1;
+    for (uint i = 0; i < numberOfManagementSystems; i++) {
+      string memory nameMS;
+      assembly {
+        nameMS := sload(add(pos, mul(i, 3)))
+      }
+      if (nameMS == msName) {
+        exist = true;
+        index = i;
+      }
+    }
+    if (exist) {
+      pos = pos + index * 3;
+      assembly {
+        ms.nameMS := sload(pos)
+        ms.decisionType := sload(add(pos, 1))
+        ms.dataPosition := sload(add(pos, 2))
+      }
+    } else {
+      revert("Mananagement system with input name does not exist.");
+    }
+    // if yes than the idea is to go through the loop and sload position + 1, 2, 3,..n and find position name
+    // after that just load decisionType and dataPosition
+
+  }
+  */
 }

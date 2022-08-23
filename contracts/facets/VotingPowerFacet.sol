@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {IVotingPower} from "../interfaces/IVotingPower.sol";
-import {LibVotingPower} from "../libraries/LibVotingPower.sol";
+import {LibVotingPower} from "../libraries/decisionSystem/votingPower/LibVotingPower.sol";
 
 contract VotingPowerFacet is IVotingPower {
   function increaseVotingPower(address voter, uint256 amount) external override {
@@ -40,5 +40,13 @@ contract VotingPowerFacet is IVotingPower {
 
   function getTimestampToUnstake(address staker) external view override returns (uint256) {
     return LibVotingPower._getTimestampToUnstake(staker);
+  }
+
+  function getDelegatee(address delegator) external view override returns(address) {
+    return LibVotingPower._getDelegatee(delegator);
+  }
+
+  function getDelegatedVotingPower(address delegator) external view override returns(uint256) {
+    return LibVotingPower._getDelegatedVotingPower(delegator);
   }
 }

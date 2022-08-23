@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-
+// looks like i don't need this
+// i can just request data for treasury or all other management system
+// and after that calculate everything and write data (proposal) back to this ms
 import {ITreasuryVotingPower} from "../../interfaces/treasury/ITreasuryVotingPower.sol";
 import {LibTreasury} from "../LibTreasury.sol";
-import {LibVotingPower} from "../LibVotingPower.sol";
+import {LibVotingPower} from "../decisionSystem/votingPower/LibVotingPower.sol";
 
 library LibTreasuryVotingPower {
   function _getMinimumQuorum() internal view returns (uint256) {

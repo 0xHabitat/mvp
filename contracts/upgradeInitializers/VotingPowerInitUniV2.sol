@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {LibVotingPower} from "../libraries/LibVotingPower.sol";
+import {LibVotingPower} from "../libraries/decisionSystem/votingPower/LibVotingPower.sol";
 import {IVotingPower} from "../interfaces/IVotingPower.sol";
 import {StakeContractERC20UniV2} from "../external/VotingPowerManagerERC20UniV2.sol";
 

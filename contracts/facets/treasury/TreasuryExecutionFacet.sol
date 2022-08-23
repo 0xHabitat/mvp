@@ -26,7 +26,6 @@ contract TreasuryExecutionFacet is ITreasuryExecution {
 
     //remove proposal and proposal voting
     LibTreasury._removeTreasuryPropopal(proposalId);
-    LibTreasury._removeTreasuryPropopalVoting(proposalId);
 
     emit ProposalExecuted(proposalId, destination, value, callData);
   }

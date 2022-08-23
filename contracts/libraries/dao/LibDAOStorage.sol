@@ -2,8 +2,8 @@
 pragma solidity ^0.8.9;
 
 import {IDAO} from "../../interfaces/dao/IDAO.sol";
-import {IManagementSystem} from "../../interfaces/dao/IManagementSystem.sol";
-import {LibManagementSystem} from "./LibManagementSystem.sol";
+//import {IManagementSystem} from "../../interfaces/dao/IManagementSystem.sol";
+//import {LibManagementSystem} from "./LibManagementSystem.sol";
 
 library LibDAOStorage {
   bytes32 constant DAO_STORAGE_POSITION = keccak256("habitat.diamond.standard.dao.storage");
@@ -14,7 +14,8 @@ struct DAOStorage {
   string purpose;
   string info;
   string socials;
-  bytes32 managementSystemPosition;
+  address addressesProvider;
+  bytes32 managementSystemsPosition;
   address[] createdSubDAOs;
 }
 */
@@ -45,6 +46,11 @@ struct DAOStorage {
     daoSocials = ds.socials;
   }
 
+  function _getDAOAddressesProvider() internal view returns (address addressesProvider) {
+    IDAO.DAOStorage storage ds = daoStorage();
+    addressesProvider = ds.addressesProvider;
+  }
+
   function _hasSubDAOs() internal view returns (bool) {
     IDAO.DAOStorage storage ds = daoStorage();
     return ds.createdSubDAOs.length > 0;
@@ -66,15 +72,15 @@ struct DAOStorage {
     return false;
   }
 
-  function _getManagementSystem()
+  function _getManagementSystemsPosition()
     internal
     view
-    returns (IManagementSystem.ManagementSystem storage ms)
+    returns (bytes32)
   {
     IDAO.DAOStorage storage ds = daoStorage();
-    ms = LibManagementSystem._getManagementSystemByPosition(ds.managementSystemPosition);
+    return ds.managementSystemsPosition;
   }
-
+/*
   function _getGovernanceVotingSystem() internal view returns (IManagementSystem.VotingSystem gvs) {
     IDAO.DAOStorage storage ds = daoStorage();
     gvs = LibManagementSystem._getGovernanceVotingSystem(ds.managementSystemPosition);
@@ -97,11 +103,6 @@ struct DAOStorage {
   function _getVotingPowerManager() internal view returns (address vpm) {
     IDAO.DAOStorage storage ds = daoStorage();
     vpm = LibManagementSystem._getVotingPowerManager(ds.managementSystemPosition);
-  }
-
-  function _getGovernanceERC20Token() internal view returns (address gerc20t) {
-    IDAO.DAOStorage storage ds = daoStorage();
-    gerc20t = LibManagementSystem._getGovernanceERC20Token(ds.managementSystemPosition);
   }
 
   function _getGovernanceSigners() internal view returns (address[] storage gs) {
@@ -133,4 +134,5 @@ struct DAOStorage {
     IDAO.DAOStorage storage ds = daoStorage();
     return LibManagementSystem._isSubDAOCreationSigner(ds.managementSystemPosition, _signer);
   }
+  */
 }
