@@ -13,7 +13,7 @@ contract VotingPowerFacet is IVotingPower {
     LibVotingPower._decreaseVotingPower(voter, amount);
   }
 
-  function delegateVotingPower(address delegatee) external ovveride {
+  function delegateVotingPower(address delegatee) external override {
     LibVotingPower._delegateVotingPower(delegatee);
   }
 
@@ -21,7 +21,7 @@ contract VotingPowerFacet is IVotingPower {
     LibVotingPower._undelegateVotingPower();
   }
 
-  function unfreezeVotingPower() external ovveride {
+  function unfreezeVotingPower() external override {
     LibVotingPower._unfreezeVotingPower();
   }
 

@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {IManagementSystem} from "../../interfaces/dao/ISubDAO.sol";
 import {LibDAOStorage} from "./LibDAOStorage.sol";
+import {IProposal} from "../../interfaces/IProposal.sol";
 
 library LibManagementSystem {
   /*
@@ -23,7 +24,6 @@ library LibManagementSystem {
 */
   function _getManagementSystems()
     internal
-    pure
     returns (IManagementSystem.ManagementSystems storage mss)
   {
     bytes32 position = LibDAOStorage._getManagementSystemsPosition();
@@ -35,7 +35,6 @@ library LibManagementSystem {
 
   function _getManagementSystem(string memory msName)
     internal
-    pure
     returns(IManagementSystem.ManagementSystem memory ms)
   {
     IManagementSystem.ManagementSystems storage mss = _getManagementSystems();
@@ -48,7 +47,7 @@ library LibManagementSystem {
       ms = mss.treasury;
     } else if (bName == keccak256(bytes("subDAOsCreation"))) {
       ms = mss.subDAOsCreation;
-    } else if ((bName == keccak256(bytes("launchPad"))) {
+    } else if (bName == keccak256(bytes("launchPad"))) {
       ms = mss.launchPad;
     } else {
       if (mss.numberOfManagementSystems > 5) {
@@ -66,7 +65,7 @@ library LibManagementSystem {
     }
   }
 
-  function _getMSDataByName(string memory msName) internal pure returns(IManagementSystem.MSData memory msData) {
+  function _getMSDataByName(string memory msName) internal returns(IManagementSystem.MSData storage msData) {
     IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
     msData = _getMSData(ms.dataPosition);
   }
@@ -78,22 +77,22 @@ library LibManagementSystem {
   }
 
   function _getProposal(string memory msName, uint proposalId) internal returns(IProposal.Proposal memory proposal) {
-    IManagementSystem.MSData memory msData = _getMSDataByName(msName);
+    IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     proposal = msData.proposals[proposalId];
   }
 
   function _getActiveVotingProposalsIds(string memory msName) internal returns(uint256[] memory) {
-    IManagementSystem.MSData memory msData = _getMSDataByName(msName);
+    IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.activeVotingProposalsIds;
   }
 
-  function _getAcceptedProposalsIds(string memory msName) internal returns(uint256[] storage) {
-    IManagementSystem.MSData memory msData = _getMSDataByName(msName);
+  function _getAcceptedProposalsIds(string storage msName) internal returns(uint256[] storage) {
+    IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.acceptedProposalsIds;
   }
 
   function _getProposalsCount(string memory msName) internal returns(uint256) {
-    IManagementSystem.MSData memory msData = _getMSDataByName(msName);
+    IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.proposalsCounter;
   }
 

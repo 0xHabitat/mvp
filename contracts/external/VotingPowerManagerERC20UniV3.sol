@@ -117,7 +117,7 @@ contract StakeContractERC20UniV3 {
     // account how much holders tokens are staked
     _stakedERC20GovToken[beneficiary] += _amount;
     // give voting power
-    votingPower.increaseVotingPower(beneficiary, _amount);
+    votingPowerHolder.increaseVotingPower(beneficiary, _amount);
   }
 
   function unstakeGovToken(uint256 _amount) public {

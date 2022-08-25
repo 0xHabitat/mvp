@@ -33,7 +33,7 @@ library LibVotingPower {
     }
   }
 
-  function _getProposalVoting(bytes32 proposalKey) internal pure returns(IVotingPower.ProposalVoting storage pV) {
+  function _getProposalVoting(bytes32 proposalKey) internal returns(IVotingPower.ProposalVoting storage pV) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     pV = vp.proposalsVoting[proposalKey];
   }
@@ -79,7 +79,7 @@ library LibVotingPower {
     uint256 amountOfVotingPower = vp.votingPower[msg.sender];
     require(amountOfVotingPower > 0, "Nothing to delegate");
 
-    Delegation storage delegation = vp.delegations[msg.sender];
+    IVotingPower.Delegation storage delegation = vp.delegations[msg.sender];
 
     require(delegation.delegatee == delegatee || delegation.delegatee == address(0), "Undelegate before delegate to another delegatee.");
     // set delegatee of delegator
@@ -94,7 +94,7 @@ library LibVotingPower {
 
   function _undelegateVotingPower() internal {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
-    Delegation storage delegation = vp.delegations[msg.sender];
+    IVotingPower.Delegation storage delegation = vp.delegations[msg.sender];
     require(delegation.delegatee != address(0), "Have not delegate yet.");
     require(delegation.delegatedVotingPower > 0, "Nothing to undelegate.");
     // remove delegetee
@@ -123,7 +123,7 @@ library LibVotingPower {
 
   function _unfreezeVotingPower() internal {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
-    Delegation storage delegation = vp.delegations[msg.sender];
+    IVotingPower.Delegation storage delegation = vp.delegations[msg.sender];
 
     require(delegation.unfreezeTimestamp < block.timestamp, "Wait timestamp to unfreeze");
     uint amountOfVotingPower = delegation.freezedAmount;
@@ -169,51 +169,51 @@ library LibVotingPower {
     return vp.timeStampToUnstake[staker];
   }
 
-  function _getDelegation(address delegator) internal view returns(Delegation memory delegation) {
+  function _getDelegation(address delegator) internal view returns(IVotingPower.Delegation memory delegation) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     delegation = vp.delegations[delegator];
   }
 
   function _getDelegatee(address delegator) internal view returns(address) {
-    Delegation memory delegation = _getDelegation(delegator);
+    IVotingPower.Delegation memory delegation = _getDelegation(delegator);
     return delegation.delegatee;
   }
 
   function _getAmountOfDelegatedVotingPower(address delegator) internal view returns(uint256) {
-    Delegation memory delegation = _getDelegation(delegator);
+    IVotingPower.Delegation memory delegation = _getDelegation(delegator);
     return delegation.delegatedVotingPower;
   }
 
   function _getFreezeAmountOfVotingPower(address delegator) internal view returns(uint256) {
-    Delegation memory delegation = _getDelegation(delegator);
+    IVotingPower.Delegation memory delegation = _getDelegation(delegator);
     return delegation.freezedAmount;
   }
 
   function _getUnfreezeTimestamp(address delegator) internal view returns(uint256) {
-    Delegation memory delegation = _getDelegation(delegator);
+    IVotingPower.Delegation memory delegation = _getDelegation(delegator);
     return delegation.unfreezeTimestamp;
   }
 
-  function _calculateMinimumQuorum(uint64 minimumQuorum) internal pure returns (uint256) {
+  function _calculateMinimumQuorum(uint64 minimumQuorum) internal returns (uint256) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     return (uint256(minimumQuorum) * vp.maxAmountOfVotingPower) / vp.precision;
   }
 
-  function _calculateIsQuorum(uint64 minimumQuorum) internal view returns (bool) {
+  function _calculateIsQuorum(uint64 minimumQuorum) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     return
       (uint256(minimumQuorum) * vp.maxAmountOfVotingPower) / vp.precision <=
       vp.totalAmountOfVotingPower;
   }
 
-  function _calculateIsEnoughVotingPower(address holder, uint64 thresholdForInitiator) internal view returns (bool) {
+  function _calculateIsEnoughVotingPower(address holder, uint64 thresholdForInitiator) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     return
       vp.votingPower[holder] >=
       ((uint256(thresholdForInitiator) * vp.totalAmountOfVotingPower) / vp.precision);
   }
 
-  function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint64 thresholdForProposal) internal view returns (bool) {
+  function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint64 thresholdForProposal) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     return
       amountOfVotes >=

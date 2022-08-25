@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {IProposal} from "../../../interfaces/IProposal.sol";
+import {IVotingPower} from "../../../interfaces/IVotingPower.sol";
 import {LibVotingPower} from "./LibVotingPower.sol";
 import {LibManagementSystemVotingPower} from "./LibManagementSystemVotingPower.sol";
 import {LibDAOStorage} from "../../dao/LibDAOStorage.sol";
@@ -84,7 +85,7 @@ library LibVotingPowerDecisionMaking {
     // remove previous votes for proposals that are already accepted or rejected
   }
 
-  function acceptOrRejectVPDSProposal(string memory msName, uint256 proposalId) internal returns(bool accepted, uint, address, uint, bytes) {
+  function acceptOrRejectVPDSProposal(string memory msName, uint256 proposalId) internal returns(bool accepted, uint, address, uint, bytes memory) {
     IVotingPower.ProposalVoting storage proposalVoting = LibVotingPower._getProposalVoting(
       keccak256(abi.encodePacked(msName,proposalId))
     );
@@ -155,12 +156,12 @@ library LibVotingPowerDecisionMaking {
       address destinationAddress = proposal.destinationAddress;
       uint value = proposal.value;
       bytes memory callData = proposal.callData;
-      LibManagementSystemVotingPower._removePropopal(msName, proposalId);
+      LibManagementSystemVotingPower._removeProposal(msName, proposalId);
       return (false, proposalId, destinationAddress, value, callData);
     }
   }
 
-  function executeVPDSProposalCall(string msName, uint256 proposalId) internal returns(bool, uint256) {
+  function executeVPDSProposalCall(string memory msName, uint256 proposalId) internal returns(bool, uint256) {
     IProposal.Proposal storage proposal = LibManagementSystemVotingPower._getProposal(msName, proposalId);
     require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");
     proposal.proposalExecuted = true;
@@ -177,7 +178,7 @@ library LibVotingPowerDecisionMaking {
     // return data needed?
     // remove from accepted
     LibManagementSystemVotingPower._removePropopalIdFromAcceptedList(msName, proposalId);
-    LibManagementSystemVotingPower._removePropopal(msName, proposalId);
+    LibManagementSystemVotingPower._removeProposal(msName, proposalId);
     return (result, proposalId);
   }
 
@@ -196,7 +197,7 @@ library LibVotingPowerDecisionMaking {
     }
     // return data needed?
     LibManagementSystemVotingPower._removePropopalIdFromAcceptedList(msName, proposalId);
-    LibManagementSystemVotingPower._removePropopal(msName, proposalId);
+    LibManagementSystemVotingPower._removeProposal(msName, proposalId);
     return (result, proposalId);
   }
 
@@ -211,22 +212,65 @@ library LibVotingPowerDecisionMaking {
       assembly {
         numMS := sload(msPos)
       }
-      bytes storedStructBeforeFE = new bytes(numMS * 96 + 64);
+      bytes memory storedStructBeforeFE = new bytes(numMS * 96 + 64);
       assembly {
-        for {let i:=0} lt(mul(i, 0x20), numMS * 3 + 2) {i := add(i, 0x01)} {
+        for {let i:=0} lt(mul(i, 0x20), add(mul(numMS, 3), 2)) {i := add(i, 0x01)} {
           let storedBlock32bytes := sload(add(msPos, i))
-          mstore(add(storedStruct, add(0x20, mul(i, 0x20))), storedBlock32bytes)
+          mstore(add(storedStructBeforeFE, add(0x20, mul(i, 0x20))), storedBlock32bytes)
         }
       }
       _;
-      bytes storedStructAfterFE = new bytes(numMS * 96 + 64);
+      bytes memory storedStructAfterFE = new bytes(numMS * 96 + 64);
       assembly {
-        for {let i:=0} lt(mul(i, 0x20), numMS * 3 + 2) {i := add(i, 0x01)} {
+        for {let i:=0} lt(mul(i, 0x20), add(mul(numMS, 3), 2)) {i := add(i, 0x01)} {
           let storedBlock32bytes := sload(add(msPos, i))
-          mstore(add(storedStruct, add(0x20, mul(i, 0x20))), storedBlock32bytes)
+          mstore(add(storedStructAfterFE, add(0x20, mul(i, 0x20))), storedBlock32bytes)
         }
       }
-      require(storedStructBeforeFE == storedStructAfterFE, "Only setAddChangeManagementSystem can execute this one.");
+      require(equal(storedStructBeforeFE, storedStructAfterFE), "Only setAddChangeManagementSystem can execute this one.");
     }
+  }
+
+  function equal(bytes memory _preBytes, bytes memory _postBytes) internal pure returns (bool) {
+    bool success = true;
+
+    assembly {
+        let length := mload(_preBytes)
+
+        // if lengths don't match the arrays are not equal
+        switch eq(length, mload(_postBytes))
+        case 1 {
+            // cb is a circuit breaker in the for loop since there's
+            //  no said feature for inline assembly loops
+            // cb = 1 - don't breaker
+            // cb = 0 - break
+            let cb := 1
+
+            let mc := add(_preBytes, 0x20)
+            let end := add(mc, length)
+
+            for {
+                let cc := add(_postBytes, 0x20)
+            // the next line is the loop condition:
+            // while(uint256(mc < end) + cb == 2)
+            } eq(add(lt(mc, end), cb), 2) {
+                mc := add(mc, 0x20)
+                cc := add(cc, 0x20)
+            } {
+                // if any of these checks fails then arrays are not equal
+                if iszero(eq(mload(mc), mload(cc))) {
+                    // unsuccess:
+                    success := 0
+                    cb := 0
+                }
+            }
+        }
+        default {
+            // unsuccess:
+            success := 0
+        }
+    }
+
+    return success;
   }
 }
