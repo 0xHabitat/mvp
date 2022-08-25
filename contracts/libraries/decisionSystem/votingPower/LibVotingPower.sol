@@ -8,6 +8,13 @@ library LibVotingPower {
     keccak256("habitat.diamond.standard.votingPower.storage");
 
   /*
+  struct Delegation {
+    address delegatee;
+    uint256 delegatedVotingPower;
+    uint256 freezedAmount;
+    uint256 unfreezeTimestamp;
+  }
+
   struct VotingPower {
     address votingPowerManager;
     uint256 maxAmountOfVotingPower;
@@ -15,10 +22,8 @@ library LibVotingPower {
     uint256 precision;
     mapping(address => uint) votingPower;
     mapping(address => uint) timeStampToUnstake;
+    mapping(address => Delegation) delegations;
     mapping(bytes32 => ProposalVoting) proposalsVoting;
-
-    mapping(address => address) delegatorToDelegatee;
-    mapping(address => uint256) delegatedVotingPower;
   }
 */
   function votingPowerStorage() internal pure returns (IVotingPower.VotingPower storage vp) {
@@ -70,40 +75,60 @@ library LibVotingPower {
   // he has to call this function again
   function _delegateVotingPower(address delegatee) internal {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
-
+    require(vp.timeStampToUnstake[msg.sender] < block.timestamp, "Wait timestamp to delegate");
     uint256 amountOfVotingPower = vp.votingPower[msg.sender];
-    address currentDelegatee = vp.delegatorToDelegatee[msg.sender];
     require(amountOfVotingPower > 0, "Nothing to delegate");
-    require(currentDelegatee == delegatee || currentDelegatee == address(0), "Undelegate before delegate to another delegatee.");
+
+    Delegation storage delegation = vp.delegations[msg.sender];
+
+    require(delegation.delegatee == delegatee || delegation.delegatee == address(0), "Undelegate before delegate to another delegatee.");
     // set delegatee of delegator
-    vp.delegatorToDelegatee[msg.sender] = delegatee;
+    delegation.delegatee = delegatee;
     // set to zero delegator voting power
     vp.votingPower[msg.sender] = uint256(0);
     // set how much voting power was delegated to delegatee from delegator
-    vp.delegatedVotingPower[msg.sender] += amountOfVotingPower;
+    delegation.delegatedVotingPower += amountOfVotingPower;
     // increase delegatee voting power
     vp.votingPower[delegatee] += amountOfVotingPower;
   }
 
   function _undelegateVotingPower() internal {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
-    address delegatee = vp.delegatorToDelegatee[msg.sender];
-    require(delegatee != address(0), "Have not delegate yet.");
+    Delegation storage delegation = vp.delegations[msg.sender];
+    require(delegation.delegatee != address(0), "Have not delegate yet.");
+    require(delegation.delegatedVotingPower > 0, "Nothing to undelegate.");
     // remove delegetee
-    vp.delegatorToDelegatee[msg.sender] = address(0);
+    address delegatee = delegation.delegatee;
+    delegation.delegatee = address(0);
     // set timeStampToUnstake at least same as delegatee has
     uint delegateeTimeStampToUnstake = vp.timeStampToUnstake[delegatee];
     if (vp.timeStampToUnstake[msg.sender] < delegateeTimeStampToUnstake) {
       vp.timeStampToUnstake[msg.sender] = delegateeTimeStampToUnstake;
     }
 
-    uint256 amountOfDelegatedVotingPower = delegatedVotingPower[msg.sender];
+    uint256 amountOfDelegatedVotingPower = delegation.delegatedVotingPower;
     // set to zero delegatedVotingPower
-    delegatedVotingPower[msg.sender] = uint256(0);
+    delegation.delegatedVotingPower = uint256(0);
     // take voting power back from delegatee
     vp.votingPower[delegatee] -= amountOfDelegatedVotingPower;
-    // give voting power back to delegator
-    vp.votingPower[msg.sender] += amountOfDelegatedVotingPower;
+    if (delegateeTimeStampToUnstake < block.timestamp) {
+      // give voting power back to delegator
+      vp.votingPower[msg.sender] += amountOfDelegatedVotingPower;
+    } else {
+      // freeze votingPower with timestamp to unfreeze
+      delegation.unfreezeTimestamp = delegateeTimeStampToUnstake;
+      delegation.freezedAmount += amountOfDelegatedVotingPower;
+    }
+  }
+
+  function _unfreezeVotingPower() internal {
+    IVotingPower.VotingPower storage vp = votingPowerStorage();
+    Delegation storage delegation = vp.delegations[msg.sender];
+
+    require(delegation.unfreezeTimestamp < block.timestamp, "Wait timestamp to unfreeze");
+    uint amountOfVotingPower = delegation.freezedAmount;
+    delegation.freezedAmount = 0;
+    vp.votingPower[msg.sender] += amountOfVotingPower;
   }
 
   function _setTimestampToUnstake(address staker, uint256 timestamp) internal {
@@ -144,14 +169,29 @@ library LibVotingPower {
     return vp.timeStampToUnstake[staker];
   }
 
-  function _getDelegatee(address delegator) internal view returns(address) {
+  function _getDelegation(address delegator) internal view returns(Delegation memory delegation) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
-    return vp.delegatorToDelegatee[delegator];
+    delegation = vp.delegations[delegator];
   }
 
-  function _getDelegatedVotingPower(address delegator) internal view returns(uint256) {
-    IVotingPower.VotingPower storage vp = votingPowerStorage();
-    return vp.delegatedVotingPower[delegator];
+  function _getDelegatee(address delegator) internal view returns(address) {
+    Delegation memory delegation = _getDelegation(delegator);
+    return delegation.delegatee;
+  }
+
+  function _getAmountOfDelegatedVotingPower(address delegator) internal view returns(uint256) {
+    Delegation memory delegation = _getDelegation(delegator);
+    return delegation.delegatedVotingPower;
+  }
+
+  function _getFreezeAmountOfVotingPower(address delegator) internal view returns(uint256) {
+    Delegation memory delegation = _getDelegation(delegator);
+    return delegation.freezedAmount;
+  }
+
+  function _getUnfreezeTimestamp(address delegator) internal view returns(uint256) {
+    Delegation memory delegation = _getDelegation(delegator);
+    return delegation.unfreezeTimestamp;
   }
 
   function _calculateMinimumQuorum(uint64 minimumQuorum) internal pure returns (uint256) {

@@ -21,6 +21,10 @@ contract VotingPowerFacet is IVotingPower {
     LibVotingPower._undelegateVotingPower();
   }
 
+  function unfreezeVotingPower() external ovveride {
+    LibVotingPower._unfreezeVotingPower();
+  }
+
   // View functions
   function getVotingPowerManager() external view override returns (address) {
     return LibVotingPower._getVotingPowerManager();
@@ -46,7 +50,15 @@ contract VotingPowerFacet is IVotingPower {
     return LibVotingPower._getDelegatee(delegator);
   }
 
-  function getDelegatedVotingPower(address delegator) external view override returns(uint256) {
-    return LibVotingPower._getDelegatedVotingPower(delegator);
+  function getAmountOfDelegatedVotingPower(address delegator) external view override returns(uint256) {
+    return LibVotingPower._getAmountOfDelegatedVotingPower(delegator);
+  }
+
+  function getFreezeAmountOfVotingPower(address delegator) external view override returns(uint256) {
+    return LibVotingPower._getFreezeAmountOfVotingPower(delegator);
+  }
+
+  function getUnfreezeTimestamp(address delegator) external view override returns(uint256) {
+    return LibVotingPower._getUnfreezeTimestamp(delegator);
   }
 }

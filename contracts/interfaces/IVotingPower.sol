@@ -3,6 +3,13 @@ pragma solidity ^0.8.9;
 
 interface IVotingPower {
 
+  struct Delegation {
+    address delegatee;
+    uint256 delegatedVotingPower;
+    uint256 freezedAmount;
+    uint256 unfreezeTimestamp;
+  }
+
   struct ProposalVoting {
     bool votingStarted;
     mapping(address => uint) votedAmount; // rethink
@@ -19,11 +26,9 @@ interface IVotingPower {
     uint256 precision;
     mapping(address => uint256) votingPower;
     mapping(address => uint256) timeStampToUnstake;
+    mapping(address => Delegation) delegations;
     // proposalVotingKey == keccak256(string msName concat uint proposalID) => ProposalVoting
     mapping(bytes32 => ProposalVoting) proposalsVoting;
-
-    mapping(address => address) delegatorToDelegatee;
-    mapping(address => uint256) delegatedVotingPower;
   }
 
   // increasing voting power
@@ -35,6 +40,8 @@ interface IVotingPower {
   function delegateVotingPower(address delegatee) external;
 
   function undelegateVotingPower() external;
+
+  function unfreezeVotingPower() external;
 
   // View functions
   function getVotingPowerManager() external view returns (address);
@@ -49,5 +56,9 @@ interface IVotingPower {
 
   function getDelegatee(address delegator) external view returns(address);
 
-  function getDelegatedVotingPower(address delegator) external view returns(uint256);
+  function getAmountOfDelegatedVotingPower(address delegator) external view returns(uint256);
+
+  function getFreezeAmountOfVotingPower(address delegator) external view returns(uint256);
+
+  function getUnfreezeTimestamp(address delegator) external view returns(uint256);
 }
