@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {LibManagementSystemVotingPower} from "../../libraries/decisionSystem/votingPower/LibManagementSystemVotingPower.sol";
 import {LibVotingPower} from "../../libraries/decisionSystem/votingPower/LibVotingPower.sol";
+import {IVotingPower} from "../../interfaces/IVotingPower.sol";
 
 contract VotingPowerMSViewFacet {
   function minimumQuorumNumerator(string memory msName) external returns (uint64) {
@@ -50,5 +51,48 @@ contract VotingPowerMSViewFacet {
   }
 
   // functions related to specific ms
+
+  // return ProposalVoting struct
+  function getProposalVotingVotesYes(string memory msName, uint256 proposalId)
+    external
+    returns (uint256)
+  {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
+    IVotingPower.ProposalVoting storage proposalVoting = LibVotingPower._getProposalVoting(proposalKey);
+    return proposalVoting.votesYes;
+  }
+
+  function getProposalVotingVotesNo(string memory msName, uint256 proposalId)
+    external
+    returns (uint256)
+  {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
+    IVotingPower.ProposalVoting storage proposalVoting = LibVotingPower._getProposalVoting(proposalKey);
+    return proposalVoting.votesNo;
+  }
+
+  function getProposalVotingDeadlineTimestamp(string memory msName, uint256 proposalId)
+    external
+    returns (uint256)
+  {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
+    IVotingPower.ProposalVoting storage proposalVoting = LibVotingPower._getProposalVoting(proposalKey);
+    return proposalVoting.votingEndTimestamp;
+  }
+
+  function isHolderVotedForProposal(string memory msName, uint256 proposalId, address holder)
+    external
+    returns (bool)
+  {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
+    IVotingPower.ProposalVoting storage proposalVoting = LibVotingPower._getProposalVoting(proposalKey);
+    return proposalVoting.votedAmount[holder] > 0;
+  }
+
+  function isVotingForProposalStarted(string memory msName, uint256 proposalId) external returns (bool) {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
+    IVotingPower.ProposalVoting storage proposalVoting = LibVotingPower._getProposalVoting(proposalKey);
+    return proposalVoting.votingStarted;
+  }
 
 }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import {LibManagementSystem} from "../../libraries/dao/LibManagementSystem.sol";
 import {LibVotingPowerDecisionMaking} from "../../libraries/decisionSystem/votingPower/LibVotingPowerDecisionMaking.sol";
 import {ITreasuryDecisionMaking} from "../../interfaces/treasury/ITreasuryDecisionMaking.sol";
+import {IProposal} from "../../interfaces/IProposal.sol";
 
 contract TreasuryDecisionMakingFacet is ITreasuryDecisionMaking {
   // here we can implement treasury specific functions like sendERC20To or sendGovTokTo and etc.
@@ -50,11 +51,12 @@ contract TreasuryDecisionMakingFacet is ITreasuryDecisionMaking {
     uint8 decisionType = uint8(LibManagementSystem._getDecisionType("treasury"));
 
     if (decisionType == uint8(2)) {
-      (bool accepted, address destination, uint value, bytes memory callData) = LibVotingPowerDecisionMaking.acceptOrRejectVPDSProposal("treasury", proposalId);
-      if (accepted) {
-        emit TreasuryProposalAccepted(proposalId, destination, value, callData);
+      IProposal.ReturnedProposalValues memory returnedProposalValues = LibVotingPowerDecisionMaking.acceptOrRejectVPDSProposal("treasury", proposalId);
+      //(bool accepted, address destination, uint value, bytes memory callData) = LibVotingPowerDecisionMaking.acceptOrRejectVPDSProposal("treasury", proposalId);
+      if (returnedProposalValues.accepted) {
+        emit TreasuryProposalAccepted(proposalId, returnedProposalValues.destinationAddress, returnedProposalValues.value, returnedProposalValues.callData);
       } else {
-        emit TreasuryProposalRejected(proposalId, destination, value, callData);
+        emit TreasuryProposalRejected(proposalId, returnedProposalValues.destinationAddress, returnedProposalValues.value, returnedProposalValues.callData);
       }
     }
   }
@@ -81,8 +83,7 @@ contract TreasuryDecisionMakingFacet is ITreasuryDecisionMaking {
     uint256 numberOfProposals = destinations.length;
     require(
       values.length == numberOfProposals &&
-        callDatas.length == numberOfProposals &&
-        deadlineTimestamps.length == numberOfProposals,
+        callDatas.length == numberOfProposals,
       "Different array length"
     );
     uint256[] memory proposalIds = new uint256[](numberOfProposals);
@@ -108,7 +109,7 @@ contract TreasuryDecisionMakingFacet is ITreasuryDecisionMaking {
 
   function acceptOrRejectSeveralTreasuryProposals(uint256[] calldata proposalIds) external override {
     for (uint256 i = 0; i < proposalIds.length; i++) {
-      acceptOrRejectProposal(proposalIds[i]);
+      acceptOrRejectTreasuryProposal(proposalIds[i]);
     }
   }
 

@@ -8,6 +8,7 @@ import {LibManagementSystemVotingPower} from "./LibManagementSystemVotingPower.s
 import {LibDAOStorage} from "../../dao/LibDAOStorage.sol";
 
 library LibVotingPowerDecisionMaking {
+
   event Voted(
     address indexed voter,
     string indexed msName,
@@ -91,7 +92,7 @@ library LibVotingPowerDecisionMaking {
     // remove previous votes for proposals that are already accepted or rejected
   }
 
-  function acceptOrRejectVPDSProposal(string memory msName, uint256 proposalId) internal returns(bool accepted, address, uint, bytes memory) {
+  function acceptOrRejectVPDSProposal(string memory msName, uint256 proposalId) internal returns(IProposal.ReturnedProposalValues memory returnedProposalValues) {
     IVotingPower.ProposalVoting storage proposalVoting = LibVotingPower._getProposalVoting(
       keccak256(abi.encodePacked(msName,proposalId))
     );
@@ -113,61 +114,37 @@ library LibVotingPowerDecisionMaking {
         // accept proposal
         proposal.proposalAccepted = true;
         LibManagementSystemVotingPower._addProposalIdToAccepted(msName, proposalId);
-        /*emit TreasuryProposalAccepted(
-          proposalId,
-          proposal.destinationAddress,
-          proposal.value,
-          proposal.callData
-        );
-        */
-        return (true, proposal.destinationAddress, proposal.value, proposal.callData);
+        returnedProposalValues.accepted = true;
+        returnedProposalValues.destinationAddress = proposal.destinationAddress;
+        returnedProposalValues.value = proposal.value;
+        returnedProposalValues.callData = proposal.callData;
       } else {
         // proposal rejected
-        /*
-        emit TreasuryProposalRejected(
-          proposalId,
-          proposal.destinationAddress,
-          proposal.value,
-          proposal.callData
-        );
-        */
-        address destinationAddress = proposal.destinationAddress;
-        uint value = proposal.value;
-        bytes memory callData = proposal.callData;
+        returnedProposalValues.accepted = false;
+        returnedProposalValues.destinationAddress = proposal.destinationAddress;
+        returnedProposalValues.value = proposal.value;
+        returnedProposalValues.callData = proposal.callData;
         LibManagementSystemVotingPower._removeProposal(msName, proposalId);
-        return (false, destinationAddress, value, callData);
       }
     } else if(proposalThresholdReachedYes) {
       // accept proposal
       proposal.proposalAccepted = true;
       LibManagementSystemVotingPower._addProposalIdToAccepted(msName, proposalId);
-      /*emit TreasuryProposalAccepted(
-        proposalId,
-        proposal.destinationAddress,
-        proposal.value,
-        proposal.callData
-      );
-      */
-      return (true, proposal.destinationAddress, proposal.value, proposal.callData);
+      returnedProposalValues.accepted = true;
+      returnedProposalValues.destinationAddress = proposal.destinationAddress;
+      returnedProposalValues.value = proposal.value;
+      returnedProposalValues.callData = proposal.callData;
     } else {
       // proposal rejected
-      /*
-      emit TreasuryProposalRejected(
-        proposalId,
-        proposal.destinationAddress,
-        proposal.value,
-        proposal.callData
-      );
-      */
-      address destinationAddress = proposal.destinationAddress;
-      uint value = proposal.value;
-      bytes memory callData = proposal.callData;
+      returnedProposalValues.accepted = false;
+      returnedProposalValues.destinationAddress = proposal.destinationAddress;
+      returnedProposalValues.value = proposal.value;
+      returnedProposalValues.callData = proposal.callData;
       LibManagementSystemVotingPower._removeProposal(msName, proposalId);
-      return (false, destinationAddress, value, callData);
     }
   }
 
-  function executeVPDSProposalCall(string memory msName, uint256 proposalId) internal returns(bool, uint256) {
+  function executeVPDSProposalCall(string memory msName, uint256 proposalId) internal returns(bool) {
     IProposal.Proposal storage proposal = LibManagementSystemVotingPower._getProposal(msName, proposalId);
     require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");
     proposal.proposalExecuted = true;
@@ -185,10 +162,10 @@ library LibVotingPowerDecisionMaking {
     // remove from accepted
     LibManagementSystemVotingPower._removePropopalIdFromAcceptedList(msName, proposalId);
     LibManagementSystemVotingPower._removeProposal(msName, proposalId);
-    return (result, proposalId);
+    return (result);
   }
 
-  function executeVPDSProposalDelegateCall(string memory msName, uint256 proposalId) internal disallowChangingManagementSystems(msName) returns(bool, uint256) {
+  function executeVPDSProposalDelegateCall(string memory msName, uint256 proposalId) internal disallowChangingManagementSystems(msName) returns(bool) {
     IProposal.Proposal storage proposal = LibManagementSystemVotingPower._getProposal(msName, proposalId);
     require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");
     proposal.proposalExecuted = true;
@@ -204,7 +181,7 @@ library LibVotingPowerDecisionMaking {
     // return data needed?
     LibManagementSystemVotingPower._removePropopalIdFromAcceptedList(msName, proposalId);
     LibManagementSystemVotingPower._removeProposal(msName, proposalId);
-    return (result, proposalId);
+    return (result);
   }
 
   modifier disallowChangingManagementSystems(string memory msName) {

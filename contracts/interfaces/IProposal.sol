@@ -10,4 +10,11 @@ interface IProposal {
       bool proposalExecuted;
       uint executionTimestamp;
   }
+
+  struct ReturnedProposalValues {
+    bool accepted;
+    address destinationAddress;
+    uint value;
+    bytes callData;
+  }
 }
