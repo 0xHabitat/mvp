@@ -8,6 +8,13 @@ import {LibManagementSystemVotingPower} from "./LibManagementSystemVotingPower.s
 import {LibDAOStorage} from "../../dao/LibDAOStorage.sol";
 
 library LibVotingPowerDecisionMaking {
+  event Voted(
+    address indexed voter,
+    string indexed msName,
+    uint256 indexed proposalId,
+    bool vote
+  );
+
   event FinalVotes(
     string indexed msName,
     uint indexed proposalId,
@@ -62,8 +69,6 @@ library LibVotingPowerDecisionMaking {
     proposalVoting.votedAmount[msg.sender] = initiatorVotingPower; // rething this
     proposalVoting.votesYes += initiatorVotingPower;
 
-    //emit TreasuryProposalCreated(proposalId, proposalVoting.votingEndTimestamp);
-
     return (proposalId, proposalVoting.votingEndTimestamp);
   }
 
@@ -82,10 +87,11 @@ library LibVotingPowerDecisionMaking {
     } else {
       proposalVoting.votesNo += difference;
     }
+    emit Voted(msg.sender, msName, proposalId, vote);
     // remove previous votes for proposals that are already accepted or rejected
   }
 
-  function acceptOrRejectVPDSProposal(string memory msName, uint256 proposalId) internal returns(bool accepted, uint, address, uint, bytes memory) {
+  function acceptOrRejectVPDSProposal(string memory msName, uint256 proposalId) internal returns(bool accepted, address, uint, bytes memory) {
     IVotingPower.ProposalVoting storage proposalVoting = LibVotingPower._getProposalVoting(
       keccak256(abi.encodePacked(msName,proposalId))
     );
@@ -114,7 +120,7 @@ library LibVotingPowerDecisionMaking {
           proposal.callData
         );
         */
-        return (true, proposalId, proposal.destinationAddress, proposal.value, proposal.callData);
+        return (true, proposal.destinationAddress, proposal.value, proposal.callData);
       } else {
         // proposal rejected
         /*
@@ -129,7 +135,7 @@ library LibVotingPowerDecisionMaking {
         uint value = proposal.value;
         bytes memory callData = proposal.callData;
         LibManagementSystemVotingPower._removeProposal(msName, proposalId);
-        return (false, proposalId, destinationAddress, value, callData);
+        return (false, destinationAddress, value, callData);
       }
     } else if(proposalThresholdReachedYes) {
       // accept proposal
@@ -142,7 +148,7 @@ library LibVotingPowerDecisionMaking {
         proposal.callData
       );
       */
-      return (true, proposalId, proposal.destinationAddress, proposal.value, proposal.callData);
+      return (true, proposal.destinationAddress, proposal.value, proposal.callData);
     } else {
       // proposal rejected
       /*
@@ -157,7 +163,7 @@ library LibVotingPowerDecisionMaking {
       uint value = proposal.value;
       bytes memory callData = proposal.callData;
       LibManagementSystemVotingPower._removeProposal(msName, proposalId);
-      return (false, proposalId, destinationAddress, value, callData);
+      return (false, destinationAddress, value, callData);
     }
   }
 
