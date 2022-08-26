@@ -21,7 +21,7 @@ contract TreasuryInit {
       secondsProposalVotingPeriod,
       secondsProposalExecutionDelayPeriod
     );
-    msData.decisionSpecificData[uint8(2)] = specificVotingPowerData;
+    msData.decisionSpecificData[IManagementSystem.DecisionType(2)] = specificVotingPowerData;
   }
 
   // signers
