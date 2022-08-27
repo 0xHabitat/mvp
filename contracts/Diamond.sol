@@ -10,21 +10,37 @@ pragma solidity ^0.8.9;
 
 import {LibDiamond} from "./libraries/LibDiamond.sol";
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
+import {IDiamondLoupe} from "./interfaces/IDiamondLoupe.sol";
 
-contract HabitatDiamond {
-  constructor(address _contractOwner, address _diamondCutFacet) payable {
+contract Diamond {
+  constructor(address _contractOwner, address _diamondCutFacet, address _diamondLoupeFacet) payable {        
     LibDiamond.setContractOwner(_contractOwner);
 
     // Add the diamondCut external function from the diamondCutFacet
-    IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
-    bytes4[] memory functionSelectors = new bytes4[](1);
-    functionSelectors[0] = IDiamondCut.diamondCut.selector;
+    IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](2);
+
+    // cut diamondCut
+    bytes4[] memory functionSelectors1 = new bytes4[](1);
+    functionSelectors1[0] = IDiamondCut.diamondCut.selector;
     cut[0] = IDiamondCut.FacetCut({
-      facetAddress: _diamondCutFacet,
-      action: IDiamondCut.FacetCutAction.Add,
-      functionSelectors: functionSelectors
+        facetAddress: _diamondCutFacet, 
+        action: IDiamondCut.FacetCutAction.Add, 
+        functionSelectors: functionSelectors1
     });
-    LibDiamond.diamondCut(cut, address(0), "");
+
+    // cut diamondLoupe
+    bytes4[] memory functionSelectors2 = new bytes4[](4);
+    functionSelectors2[0] = IDiamondLoupe.facets.selector;
+    functionSelectors2[1] = IDiamondLoupe.facetFunctionSelectors.selector;
+    functionSelectors2[2] = IDiamondLoupe.facetAddresses.selector;
+    functionSelectors2[3] = IDiamondLoupe.facetAddress.selector;
+    cut[1] = IDiamondCut.FacetCut({
+        facetAddress: _diamondLoupeFacet, 
+        action: IDiamondCut.FacetCutAction.Add, 
+        functionSelectors: functionSelectors2
+    });
+
+    LibDiamond.diamondCut(cut, address(0), "");    
   }
 
   // Find facet for function that is called and execute the
