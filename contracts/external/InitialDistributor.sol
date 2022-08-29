@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IERC20} from "../libraries/openzeppelin/IERC20.sol";
-import {SafeERC20} from "../libraries/openzeppelin/SafeERC20.sol";
+import {IERC20} from "@solidstate/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 contract InitialDistributor {
   using SafeERC20 for IERC20;

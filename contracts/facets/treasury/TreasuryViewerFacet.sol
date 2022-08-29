@@ -6,20 +6,21 @@ import {LibManagementSystem} from "../../libraries/dao/LibManagementSystem.sol";
 import {IProposal} from "../../interfaces/IProposal.sol";
 
 contract TreasuryViewerFacet {
-  function getTreasuryDecisionType() external returns (IManagementSystem.DecisionType) {
+  function getTreasuryDecisionType() external view returns (IManagementSystem.DecisionType) {
     return LibManagementSystem._getDecisionType("treasury");
   }
 
-  function getTreasuryProposalsCount() external returns (uint256) {
+  function getTreasuryProposalsCount() external view returns (uint256) {
     return LibManagementSystem._getProposalsCount("treasury");
   }
 
-  function getTreasuryActiveVotingProposalsIds() external returns (uint256[] memory) {
+  function getTreasuryActiveVotingProposalsIds() external view returns (uint256[] memory) {
     return LibManagementSystem._getActiveVotingProposalsIds("treasury");
   }
 
   function getTreasuryProposal(uint256 proposalId)
     external
+    view
     returns (IProposal.Proposal memory)
   {
     return LibManagementSystem._getProposal("treasury", proposalId);

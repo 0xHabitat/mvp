@@ -1,16 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
 
-import {LibDiamond} from "../libraries/LibDiamond.sol";
-import {IERC173} from "../interfaces/IERC173.sol";
+pragma solidity ^0.8.0;
 
-contract OwnershipFacet is IERC173 {
-  function transferOwnership(address _newOwner) external override {
-    LibDiamond.enforceIsContractOwner();
-    LibDiamond.setContractOwner(_newOwner);
-  }
+import { SafeOwnable, OwnableStorage } from '@solidstate/contracts/access/ownable/SafeOwnable.sol';
 
-  function owner() external view override returns (address owner_) {
-    owner_ = LibDiamond.contractOwner();
-  }
-}
+contract OwnershipFacet is SafeOwnable {}
