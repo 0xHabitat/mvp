@@ -1,49 +1,78 @@
 // SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
 
-pragma solidity ^0.8.0;
+/******************************************************************************\
+* Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
+* EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
+*
+* Implementation of a diamond.
+/******************************************************************************/
 
-import { DiamondBase, DiamondBaseStorage } from '@solidstate/contracts/proxy/diamond/base/DiamondBase.sol';
-import { OwnableStorage } from '@solidstate/contracts/access/ownable/OwnableStorage.sol';
+import {LibDiamond} from "./libraries/LibDiamond.sol";
+import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
+import {IDiamondLoupe} from "./interfaces/IDiamondLoupe.sol";
 
-import { IDiamondWritable } from '@solidstate/contracts/proxy/diamond/writable/IDiamondWritable.sol';
-import { IDiamondReadable } from '@solidstate/contracts/proxy/diamond/readable/IDiamondReadable.sol';
+contract Diamond {
+  constructor(address _contractOwner, address _diamondCutFacet, address _diamondLoupeFacet) payable {        
+    LibDiamond.setContractOwner(_contractOwner);
 
-contract Diamond is DiamondBase {
-    using DiamondBaseStorage for DiamondBaseStorage.Layout;
-    using OwnableStorage for OwnableStorage.Layout;
+    // Add the diamondCut external function from the diamondCutFacet
+    IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](2);
 
-    constructor(
-        address _owner, 
-        address _diamondCutFacet, 
-        address _diamondLoupeFacet 
-    /* IDiamondWritable.FacetCut[] memory cuts, address target, bytes memory data */
-    ) payable {
-/*         DiamondBaseStorage.layout().diamondCut(cuts, target, data); */
-        OwnableStorage.layout().owner = _owner;
+    // cut diamondCut
+    bytes4[] memory functionSelectors1 = new bytes4[](1);
+    functionSelectors1[0] = IDiamondCut.diamondCut.selector;
+    cut[0] = IDiamondCut.FacetCut({
+        facetAddress: _diamondCutFacet, 
+        action: IDiamondCut.FacetCutAction.Add, 
+        functionSelectors: functionSelectors1
+    });
 
-        IDiamondWritable.FacetCut[] memory cut = new IDiamondWritable.FacetCut[](2);
+    // cut diamondLoupe
+    bytes4[] memory functionSelectors2 = new bytes4[](4);
+    functionSelectors2[0] = IDiamondLoupe.facets.selector;
+    functionSelectors2[1] = IDiamondLoupe.facetFunctionSelectors.selector;
+    functionSelectors2[2] = IDiamondLoupe.facetAddresses.selector;
+    functionSelectors2[3] = IDiamondLoupe.facetAddress.selector;
+    cut[1] = IDiamondCut.FacetCut({
+        facetAddress: _diamondLoupeFacet, 
+        action: IDiamondCut.FacetCutAction.Add, 
+        functionSelectors: functionSelectors2
+    });
 
-        bytes4[] memory functionSelectors1 = new bytes4[](1);
-        functionSelectors1[0] = IDiamondWritable.diamondCut.selector;
-        cut[0] = IDiamondWritable.FacetCut({
-            target: _diamondCutFacet, 
-            action: IDiamondWritable.FacetCutAction.ADD, 
-            selectors: functionSelectors1
-        });
+    LibDiamond.diamondCut(cut, address(0), "");    
+  }
 
-        // cut diamondLoupe
-        bytes4[] memory functionSelectors2 = new bytes4[](4);
-        functionSelectors2[0] = IDiamondReadable.facets.selector;
-        functionSelectors2[1] = IDiamondReadable.facetFunctionSelectors.selector;
-        functionSelectors2[2] = IDiamondReadable.facetAddresses.selector;
-        functionSelectors2[3] = IDiamondReadable.facetAddress.selector;
-        cut[1] = IDiamondWritable.FacetCut({
-            target: _diamondLoupeFacet, 
-            action: IDiamondWritable.FacetCutAction.ADD, 
-            selectors: functionSelectors2
-        });
-
-        DiamondBaseStorage.layout().diamondCut(cut, address(0), '');
+  // Find facet for function that is called and execute the
+  // function if a facet is found and return any value.
+  fallback() external payable {
+    LibDiamond.DiamondStorage storage ds;
+    bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;
+    // get diamond storage
+    assembly {
+      ds.slot := position
     }
-    receive() external payable {}
+    // get facet from function selector
+    address facet = address(bytes20(ds.facets[msg.sig]));
+    require(facet != address(0), "Diamond: Function does not exist");
+    // Execute external function from facet using delegatecall and return any value.
+    assembly {
+      // copy function selector and any arguments
+      calldatacopy(0, 0, calldatasize())
+      // execute function call using the facet
+      let result := delegatecall(gas(), facet, 0, calldatasize(), 0, 0)
+      // get any return value
+      returndatacopy(0, 0, returndatasize())
+      // return any return value or error back to the caller
+      switch result
+      case 0 {
+        revert(0, returndatasize())
+      }
+      default {
+        return(0, returndatasize())
+      }
+    }
+  }
+
+  receive() external payable {}
 }

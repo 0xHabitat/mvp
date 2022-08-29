@@ -33,7 +33,7 @@ library LibVotingPower {
     }
   }
 
-  function _getProposalVoting(bytes32 proposalKey) internal view returns(IVotingPower.ProposalVoting storage pV) {
+  function _getProposalVoting(bytes32 proposalKey) internal returns(IVotingPower.ProposalVoting storage pV) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     pV = vp.proposalsVoting[proposalKey];
   }
@@ -194,26 +194,26 @@ library LibVotingPower {
     return delegation.unfreezeTimestamp;
   }
 
-  function _calculateMinimumQuorum(uint64 minimumQuorum) internal view returns (uint256) {
+  function _calculateMinimumQuorum(uint64 minimumQuorum) internal returns (uint256) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     return (uint256(minimumQuorum) * vp.maxAmountOfVotingPower) / vp.precision;
   }
 
-  function _calculateIsQuorum(uint64 minimumQuorum) internal view returns (bool) {
+  function _calculateIsQuorum(uint64 minimumQuorum) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     return
       (uint256(minimumQuorum) * vp.maxAmountOfVotingPower) / vp.precision <=
       vp.totalAmountOfVotingPower;
   }
 
-  function _calculateIsEnoughVotingPower(address holder, uint64 thresholdForInitiator) internal view returns (bool) {
+  function _calculateIsEnoughVotingPower(address holder, uint64 thresholdForInitiator) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     return
       vp.votingPower[holder] >=
       ((uint256(thresholdForInitiator) * vp.totalAmountOfVotingPower) / vp.precision);
   }
 
-  function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint64 thresholdForProposal) internal view returns (bool) {
+  function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint64 thresholdForProposal) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     return
       amountOfVotes >=

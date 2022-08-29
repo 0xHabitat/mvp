@@ -24,7 +24,6 @@ library LibManagementSystem {
 */
   function _getManagementSystems()
     internal
-    view
     returns (IManagementSystem.ManagementSystems storage mss)
   {
     bytes32 position = LibDAOStorage._getManagementSystemsPosition();
@@ -36,7 +35,6 @@ library LibManagementSystem {
 
   function _getManagementSystem(string memory msName)
     internal
-    view
     returns(IManagementSystem.ManagementSystem memory ms)
   {
     IManagementSystem.ManagementSystems storage mss = _getManagementSystems();
@@ -67,33 +65,33 @@ library LibManagementSystem {
     }
   }
 
-  function _getMSDataByName(string memory msName) internal view returns(IManagementSystem.MSData storage msData) {
+  function _getMSDataByName(string memory msName) internal returns(IManagementSystem.MSData storage msData) {
     IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
     msData = _getMSData(ms.dataPosition);
   }
 
   // viewers for specific ms
-  function _getDecisionType(string memory msName) internal view returns(IManagementSystem.DecisionType) {
+  function _getDecisionType(string memory msName) internal returns(IManagementSystem.DecisionType) {
     IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
     return ms.decisionType;
   }
 
-  function _getProposal(string memory msName, uint proposalId) internal view returns(IProposal.Proposal memory proposal) {
+  function _getProposal(string memory msName, uint proposalId) internal returns(IProposal.Proposal memory proposal) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     proposal = msData.proposals[proposalId];
   }
 
-  function _getActiveVotingProposalsIds(string memory msName) internal view returns(uint256[] memory) {
+  function _getActiveVotingProposalsIds(string memory msName) internal returns(uint256[] memory) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.activeVotingProposalsIds;
   }
 
-  function _getAcceptedProposalsIds(string storage msName) internal view returns(uint256[] storage) {
+  function _getAcceptedProposalsIds(string storage msName) internal returns(uint256[] storage) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.acceptedProposalsIds;
   }
 
-  function _getProposalsCount(string memory msName) internal view returns(uint256) {
+  function _getProposalsCount(string memory msName) internal returns(uint256) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.proposalsCounter;
   }

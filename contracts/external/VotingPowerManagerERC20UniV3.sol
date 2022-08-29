@@ -4,8 +4,8 @@ pragma solidity ^0.8.9;
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableMap.sol';
 import {LibUniswapV3Math} from "../libraries/helpers/LibUniswapV3Math.sol";
-import {IERC20} from "@solidstate/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {IERC20} from "../libraries/openzeppelin/IERC20.sol";
+import {SafeERC20} from "../libraries/openzeppelin/SafeERC20.sol";
 import {IVotingPower} from "../interfaces/IVotingPower.sol";
 
 struct Slot0 {
