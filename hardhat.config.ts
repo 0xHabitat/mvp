@@ -1,6 +1,7 @@
 require("dotenv").config();
 import '@nomiclabs/hardhat-waffle';
 import 'hardhat-abi-exporter';
+require('hardhat-gemcutter');
 
 // This adds support for typescript paths mappings
 import 'tsconfig-paths/register';
