@@ -6,7 +6,7 @@ hardhat diamond:add --local --name ERC20Facet
 hardhat diamond:cut --init-contract ERC20Init --init-fn initERC20deployInitialDistributor --init-params '["Habitat", "HBT", 18, "10000000000000000000000000"]'
 hardhat diamond:add --local --name VotingPowerFacet
 hardhat diamond:add --local --name VotingPowerMSViewFacet
-# hardhat diamond:cut --init-contract VotingPowerInitUniV3 --init-fn initVotingPowerERC20UniV3DeployMainPools --init-params '["10000","0xC36442b4a4522E871399CD717aBDD847Ab11FE88",["0x4200000000000000000000000000000000000006","0x7F5c764cBc14f9669B88837ca1490cCa17c31607","0x94b008aA00579c1307B0EF2c499aD98a8ce58e58","0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1","0x4200000000000000000000000000000000000042"],"0x1f9f6d9a3bc5ab22441f2925e9"]'
+hardhat diamond:cut --init-contract VotingPowerInitUniV3 --init-fn initVotingPowerERC20UniV3DeployMainPool --init-params '["10000","0xC36442b4a4522E871399CD717aBDD847Ab11FE88",["0x4200000000000000000000000000000000000006","0x7F5c764cBc14f9669B88837ca1490cCa17c31607","0x94b008aA00579c1307B0EF2c499aD98a8ce58e58","0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1","0x4200000000000000000000000000000000000042"],["0x81853cdc3fe8b949c55450b","0x1f9f6d9a3bc5ab22441f2925e9"]]'
 hardhat diamond:add --local --name TreasuryDefaultCallbackHandlerFacet
 hardhat diamond:add --local --name TreasuryDecisionMakingFacet
 hardhat diamond:add --local --name TreasuryViewerFacet
