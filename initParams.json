@@ -1,0 +1,139 @@
+{
+  "initDAO": {
+    "functionDescription": "Initiates the state with DAO metadata, the trusted source of addresses, and calculates and stores the position for Management systems data",
+    "daoName": {
+      "value": "HabitatDAO",
+      "description": "The name of DAO"
+    },
+    "purpose": {
+      "value": "Developing DAO tools.",
+      "description": "The current purpose of the DAO"
+    },
+    "info": {
+      "value": "info",
+      "description": "Field for more information about DAO"
+    },
+    "socials": {
+      "value": "0xhabitat.org",
+      "description": "DAO socials"
+    },
+    "addressesProvider": {
+      "value": "0x0000000000000000000000000000000000000000",
+      "description": "The trusted source to make diamondCuts, have getters for facets and init contracts"
+    }
+  },
+  "initManagementSystems5": {
+    "functionDescription": "Initiates state for 5 management systems: setAddChangeManagementSystem (uses delegatecall, the only ms that is able to change decision type for other ms, also can add new ms), governance (uses delegatecall, ms that can change configuration data, can call diamondCut), treasury (uses call only, can move assets and jump into defi protocols), subDAOsCreation (can create subDAOs that are connected to mainDAO), launchPad (can handle token launch). Each management system can has it's own decision type and data related to it.",
+    "decisionTypes": {
+      "value": [2,2,2,2,2],
+      "description": "An array with chosen decision type for each ms. Current options: 0 - None, 1 - OnlyOwner, 2 - VotingPowerManagerERC20, 3 - Signers. Can be extended. For prototype we have only one decision system implemented."
+    }
+  },
+  "initERC20deployInitialDistributor": {
+    "functionDescription": "Initiates state for ERC20 with fix totalSupply (no minting) and deploys initialDistributor contract that receives all tokens and has as owner caller which able to distribute tokens and stake tokens on favor of an array of addresses.",
+    "tokenName": {
+      "value": "Habitat",
+      "description": "Governance token name."
+    },
+    "tokenSymbol": {
+      "value": "HBT",
+      "description": "Governance token symbol."
+    },
+    "decimals": {
+      "value": 18,
+      "description": "Decimals."
+    },
+    "totalSupply": {
+      "value": "10000000000000000000000000",
+      "description": "Fixed total supply."
+    }
+  },
+  "initVotingPowerERC20UniV3DeployMainPool": {
+    "functionDescription": "Initiates decision type VotingPowerERC20 with maxAmountOfVotingPower equal governance token totalSupply. Deploys one uniV3 pool with 0.3% fee. Deploys stake contract that is able to get governance tokens and uniV3 NFTs where underlying tokens are governance and legalPairTokens and give voting power for stakers. Decision type VotingPowerERC20 has delegation functionality.",
+    "_precision": {
+      "value": 10000,
+      "description": "The dividor that helps represent percentage. Example, 11.42% - decimals 0.1142, value 0.1142 * 10000(precision) = 1142."
+    },
+    "_nfPositionManager": {
+      "value": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+      "description": "Uniswap V3 NonfungiblePositionManager address."
+    },
+    "_legalPairTokens": {
+      "value": ["0x4200000000000000000000000000000000000006","0x7F5c764cBc14f9669B88837ca1490cCa17c31607","0x94b008aA00579c1307B0EF2c499aD98a8ce58e58","0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1","0x4200000000000000000000000000000000000042"],
+      "description": "An array of ERC20 token addresses on optimism mainnet, which are legalPairTokens. Max 9 tokens. Means that user who provides liquidity in uniV3 pool as governance token and one of the tokens from this array is able to stake his position and receive voting power. UniV3 pool is deployed with governance token and first token from this array."
+    },
+    "_sqrtPricesX96": {
+      "value": ["0x81853cdc3fe8b949c55450b","0x1f9f6d9a3bc5ab22441f2925e9"],
+      "description": "Initial price for uniV3 pool. Values set as 1000 governance tokens for 1 legal pair token (1000HBT for 1WETH). We put two initial prices 0.001 and 1000.0 (calculated: reserve1/reserve0), because we don't know the governance token address before we deploy diamond, it means we cannot define which token will be token0 and which token1."
+    }
+  },
+  "initTreasuryVotingPower": {
+    "functionDescription": "Initiates specific voting power data for treasury management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
+    "minimumQuorum": {
+      "value": 1500,
+      "description": "Value is the percentage (15% - 0.15 * 10000). The percentage helps to calculate the minimum quorum by multiplying with maxAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if current totalAmountOfVotingPower is less than minimumQuorum rejects proposal creation)."
+    },
+    "thresholdForInitiator": {
+      "value": 10,
+      "description": "Value is the percentage (0.1% - 0.001 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
+    },
+    "thresholdForProposal" : {
+      "value": 3400,
+      "description": "Value is the percentage (34% - 0.34 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
+    },
+    "secondsProposalVotingPeriod" : {
+      "value": 86400,
+      "description": "Value represents the amount of seconds that are given for voting actions. After proposal is created the countdown started, votingPowerHolder are able to vote. After voting period is ended the proposal can be accepted or rejected depending on the voting results."
+    },
+    "secondsProposalExecutionDelayPeriod" : {
+      "value": 3600,
+      "description": "Value represents the amount of seconds that are given for a delaying execution after voting period is ended."
+    }
+  },
+  "initGovernanceVotingPower": {
+    "functionDescription": "Initiates specific voting power data for governance management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
+    "minimumQuorum": {
+      "value": 3300,
+      "description": "Value is the percentage (33% - 0.33 * 10000). The percentage helps to calculate the minimum quorum by multiplying with maxAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if current totalAmountOfVotingPower is less than minimumQuorum rejects proposal creation)."
+    },
+    "thresholdForInitiator": {
+      "value": 100,
+      "description": "Value is the percentage (1% - 0.01 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
+    },
+    "thresholdForProposal" : {
+      "value": 5100,
+      "description": "Value is the percentage (51% - 0.51 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
+    },
+    "secondsProposalVotingPeriod" : {
+      "value": 259200,
+      "description": "Value represents the amount of seconds that are given for voting actions. After proposal is created the countdown started, votingPowerHolder are able to vote. After voting period is ended the proposal can be accepted or rejected depending on the voting results."
+    },
+    "secondsProposalExecutionDelayPeriod" : {
+      "value": 3600,
+      "description": "Value represents the amount of seconds that are given for a delaying execution after voting period is ended."
+    }
+  },
+  "initCreationSubDAOsVotingPower": {
+    "functionDescription": "Initiates specific voting power data for creationSubDAOs management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
+    "minimumQuorum": {
+      "value": 3300,
+      "description": "Value is the percentage (33% - 0.33 * 10000). The percentage helps to calculate the minimum quorum by multiplying with maxAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if current totalAmountOfVotingPower is less than minimumQuorum rejects proposal creation)."
+    },
+    "thresholdForInitiator": {
+      "value": 100,
+      "description": "Value is the percentage (1% - 0.01 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
+    },
+    "thresholdForProposal" : {
+      "value": 5100,
+      "description": "Value is the percentage (51% - 0.51 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
+    },
+    "secondsProposalVotingPeriod" : {
+      "value": 259200,
+      "description": "Value represents the amount of seconds that are given for voting actions. After proposal is created the countdown started, votingPowerHolder are able to vote. After voting period is ended the proposal can be accepted or rejected depending on the voting results."
+    },
+    "secondsProposalExecutionDelayPeriod" : {
+      "value": 3600,
+      "description": "Value represents the amount of seconds that are given for a delaying execution after voting period is ended."
+    }
+  }
+}
