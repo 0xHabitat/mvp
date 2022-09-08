@@ -1,24 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {IProposal} from "../IProposal.sol";
+
 interface IManagementSystem {
-  enum VotingSystem {
-    VotingPowerManager, //stake contract
-    ERC20PureVoting, // Compound
+
+  enum DecisionType {
+    None,
+    OnlyOwner,
+    VotingPowerManagerERC20, // stake contract
     Signers // Gnosis
+    //ERC20PureVoting, // Compound
     //BountyCreation - gardener, worker, reviewer - 3 signers
   }
 
   struct ManagementSystem {
-    VotingSystem governanceVotingSystem;
-    VotingSystem treasuryVotingSystem;
-    VotingSystem subDAOCreationVotingSystem;
-    // VotingSystem bountyCreation;
-    address votingPowerManager;
-    address governanceERC20Token;
-    address[] governanceSigners;
-    address[] treasurySigners;
-    address[] subDAOCreationSigners;
-    //address[] signers; // maybe better use Gnosis data structure (nested array) instead of array
+    string nameMS; // very important that this item is bytes32, so the string is max 31 char
+    DecisionType decisionType;
+    bytes32 dataPosition;
+  }
+
+  struct ManagementSystems {
+    uint numberOfManagementSystems;
+    ManagementSystem setAddChangeManagementSystem;
+    ManagementSystem governance;
+    ManagementSystem treasury;
+    ManagementSystem subDAOsCreation;
+    ManagementSystem launchPad;
+  }
+  // this struct is stored at dataPosition slot
+  struct MSData {
+    // decisionSystem => data
+    mapping(DecisionType => bytes) decisionSpecificData;
+    // proposals
+    //mapping(uint256 => bytes) proposals;
+    mapping(uint256 => IProposal.Proposal) proposals;
+    uint256[] activeVotingProposalsIds;
+    uint256[] acceptedProposalsIds;
+    uint256 proposalsCounter;
   }
 }

@@ -76,7 +76,7 @@ struct SubDAOStorage {
   function _isSubDAOOf(address _mainDAO) internal view returns (bool) {
     return _mainDAO == _getMainDAO();
   }
-
+/*
   function _getManagementSystem()
     internal
     view
@@ -144,4 +144,5 @@ struct SubDAOStorage {
     ISubDAO.SubDAOStorage storage sds = subDAOStorage();
     return LibManagementSystem._isSubDAOCreationSigner(sds.managementSystemPosition, _signer);
   }
+  */
 }

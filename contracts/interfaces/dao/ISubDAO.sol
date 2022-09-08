@@ -33,7 +33,7 @@ interface ISubDAO {
   function isMainDAOFor(address _subDAO) external view returns (bool);
 
   function getManagementSystem() external view returns (IManagementSystem.ManagementSystem memory);
-
+/*
   function getGovernanceVotingSystem() external view returns (IManagementSystem.VotingSystem);
 
   function getTreasuryVotingSystem() external view returns (IManagementSystem.VotingSystem);
@@ -55,4 +55,5 @@ interface ISubDAO {
   function isTreasurySigner(address _signer) external view returns (bool);
 
   function isSubDAOCreationSigner(address _signer) external view returns (bool);
+  */
 }
