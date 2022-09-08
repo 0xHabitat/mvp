@@ -7,7 +7,6 @@ import {LibManagementSystem} from "../../dao/LibManagementSystem.sol";
 
 // decisionSpecificData[2]
 struct VotingPowerSpecificData {
-  uint64 minimumQuorum;
   uint64 thresholdForProposal;
   uint64 thresholdForInitiator;
   uint64 secondsProposalVotingPeriod;
@@ -43,11 +42,6 @@ library LibManagementSystemVotingPower {
     msData.proposalsCounter = msData.proposalsCounter + uint128(1);
     proposalId = uint256(msData.proposalsCounter);
     msData.activeVotingProposalsIds.push(proposalId);
-  }
-
-  function _getMinimumQuorumNumerator(string memory msName) internal returns(uint64) {
-    VotingPowerSpecificData memory vpsd = _getMSVotingPowerSpecificData(msName);
-    return vpsd.minimumQuorum;
   }
 
   function _getThresholdForProposalNumerator(string memory msName) internal returns(uint64) {

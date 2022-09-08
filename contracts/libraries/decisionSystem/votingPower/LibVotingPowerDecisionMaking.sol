@@ -35,9 +35,6 @@ library LibVotingPowerDecisionMaking {
     uint256 value,
     bytes calldata callData
   ) internal returns (uint256, uint256) {
-    // check if minimumQuorum
-    uint64 minimumQuorumNumerator = LibManagementSystemVotingPower._getMinimumQuorumNumerator(msName);
-    require(LibVotingPower._calculateIsQuorum(minimumQuorumNumerator), "There is no quorum yet.");
     // threshold for creating proposals
     uint64 thresholdForInitiatorNumerator = LibManagementSystemVotingPower._getThresholdForInitiatorNumerator(msName);
     require(

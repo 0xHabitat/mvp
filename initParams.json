@@ -69,17 +69,13 @@
   },
   "initTreasuryVotingPower": {
     "functionDescription": "Initiates specific voting power data for treasury management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
-    "minimumQuorum": {
-      "value": 1500,
-      "description": "Value is the percentage (15% - 0.15 * 10000). The percentage helps to calculate the minimum quorum by multiplying with maxAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if current totalAmountOfVotingPower is less than minimumQuorum rejects proposal creation)."
-    },
     "thresholdForInitiator": {
       "value": 10,
-      "description": "Value is the percentage (0.1% - 0.001 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
+      "description": "Value is the percentage (0.1% - 0.001 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
     },
     "thresholdForProposal" : {
       "value": 3400,
-      "description": "Value is the percentage (34% - 0.34 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
+      "description": "Value is the percentage (34% - 0.34 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
     },
     "secondsProposalVotingPeriod" : {
       "value": 86400,
@@ -92,17 +88,13 @@
   },
   "initGovernanceVotingPower": {
     "functionDescription": "Initiates specific voting power data for governance management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
-    "minimumQuorum": {
-      "value": 3300,
-      "description": "Value is the percentage (33% - 0.33 * 10000). The percentage helps to calculate the minimum quorum by multiplying with maxAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if current totalAmountOfVotingPower is less than minimumQuorum rejects proposal creation)."
-    },
     "thresholdForInitiator": {
       "value": 100,
-      "description": "Value is the percentage (1% - 0.01 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
+      "description": "Value is the percentage (1% - 0.01 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
     },
     "thresholdForProposal" : {
       "value": 5100,
-      "description": "Value is the percentage (51% - 0.51 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
+      "description": "Value is the percentage (51% - 0.51 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
     },
     "secondsProposalVotingPeriod" : {
       "value": 259200,
@@ -115,17 +107,13 @@
   },
   "initCreationSubDAOsVotingPower": {
     "functionDescription": "Initiates specific voting power data for creationSubDAOs management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
-    "minimumQuorum": {
-      "value": 3300,
-      "description": "Value is the percentage (33% - 0.33 * 10000). The percentage helps to calculate the minimum quorum by multiplying with maxAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if current totalAmountOfVotingPower is less than minimumQuorum rejects proposal creation)."
-    },
     "thresholdForInitiator": {
       "value": 100,
-      "description": "Value is the percentage (1% - 0.01 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
+      "description": "Value is the percentage (1% - 0.01 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.)"
     },
     "thresholdForProposal" : {
       "value": 5100,
-      "description": "Value is the percentage (51% - 0.51 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with totalAmountOfVotingPower. Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
+      "description": "Value is the percentage (51% - 0.51 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
     },
     "secondsProposalVotingPeriod" : {
       "value": 259200,

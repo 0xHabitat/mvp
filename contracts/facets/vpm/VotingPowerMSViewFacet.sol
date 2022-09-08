@@ -6,9 +6,6 @@ import {LibVotingPower} from "../../libraries/decisionSystem/votingPower/LibVoti
 import {IVotingPower} from "../../interfaces/IVotingPower.sol";
 
 contract VotingPowerMSViewFacet {
-  function minimumQuorumNumerator(string memory msName) external returns (uint64) {
-    return LibManagementSystemVotingPower._getMinimumQuorumNumerator(msName);
-  }
 
   function thresholdForProposalNumerator(string memory msName) external returns (uint64) {
     return LibManagementSystemVotingPower._getThresholdForProposalNumerator(msName);
@@ -20,16 +17,6 @@ contract VotingPowerMSViewFacet {
 
   function denominator() external view returns (uint256) {
     return LibVotingPower._getPrecision();
-  }
-
-  function getMinimumQuorum(string memory msName) external returns (uint256) {
-    uint64 minimumQuorumNumerator = LibManagementSystemVotingPower._getMinimumQuorumNumerator(msName);
-    return LibVotingPower._calculateMinimumQuorum(minimumQuorumNumerator);
-  }
-
-  function isQourum(string memory msName) external returns (bool) {
-    uint64 minimumQuorumNumerator = LibManagementSystemVotingPower._getMinimumQuorumNumerator(msName);
-    return LibVotingPower._calculateIsQuorum(minimumQuorumNumerator);
   }
 
   function isEnoughVotingPower(address holder, string memory msName) external returns (bool) {

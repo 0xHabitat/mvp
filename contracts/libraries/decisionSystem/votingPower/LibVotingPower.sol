@@ -194,29 +194,28 @@ library LibVotingPower {
     return delegation.unfreezeTimestamp;
   }
 
-  function _calculateMinimumQuorum(uint64 minimumQuorum) internal returns (uint256) {
-    IVotingPower.VotingPower storage vp = votingPowerStorage();
-    return (uint256(minimumQuorum) * vp.maxAmountOfVotingPower) / vp.precision;
-  }
-
-  function _calculateIsQuorum(uint64 minimumQuorum) internal returns (bool) {
-    IVotingPower.VotingPower storage vp = votingPowerStorage();
-    return
-      (uint256(minimumQuorum) * vp.maxAmountOfVotingPower) / vp.precision <=
-      vp.totalAmountOfVotingPower;
-  }
-
   function _calculateIsEnoughVotingPower(address holder, uint64 thresholdForInitiator) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
-    return
-      vp.votingPower[holder] >=
-      ((uint256(thresholdForInitiator) * vp.totalAmountOfVotingPower) / vp.precision);
+    if (vp.totalAmountOfVotingPower < vp.maxAmountOfVotingPower) {
+      return
+        vp.votingPower[holder] >=
+        ((uint256(thresholdForInitiator) * vp.maxAmountOfVotingPower) / vp.precision);
+    } else {
+      return
+        vp.votingPower[holder] >=
+        ((uint256(thresholdForInitiator) * vp.totalAmountOfVotingPower) / vp.precision);
+    }
   }
 
   function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint64 thresholdForProposal) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
-    return
+    if (vp.totalAmountOfVotingPower < vp.maxAmountOfVotingPower) {
       amountOfVotes >=
-      ((uint256(thresholdForProposal) * vp.totalAmountOfVotingPower) / vp.precision);
+      ((uint256(thresholdForProposal) * vp.maxAmountOfVotingPower) / vp.precision);
+    } else {
+      return
+        amountOfVotes >=
+        ((uint256(thresholdForProposal) * vp.totalAmountOfVotingPower) / vp.precision);
+    }
   }
 }
