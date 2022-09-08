@@ -188,7 +188,7 @@ async function deployDiamond () {
   console.log('VotingPowerManager deployed:', votingPowerManagerAddress);
 
   // Treasury cut
-  functionCall = initContractInstances.TreasuryInit.interface.encodeFunctionData('initTreasuryVotingPower', [initParams.initTreasuryVotingPower.minimumQuorum.value, initParams.initTreasuryVotingPower.thresholdForInitiator.value, initParams.initTreasuryVotingPower.thresholdForProposal.value, initParams.initTreasuryVotingPower.secondsProposalVotingPeriod.value, initParams.initTreasuryVotingPower.secondsProposalExecutionDelayPeriod.value]);
+  functionCall = initContractInstances.TreasuryInit.interface.encodeFunctionData('initTreasuryVotingPower', [initParams.initTreasuryVotingPower.thresholdForInitiator.value, initParams.initTreasuryVotingPower.thresholdForProposal.value, initParams.initTreasuryVotingPower.secondsProposalVotingPeriod.value, initParams.initTreasuryVotingPower.secondsProposalExecutionDelayPeriod.value]);
   const treasuryCut = [
     {
       facetAddress: facetContractInstances.TreasuryDefaultCallbackHandlerFacet.address,
