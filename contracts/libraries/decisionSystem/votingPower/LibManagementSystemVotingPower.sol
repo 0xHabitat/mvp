@@ -7,8 +7,8 @@ import {LibManagementSystem} from "../../dao/LibManagementSystem.sol";
 
 // decisionSpecificData[2]
 struct VotingPowerSpecificData {
-  uint64 thresholdForProposal;
   uint64 thresholdForInitiator;
+  uint64 thresholdForProposal;
   uint64 secondsProposalVotingPeriod;
   uint64 secondsProposalExecutionDelayPeriod;
 }

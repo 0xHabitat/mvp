@@ -14,18 +14,19 @@ contract TreasuryDecisionMakingFacet is ITreasuryDecisionMaking {
     uint256 value,
     bytes calldata callData
   ) public override returns (uint256 proposalId) {
-
-    bytes4 destSelector = bytes4(callData[0:4]);
-    if (destination == address(this)) {
-      // allow to call diamond only as ERC20 functionallity
-      //(transfer(address,uint256), approve(address,uint256), increaseAllowance, decreaseAllowance)
-      require(
-        destSelector == 0xa9059cbb ||
-        destSelector == 0x095ea7b3 ||
-        destSelector == 0x39509351 ||
-        destSelector == 0xa457c2d7,
-        "Treasury proposals are related only to governance token."
-      );
+    if (callData.length >= 4) {
+      bytes4 destSelector = bytes4(callData[0:4]);
+      if (destination == address(this)) {
+        // allow to call diamond only as ERC20 functionallity
+        //(transfer(address,uint256), approve(address,uint256), increaseAllowance, decreaseAllowance)
+        require(
+          destSelector == 0xa9059cbb ||
+          destSelector == 0x095ea7b3 ||
+          destSelector == 0x39509351 ||
+          destSelector == 0xa457c2d7,
+          "Treasury proposals are related only to governance token."
+        );
+      }
     }
     // what is treasury decision system?
     uint8 decisionType = uint8(LibManagementSystem._getDecisionType("treasury"));
