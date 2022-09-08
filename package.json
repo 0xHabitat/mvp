@@ -7,6 +7,7 @@
     "build": "hardhat compile",
     "test": "hardhat test",
     "deploy": "hardhat run --network localhost scripts/deploy.js",
+    "deployHabitatDAO": "hardhat run --network localhost scripts/deployHabitatDAO.js",
     "tsc": "tsc && cp typechain/*.d.ts dist/typechain/",
     "clean": "hardhat clean && rm -rf dist",
     "lint::typescript": "eslint './**/*.ts' --ext .ts",

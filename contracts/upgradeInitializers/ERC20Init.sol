@@ -9,7 +9,8 @@ import {InitialDistributorAbleToStake} from "../external/InitialDistributor.sol"
 contract ERC20Init is ERC20BaseInternal {
 
   event InitialDistributorDeployed(
-    address initialDistributor
+    address indexed initialDistributor,
+    address indexed erc20Address
   );
 
   using ERC20MetadataStorage for ERC20MetadataStorage.Layout;
@@ -51,7 +52,7 @@ contract ERC20Init is ERC20BaseInternal {
       msg.sender,
       address(this)
     );
-    emit InitialDistributorDeployed(address(initialDistributor));
+    emit InitialDistributorDeployed(address(initialDistributor), address(this));
     ERC20MetadataStorage.Layout storage tokenMetadata = ERC20MetadataStorage.layout();
     tokenMetadata.setName(tokenName);
     tokenMetadata.setSymbol(tokenSymbol);

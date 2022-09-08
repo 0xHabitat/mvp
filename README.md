@@ -27,6 +27,20 @@ then in main terminal:
 yarn deploy
 ```
 
+## deploy habitat DAO
+
+in separate terminal:
+
+```
+yarn run hardhat node
+```
+
+then in main terminal:
+
+```
+yarn deployHabitatDAO
+```
+
 ## deploy with Gemcutter
 
 More info about Gemcutter https://0xhabitat.org/docs/Developers/Gemcutter/
