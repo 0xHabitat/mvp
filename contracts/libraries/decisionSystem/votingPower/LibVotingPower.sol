@@ -210,8 +210,9 @@ library LibVotingPower {
   function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint64 thresholdForProposal) internal returns (bool) {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     if (vp.totalAmountOfVotingPower < vp.maxAmountOfVotingPower) {
-      amountOfVotes >=
-      ((uint256(thresholdForProposal) * vp.maxAmountOfVotingPower) / vp.precision);
+      return
+        amountOfVotes >=
+        ((uint256(thresholdForProposal) * vp.maxAmountOfVotingPower) / vp.precision);
     } else {
       return
         amountOfVotes >=
