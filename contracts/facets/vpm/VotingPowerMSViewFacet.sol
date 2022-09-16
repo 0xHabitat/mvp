@@ -11,8 +11,18 @@ contract VotingPowerMSViewFacet {
     return LibManagementSystemVotingPower._getThresholdForProposalNumerator(msName);
   }
 
+  function absoluteThresholdForProposal(string memory msName) external returns (uint256) {
+    uint64 thresholdNumerator = LibManagementSystemVotingPower._getThresholdForProposalNumerator(msName);
+    return LibVotingPower._calculateAbsoluteThresholdValue(thresholdNumerator);
+  }
+
   function thresholdForInitiatorNumerator(string memory msName) external returns (uint64) {
     return LibManagementSystemVotingPower._getThresholdForInitiatorNumerator(msName);
+  }
+
+  function absoluteThresholdForInitiator(string memory msName) external returns (uint256) {
+    uint64 thresholdNumerator = LibManagementSystemVotingPower._getThresholdForInitiatorNumerator(msName);
+    return LibVotingPower._calculateAbsoluteThresholdValue(thresholdNumerator);
   }
 
   function denominator() external view returns (uint256) {

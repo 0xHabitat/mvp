@@ -66,7 +66,7 @@ library LibVotingPowerDecisionMaking {
     LibVotingPower._setTimestampToUnstake(msg.sender, proposal.executionTimestamp);
     proposalVoting.votedAmount[msg.sender] = initiatorVotingPower; // rething this
     proposalVoting.votesYes += initiatorVotingPower;
-
+    emit Voted(msg.sender, msName, proposalId, true);
     return (proposalId, proposalVoting.votingEndTimestamp);
   }
 
