@@ -61,7 +61,7 @@ library LibVotingPower {
     IVotingPower.VotingPower storage vp = votingPowerStorage();
     require(msg.sender == vp.votingPowerManager);
     require(
-      vp.timeStampToUnstake[voter] < block.timestamp,
+      vp.timeStampToUnstake[voter] <= block.timestamp,
       "Cannot unstake now."
     );
     // decrease totalVotingPower
@@ -217,6 +217,15 @@ library LibVotingPower {
       return
         amountOfVotes >=
         ((uint256(thresholdForProposal) * vp.totalAmountOfVotingPower) / vp.precision);
+    }
+  }
+
+  function _calculateAbsoluteThresholdValue(uint64 thresholdNumerator) internal returns (uint256) {
+    IVotingPower.VotingPower storage vp = votingPowerStorage();
+    if (vp.totalAmountOfVotingPower < vp.maxAmountOfVotingPower) {
+      return ((uint256(thresholdNumerator) * vp.maxAmountOfVotingPower) / vp.precision);
+    } else {
+      return ((uint256(thresholdNumerator) * vp.totalAmountOfVotingPower) / vp.precision);
     }
   }
 }

@@ -62,7 +62,7 @@ async function deployFacets() {
     // concat
   }
   await fs.promises.writeFile('./habitatDiamondABI.json', JSON.stringify(abi, null, 2));
-  return facetContractInstances;
+  return [facetContractInstances, abi];
 }
 
 async function deployDiamond () {
@@ -71,7 +71,7 @@ async function deployDiamond () {
   const contractOwner = accounts[0]
 
   const initContractInstances = await deployInitContract();
-  const facetContractInstances = await deployFacets();
+  const [facetContractInstances, abi] = await deployFacets();
 
   // deploy HabitatDiamond
   // after daoFactory is ready refactor
@@ -187,6 +187,32 @@ async function deployDiamond () {
   deployedContracts.external.votingPowerManager = votingPowerManagerAddress;
   console.log('VotingPowerManager deployed:', votingPowerManagerAddress);
 
+  // deploy pools
+  const legalPairTokens = initParams.initVotingPowerERC20UniV3DeployMainPool._legalPairTokens.value;
+  const mainLegalPairToken = legalPairTokens[0];
+  let poolsDeployTx;
+  if (habitatDiamond.address < mainLegalPairToken) {
+    poolsDeployTx = await initContractInstances.VotingPowerInitUniV3.deploy2UniV3Pools(initParams.initVotingPowerERC20UniV3DeployMainPool._nfPositionManager.value, habitatDiamond.address, mainLegalPairToken, [10000, 500], initParams.initVotingPowerERC20UniV3DeployMainPool._sqrtPricesX96.value[0]);
+  } else {
+    poolsDeployTx = await initContractInstances.VotingPowerInitUniV3.deploy2UniV3Pools(initParams.initVotingPowerERC20UniV3DeployMainPool._nfPositionManager.value, mainLegalPairToken, habitatDiamond.address, [10000, 500], initParams.initVotingPowerERC20UniV3DeployMainPool._sqrtPricesX96.value[1]);
+  }
+  console.log('Deploy 2 main pools tx: ', poolsDeployTx.hash)
+  let poolsDeployReceipt = await poolsDeployTx.wait()
+  if (!poolsDeployReceipt.status) {
+    throw Error(`Deploy 2 main pools tx failed: ${poolsDeployTx.hash}`)
+  }
+  console.log('2 main pools are deployed')
+
+  // missing pools deployment for other pair tokens, because we have to think more if we
+  // need more legal pair tokens, if we are not planing to take care about prices in
+  // those pools it could become an attack vector:
+  // the prices in empty pools can be easily moved and it means that attacker
+  // can set the price and provide liquidity in a way to get too much voting power
+  // for almost nothing
+  // - maybe this case can be covered in stake contract logic:
+  // - instead of taking current price in a specific pool -> take the current price
+  // - of main pool and using uniV3 calculate the market price of the current pool
+
   // Treasury cut
   functionCall = initContractInstances.TreasuryInit.interface.encodeFunctionData('initTreasuryVotingPower', [initParams.initTreasuryVotingPower.thresholdForInitiator.value, initParams.initTreasuryVotingPower.thresholdForProposal.value, initParams.initTreasuryVotingPower.secondsProposalVotingPeriod.value, initParams.initTreasuryVotingPower.secondsProposalExecutionDelayPeriod.value]);
   const treasuryCut = [
@@ -216,7 +242,7 @@ async function deployDiamond () {
   console.log('Completed treasury diamond cut')
 
   await fs.promises.writeFile('./deployedContracts.json', JSON.stringify(deployedContracts, null, 2));
-  return habitatDiamond.address
+  return [habitatDiamond.address, abi, deployedContracts.external.initialDistributor, deployedContracts.external.votingPowerManager];
 }
 
 function getAddressFromEvent(receipt, eventSignature, topicIndex) {
