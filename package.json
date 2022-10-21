@@ -59,6 +59,7 @@
     "@openzeppelin/contracts": "^4.7.0",
     "@solidstate/contracts": "^0.0.32",
     "@uniswap/v3-periphery": "^1.4.1",
-    "hardhat-gemcutter": "https://github.com/marcocastignoli/hardhat-gemcutter"
+    "hardhat-gemcutter": "https://github.com/marcocastignoli/hardhat-gemcutter",
+    "ipfs-http-client": "^58.0.1"
   }
 }

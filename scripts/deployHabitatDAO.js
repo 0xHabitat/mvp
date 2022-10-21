@@ -4,6 +4,7 @@
 const { getSelectors, FacetCutAction } = require('./libraries/diamond.js')
 const initParams = require('../initParams.json');
 const fs = require('fs');
+const IPFS = require('ipfs-http-client')
 const deployedContracts = {};
 
 async function deployInitContract() {
@@ -31,6 +32,29 @@ async function deployInitContract() {
   return initContractInstances;
 }
 
+const { promises } = fs
+async function verify (contracts) {
+  const node = await IPFS.create()
+  const buildInfo = 'artifacts/build-info'
+  const files = await promises.readdir(buildInfo)
+
+  const buildInfoBuffer = await promises.readFile(`${buildInfo}/${files[0]}`)
+  const string = await buildInfoBuffer.toString()
+  const buildInfoJson = JSON.parse(string)
+
+  for (const contract of contracts) {
+    for (const contractsInFile of Object.values(buildInfoJson.output.contracts)) {
+      let isRight = Object.keys(contractsInFile).includes(contract.name)
+      if (isRight) {
+        let buildInfoContract = contractsInFile[contract.name]
+        await node.add(Buffer.from(buildInfoContract.metadata))
+      }
+    }
+  }
+
+  return true
+}
+
 async function deployFacets() {
   // after addressesProvider is ready write directly to contract
   deployedContracts.facetContracts = {};
@@ -50,10 +74,15 @@ async function deployFacets() {
 
   const facetContractInstances = {};
   let abi = [];
+  const contractsToVerify = [];
   for (const FacetName of FacetNames) {
     const FacetContract = await ethers.getContractFactory(FacetName)
     const facetContract = await FacetContract.deploy()
     await facetContract.deployed()
+    contractsToVerify.push({
+      name: FacetName,
+      address: facetContract.address
+    })
     deployedContracts.facetContracts[FacetName] = facetContract.address;
     facetContractInstances[FacetName] = facetContract;
 
@@ -62,6 +91,7 @@ async function deployFacets() {
     // concat
   }
   await fs.promises.writeFile('./habitatDiamondABI.json', JSON.stringify(abi, null, 2));
+  verify(contractsToVerify)
   return [facetContractInstances, abi];
 }
 
