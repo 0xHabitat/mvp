@@ -22,6 +22,10 @@ contract DAOViewerFacet {
     return LibDAOStorage._getDAOSocials();
   }
 
+  function getDAOAddressesProvider() external view returns(address) {
+    return LibDAOStorage._getDAOAddressesProvider();
+  }
+
   function hasSubDAOs() external view returns (bool) {
 
   }

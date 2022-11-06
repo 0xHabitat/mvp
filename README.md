@@ -9,22 +9,9 @@ yarn build
 
 ## test
 To run tests you first need to add alchemyToken.json with your alchemyToken.
+Current tests are outdated.
 ```
 yarn test
-```
-
-## deploy
-
-in separate terminal:
-
-```
-yarn run hardhat node
-```
-
-then in main terminal:
-
-```
-yarn deploy
 ```
 
 ## deploy habitat DAO
@@ -38,7 +25,7 @@ yarn run hardhat node
 then in main terminal:
 
 ```
-yarn deployHabitatDAO
+yarn deployDAO
 ```
 
 ## deploy with Gemcutter

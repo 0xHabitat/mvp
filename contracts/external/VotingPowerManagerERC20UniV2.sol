@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import {IERC20} from "../libraries/openzeppelin/IERC20.sol";
 import {SafeERC20} from "../libraries/openzeppelin/SafeERC20.sol";
-import {IVotingPower} from "../interfaces/IVotingPower.sol";
+import {IVotingPower} from "../interfaces/decisionSystem/IVotingPower.sol";
 
 contract StakeContractERC20UniV2 {
   using SafeERC20 for IERC20;
