@@ -77,6 +77,12 @@ async function deployFacets() {
     const facetAbi = facetContract.interface.format(ethers.utils.FormatTypes.json);
     abi = abi.concat(JSON.parse(facetAbi));
   }
+
+  // add libraries abi to diamond
+  const library = await ethers.getContractFactory('LibDecisionProcess');
+  const libAbi = library.interface.format(ethers.utils.FormatTypes.json);
+  abi = abi.concat(JSON.parse(libAbi));
+  
   await fs.promises.writeFile('./habitatDiamondABI.json', JSON.stringify(abi, null, 2));
   return [facetContracts, FacetNames];
 }

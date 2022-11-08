@@ -17,7 +17,8 @@ interface IERC20Deployer {
     string memory tokenName,
     string memory tokenSymbol,
     uint256 totalSupply,
-    uint160[2] memory _sqrtPricesX96
+    uint160[2] memory _sqrtPricesX96,
+    address initialDistributorOwner
   ) external returns(address, address);
 
   function deployLastPool(
@@ -123,7 +124,8 @@ contract MainDeployer {
       tokenName,
       tokenSymbol,
       totalSupply,
-      _sqrtPricesX96
+      _sqrtPricesX96,
+      msg.sender
     );
     return (govToken, distributor);
   }

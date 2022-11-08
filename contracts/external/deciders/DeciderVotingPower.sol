@@ -76,6 +76,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     address _votingPowerManager,
     uint256 _precision
   ) BaseDecider(_dao, _deciderType, _daoSetter) {
+    precision = _precision;
     votingPowerManager = _votingPowerManager;
     address governanceToken = IVotingPowerManager(votingPowerManager).governanceToken();
     maxAmountOfVotingPower = IERC20(governanceToken).totalSupply();
@@ -137,14 +138,17 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
   ) external override onlyDAO {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
+    require(proposalVoting.votingStarted, "No voting rn.");
     uint deciderVotingPower = getVoterVotingPower(decider);
+    require(proposalVoting.votedAmount[decider] < deciderVotingPower, "Already voted.");
     _setTimestampToUnstake(decider, proposalVoting.unstakeTimestamp);
+    uint difference = deciderVotingPower - proposalVoting.votedAmount[decider];
 
     proposalVoting.votedAmount[decider] = deciderVotingPower; // rething this
     if (decision) {
-      proposalVoting.votesYes += deciderVotingPower;
+      proposalVoting.votesYes += difference;
     } else {
-      proposalVoting.votesNo += deciderVotingPower;
+      proposalVoting.votesNo += difference;
     }
     emit Voted(decider, msName, proposalId, decision);
   }

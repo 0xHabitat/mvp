@@ -52,6 +52,7 @@ library LibDecisionProcess {
 
     uint256 executionTimestamp;
     address directCaller = decider.directCaller();
+    proposalId = LibManagementSystem._getFreeProposalId(msName);
     // who is calling (EOA or module?)
     if (msg.sender != directCaller) {
       // EOA calling
@@ -71,7 +72,6 @@ library LibDecisionProcess {
       executionTimestamp = decider.directCallerExecutionTimestamp(specificData);
     }
     // initiate proposal
-    proposalId = LibManagementSystem._getFreeProposalId(msName);
     IProposal.Proposal storage proposal = LibManagementSystem._getProposal(msName, proposalId);
     proposal.destinationAddress = destination;
     proposal.value = value;
@@ -167,10 +167,10 @@ library LibDecisionProcess {
     address directCaller = decider.directCaller();
 
     // who is calling (EOA or module?)
-    if (msg.sender != directCaller) {
+    if (msg.sender != directCaller && msg.sender != address(decider)) {
       proposal.proposalExecuted = false;
       result = decider.executeProposal(msName, proposalId, funcSelector);
-    } else {
+    } else if (msg.sender == directCaller || msg.sender == address(decider)) {
       address destination = proposal.destinationAddress;
       uint256 value = proposal.value;
       bytes memory callData = proposal.callData;
@@ -204,10 +204,10 @@ library LibDecisionProcess {
     address directCaller = decider.directCaller();
 
     // who is calling (EOA or module?)
-    if (msg.sender != directCaller) {
+    if (msg.sender != directCaller && msg.sender != address(decider)) {
       proposal.proposalExecuted = false;
       result = decider.executeProposal(msName, proposalId, funcSelector);
-    } else {
+    } else if (msg.sender == directCaller || msg.sender == address(decider)) {
       address destination = proposal.destinationAddress;
       bytes memory callData = proposal.callData;
 

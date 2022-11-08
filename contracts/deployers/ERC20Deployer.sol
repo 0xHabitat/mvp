@@ -27,10 +27,11 @@ contract ERC20Deployer {
     string memory tokenName,
     string memory tokenSymbol,
     uint totalSupply,
-    uint160[2] memory _sqrtPricesX96
+    uint160[2] memory _sqrtPricesX96,
+    address initialDistributorOwner
   ) external returns(address, address) {
     InitialDistributorAbleToStake initialDistributor = new InitialDistributorAbleToStake(
-      msg.sender,
+      initialDistributorOwner,
       address(this)
     );
 
