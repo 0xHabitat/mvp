@@ -6,7 +6,7 @@ interface ITreasuryActions {
   function createTreasuryProposal(
     address destination,
     uint256 value,
-    bytes calldata callData
+    bytes memory callData
   ) external returns (uint256);
 
   function createSeveralTreasuryProposals(
@@ -42,7 +42,7 @@ interface ITreasuryActions {
   function batchedTreasuryProposalExecution(
     address destination,
     uint256 value,
-    bytes calldata callData
+    bytes memory callData
   ) external returns(bool result);
 
   function batchedSeveralTreasuryProposalsExecution(

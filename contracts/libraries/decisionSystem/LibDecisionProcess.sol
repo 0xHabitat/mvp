@@ -43,7 +43,7 @@ library LibDecisionProcess {
     string memory msName,
     address destination,
     uint256 value,
-    bytes calldata callData
+    bytes memory callData
   ) internal returns(uint256 proposalId) {
     // what is decision system?
     IDecider decider = _getDecider(msName);

@@ -6,15 +6,8 @@ import {BaseDecider} from "./BaseDecider.sol";
 enum Operation {Call, DelegateCall}
 
 interface IGnosisSafe {
-  function isModuleEnabled(address module) external view returns(bool);
   function isOwner(address owner) external view returns (bool);
   function getThreshold() external view returns (uint256);
-  function execTransactionFromModuleReturnData(
-    address to,
-    uint256 value,
-    bytes memory data,
-    Operation operation
-  ) external returns (bool success, bytes memory returnData);
 }
 
 contract DeciderSigners is BaseDecider {
@@ -43,11 +36,6 @@ contract DeciderSigners is BaseDecider {
   // proposalKey == keccak256(string msName concat uint proposalID) => ProposalDecision
   mapping(bytes32 => ProposalDecision) proposalDecisions;
 
-  modifier moduleEnabled() {
-    require(IGnosisSafe(gnosisSafe).isModuleEnabled(address(this)), "Module is disabled. Enable module on gnosis side first.");
-    _;
-  }
-
   constructor(
     address _dao,
     address _daoSetter,
@@ -58,19 +46,19 @@ contract DeciderSigners is BaseDecider {
   }
 
   // DECIDER FUNCTIONS
-  function isSetupComplete() external override onlyDAO moduleEnabled returns(bool) {
+  function isSetupComplete() external override onlyDAO returns(bool) {
     return gnosisSafe != address(0) && dao != address(0);
   }
 
-  function directCaller() external override onlyDAO moduleEnabled returns(address) {
+  function directCaller() external override onlyDAO returns(address) {
     return gnosisSafe;
   }
 
   function isDirectCallerSetup() external override returns(bool) {
-    return IGnosisSafe(gnosisSafe).isModuleEnabled(address(this));
+    return gnosisSafe != address(0);
   }
 
-  function directCallerExecutionTimestamp(bytes memory specificData) external override onlyDAO moduleEnabled returns(uint256) {
+  function directCallerExecutionTimestamp(bytes memory specificData) external override onlyDAO returns(uint256) {
     SignerSpecificData memory ssd = abi.decode(specificData, (SignerSpecificData));
     return ssd.secondsProposalExecutionDelayPeriod + block.timestamp;
   }
@@ -78,7 +66,7 @@ contract DeciderSigners is BaseDecider {
   function isCallerAllowedToCreateProposal(
     address caller,
     bytes memory specificData
-  ) external override onlyDAO moduleEnabled returns(bool, string memory) {
+  ) external override onlyDAO returns(bool, string memory) {
     bool isSigner = IGnosisSafe(gnosisSafe).isOwner(caller);
     return (isSigner, isSigner ? "" : "Not a signer in gnosis safe");
   }
@@ -87,7 +75,7 @@ contract DeciderSigners is BaseDecider {
     string memory msName,
     uint256 proposalId,
     bytes memory specificData
-  ) external override onlyDAO moduleEnabled returns(uint256 executionTimestamp) {
+  ) external override onlyDAO returns(uint256 executionTimestamp) {
     // create a decision process
     bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
     ProposalDecision storage proposalDecision = _getProposalDecision(proposalKey);
@@ -103,13 +91,14 @@ contract DeciderSigners is BaseDecider {
     uint256 proposalId,
     address decider,
     bool decision
-  ) external override onlyDAO moduleEnabled {
+  ) external override onlyDAO {
     require(IGnosisSafe(gnosisSafe).isOwner(decider), "Only gnosis signers can decide.");
     // decide
     bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
     ProposalDecision storage proposalDecision = _getProposalDecision(proposalKey);
     require(proposalDecision.decisionProcessStarted, "Decision process is not started yet.");
     require(!proposalDecision.decided[decider], "Already decided.");
+    proposalDecision.decided[decider] = true;
     if (decision) {
       proposalDecision.signersDecidedToAccept.push(decider);
       require(proposalDecision.signersDecidedToAccept.length < 200, "Choose offchain way to make decisions.");
@@ -124,7 +113,7 @@ contract DeciderSigners is BaseDecider {
     string memory msName,
     uint256 proposalId,
     bytes memory specificData
-  ) external override onlyDAO moduleEnabled returns(bool) {
+  ) external override onlyDAO returns(bool) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
     ProposalDecision storage proposalDecision = _getProposalDecision(proposalKey);
     require(proposalDecision.decisionProcessStarted, "Decision process is not started yet.");
@@ -181,17 +170,12 @@ contract DeciderSigners is BaseDecider {
     string memory msName,
     uint256 proposalId,
     bytes4 funcSelector
-  ) external override onlyDAO moduleEnabled returns(bool) {
+  ) external override onlyDAO returns(bool) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
     require(canBeExecuted[proposalKey], "Decider: Proposal cannot be executed.");
     canBeExecuted[proposalKey] = false;
     bytes memory daoCallData = abi.encodeWithSelector(funcSelector, proposalId);
-    (bool success, bytes memory returnedData) = IGnosisSafe(gnosisSafe).execTransactionFromModuleReturnData(
-      dao,
-      uint256(0),
-      daoCallData,
-      Operation.Call
-    );
+    (bool success, bytes memory returnedData) = dao.call(daoCallData);
     require(success);
     (bool returnedResult) = abi.decode(returnedData, (bool));
     return returnedResult;
@@ -200,6 +184,11 @@ contract DeciderSigners is BaseDecider {
   // INTERNAL FUNCTIONS
   function _getProposalDecision(bytes32 proposalKey) internal returns(ProposalDecision storage pD) {
     pD = proposalDecisions[proposalKey];
+  }
+
+  // pure function
+  function computeProposalKey(string memory msName, uint256 proposalId) external pure returns(bytes32) {
+    return keccak256(abi.encodePacked(msName,proposalId));
   }
 
   // View functions

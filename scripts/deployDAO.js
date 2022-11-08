@@ -2,7 +2,7 @@ const initParams = require('../initParams.json');
 const {deployMainDeployerAndAddressesProvider} = require('./deployMainDeployerAndAddressesProvider.js');
 const deployed = require('./deployed.json');
 
-async function deployDAO() {
+async function deployDAO(decisionTypes = initParams.initManagementSystems5.decisionTypes.value) {
   const accounts = await ethers.getSigners();
   const accountDeployerAddress = accounts[0].address;
   // first deploy mainDeployer and addresses provider
@@ -80,7 +80,7 @@ async function deployDAO() {
 
   // deploy dao
   const daoMetaData = [initParams.initDAO.daoName, initParams.initDAO.purpose, initParams.initDAO.info, initParams.initDAO.socials];
-  const decidersRelatedToDecisionTypes = initParams.initManagementSystems5.decisionTypes.value.map(
+  const decidersRelatedToDecisionTypes = decisionTypes.map(
     (e) => {
       if (e == 2) {
         return deciderVotingPowerAddress;
@@ -106,7 +106,7 @@ async function deployDAO() {
   const daoAddress = await mainDeployer.callStatic.deployDAOMS5T(
     addressesProviderAddress,
     daoMetaData,
-    initParams.initManagementSystems5.decisionTypes.value,
+    decisionTypes,
     decidersRelatedToDecisionTypes,
     treasuryVotingPowerSpecificData,
     treasurySignersSpecificData
@@ -115,7 +115,7 @@ async function deployDAO() {
   tx = await mainDeployer.deployDAOMS5T(
     addressesProviderAddress,
     daoMetaData,
-    initParams.initManagementSystems5.decisionTypes.value,
+    decisionTypes,
     decidersRelatedToDecisionTypes,
     treasuryVotingPowerSpecificData,
     treasurySignersSpecificData

@@ -10,7 +10,7 @@ contract TreasuryActionsFacet is ITreasuryActions {
   function createTreasuryProposal(
     address destination,
     uint256 value,
-    bytes calldata callData
+    bytes memory callData
   ) public override returns (uint256 proposalId) {
     require(destination != address(this), "Not a treasury proposal.");
     proposalId = LibDecisionProcess.createProposal("treasury", destination, value, callData);
@@ -38,7 +38,7 @@ contract TreasuryActionsFacet is ITreasuryActions {
   ) public override returns(uint256 proposalId) {
     require(IERC20(token).balanceOf(address(this)) >= amount, "Not enough tokens in treasury.");
     bytes memory callData = abi.encodeWithSelector(IERC20.transfer.selector, receiver, amount);
-    proposalId = this.createTreasuryProposal(token, uint256(0), callData);
+    proposalId = createTreasuryProposal(token, uint256(0), callData);
   }
 
   function sendETHFromTreasuryInitProposal(
@@ -47,14 +47,14 @@ contract TreasuryActionsFacet is ITreasuryActions {
   ) public override returns(uint256 proposalId) {
     require(address(this).balance >= value, "Not enoug ether in treasury");
     bytes memory callData;
-    proposalId = this.createTreasuryProposal(receiver, value, callData);
+    proposalId = createTreasuryProposal(receiver, value, callData);
   }
 
   // batch for direct caller
   function batchedTreasuryProposalExecution(
     address destination,
     uint256 value,
-    bytes calldata callData
+    bytes memory callData
   ) public override returns(bool result) {
     uint256 proposalId = createTreasuryProposal(destination, value, callData);
     acceptOrRejectTreasuryProposal(proposalId);
