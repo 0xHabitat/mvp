@@ -9,7 +9,6 @@ yarn build
 
 ## test
 To run tests you first need to add alchemyToken.json with your alchemyToken.
-Current tests are outdated.
 ```
 yarn test
 ```
@@ -27,6 +26,8 @@ then in main terminal:
 ```
 yarn deployDAO
 ```
+
+./scripts/deployed.json has two values, that are rewritten after deployment, if you run/rerun node again paste in "redeploy" key "true" value 
 
 ## deploy with Gemcutter
 
