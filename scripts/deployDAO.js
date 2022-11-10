@@ -79,7 +79,7 @@ async function deployDAO(decisionTypes = initParams.initManagementSystems5.decis
   }
 
   // deploy dao
-  const daoMetaData = [initParams.initDAO.daoName, initParams.initDAO.purpose, initParams.initDAO.info, initParams.initDAO.socials];
+  const daoMetaData = [initParams.initDAO.daoName.value, initParams.initDAO.purpose.value, initParams.initDAO.info.value, initParams.initDAO.socials.value];
   const decidersRelatedToDecisionTypes = decisionTypes.map(
     (e) => {
       if (e == 2) {
