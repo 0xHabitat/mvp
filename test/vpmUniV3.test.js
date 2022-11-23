@@ -43,9 +43,10 @@ describe('Stake', function () {
     votingPowerHolder = await MockVotingPowerHolder.deploy();
     await votingPowerHolder.deployed();
     const StakeContractERC20UniV3 = await ethers.getContractFactory('StakeContractERC20UniV3');
-    stakeContractERC20UniV3 = await StakeContractERC20UniV3.deploy(votingPowerHolder.address, nfPositionManagerAddress, hbtToken.address, [wETHAddress]);
+    stakeContractERC20UniV3 = await StakeContractERC20UniV3.deploy(nfPositionManagerAddress, hbtToken.address, [wETHAddress]);
     await stakeContractERC20UniV3.deployed();
     await votingPowerHolder.setVPM(stakeContractERC20UniV3.address);
+    await stakeContractERC20UniV3.setVotingPowerHolder(votingPowerHolder.address);
     const PositionValueTest = await ethers.getContractFactory('PositionValueTest');
     positionValueTest = await PositionValueTest.deploy();
     await positionValueTest.deployed();

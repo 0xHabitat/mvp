@@ -1,4 +1,52 @@
 {
+  "deployGovernanceToken": {
+    "functionDescription": "Deploys ERC20 with fix totalSupply (no minting) and deploys initialDistributor contract (that receives all tokens and has as owner caller which able to distribute tokens and stake tokens on favor of an array of addresses) and deploys two main uniV3 pools (WETH-GovernanceToken).",
+    "tokenName": {
+      "value": "HabitatDAO",
+      "description": "Governance token name."
+    },
+    "tokenSymbol": {
+      "value": "HBT",
+      "description": "Governance token symbol."
+    },
+    "totalSupply": {
+      "value": "10000000000000000000000000",
+      "description": "Fixed total supply."
+    },
+    "_sqrtPricesX96": {
+      "value": ["0x81853cdc3fe8b949c55450b","0x1f9f6d9a3bc5ab22441f2925e9"],
+      "description": "Should be set to 1$ equal 1 HBT in terms of ETH in launch day. Initial price for uniV3 pool. Values set as 1000 governance tokens for 1 legal pair token (1000HBT for 1WETH). We put two initial prices 0.001 and 1000.0 (calculated: reserve1/reserve0), because we don't know the governance token address before we deploy diamond, it means we cannot define which token will be token0 and which token1."
+    }
+  },
+  "deployThreePools": {
+    "functionDescription": "Deploys three UniV3 pools (1%/0.3%/0.05% fee) for each legal pair token and governanceToken.",
+    "_legalPairTokens": {
+      "value": ["0x4200000000000000000000000000000000000006","0x7F5c764cBc14f9669B88837ca1490cCa17c31607","0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1","0x4200000000000000000000000000000000000042"],
+      "description": "An array of ERC20 token addresses on optimism mainnet, which are legalPairTokens. Max 9 tokens. Means that user who provides liquidity in uniV3 pool as governance token and one of the tokens from this array is able to stake his position and receive voting power. UniV3 pool is deployed with governance token and first token from this array."
+    },
+    "_sqrtPricesX96": {
+      "value": [["0x81853cdc3fe8b949c55450b","0x1f9f6d9a3bc5ab22441f2925e9"], ["0x81853cdc3fe8b949c55450b","0x1f9f6d9a3bc5ab22441f2925e9"],["0x81853cdc3fe8b949c55450b","0x1f9f6d9a3bc5ab22441f2925e9"],["0x81853cdc3fe8b949c55450b","0x1f9f6d9a3bc5ab22441f2925e9"]],
+      "description": "Should be set to 1$ equal 1 HBT in terms of ETH in launch day. Initial price for uniV3 pool. Values set as 1000 governance tokens for 1 legal pair token (1000HBT for 1WETH). We put two initial prices 0.001 and 1000.0 (calculated: reserve1/reserve0), because we don't know the governance token address before we deploy diamond, it means we cannot define which token will be token0 and which token1."
+    }
+  },
+  "deployVotingPowerAndSignersDeciders": {
+    "functionDescription": "Deploys voting power manager (stake contract), deploys voting power decider and deploys signers decider.",
+    "_nfPositionManager": {
+      "value": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+      "description": "Uniswap V3 NonfungiblePositionManager address."
+    },
+    "_precision": {
+      "value": 10000,
+      "description": "The dividor for voting power decider that helps represent percentage. Example, 11.42% - decimals 0.1142, value 0.1142 * 10000(precision) = 1142."
+    },
+    "_gnosisSafe": {
+      "value": "0xb55e46cBb6e82597CE58ADE018e8da57752B36A2",
+      "description": "The Gnosis Safe address that was deployed and signers was set."
+    }
+  },
+  "deployDAOMS5T": {
+    "functionDescription": "Deploys diamond, initiates dao, initiates 5 management systems, initiates deciders."
+  },
   "initDAO": {
     "functionDescription": "Initiates the state with DAO metadata, the trusted source of addresses, and calculates and stores the position for Management systems data",
     "daoName": {
@@ -29,45 +77,7 @@
       "description": "An array with chosen decision type for each ms. Current options: 0 - None, 1 - OnlyOwner, 2 - VotingPowerManagerERC20, 3 - Signers. Can be extended. For prototype we have only one decision system implemented."
     }
   },
-  "initERC20deployInitialDistributor": {
-    "functionDescription": "Initiates state for ERC20 with fix totalSupply (no minting) and deploys initialDistributor contract that receives all tokens and has as owner caller which able to distribute tokens and stake tokens on favor of an array of addresses.",
-    "tokenName": {
-      "value": "HabitatDAO",
-      "description": "Governance token name."
-    },
-    "tokenSymbol": {
-      "value": "HBT",
-      "description": "Governance token symbol."
-    },
-    "decimals": {
-      "value": 18,
-      "description": "Decimals."
-    },
-    "totalSupply": {
-      "value": "10000000000000000000000000",
-      "description": "Fixed total supply."
-    }
-  },
-  "initVotingPowerERC20UniV3DeployMainPool": {
-    "functionDescription": "Initiates decision type VotingPowerERC20 with maxAmountOfVotingPower equal governance token totalSupply. Deploys one uniV3 pool with 0.3% fee. Deploys stake contract that is able to get governance tokens and uniV3 NFTs where underlying tokens are governance and legalPairTokens and give voting power for stakers. Decision type VotingPowerERC20 has delegation functionality.",
-    "_precision": {
-      "value": 10000,
-      "description": "The dividor that helps represent percentage. Example, 11.42% - decimals 0.1142, value 0.1142 * 10000(precision) = 1142."
-    },
-    "_nfPositionManager": {
-      "value": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-      "description": "Uniswap V3 NonfungiblePositionManager address."
-    },
-    "_legalPairTokens": {
-      "value": ["0x4200000000000000000000000000000000000006","0x7F5c764cBc14f9669B88837ca1490cCa17c31607","0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1","0x4200000000000000000000000000000000000042"],
-      "description": "An array of ERC20 token addresses on optimism mainnet, which are legalPairTokens. Max 9 tokens. Means that user who provides liquidity in uniV3 pool as governance token and one of the tokens from this array is able to stake his position and receive voting power. UniV3 pool is deployed with governance token and first token from this array."
-    },
-    "_sqrtPricesX96": {
-      "value": ["0x81853cdc3fe8b949c55450b","0x1f9f6d9a3bc5ab22441f2925e9"],
-      "description": "Should be set to 1$ equal 1 HBT in terms of ETH in launch day. Initial price for uniV3 pool. Values set as 1000 governance tokens for 1 legal pair token (1000HBT for 1WETH). We put two initial prices 0.001 and 1000.0 (calculated: reserve1/reserve0), because we don't know the governance token address before we deploy diamond, it means we cannot define which token will be token0 and which token1."
-    }
-  },
-  "initTreasuryVotingPower": {
+  "initTreasuryVotingPowerSpecificData": {
     "functionDescription": "Initiates specific voting power data for treasury management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
     "thresholdForInitiator": {
       "value": 50,
@@ -86,7 +96,7 @@
       "description": "Value represents the amount of seconds that are given for a delaying execution after voting period is ended."
     }
   },
-  "initGovernanceVotingPower": {
+  "initGovernanceVotingPowerSpecificData": {
     "functionDescription": "Initiates specific voting power data for governance management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
     "thresholdForInitiator": {
       "value": 500,
@@ -105,7 +115,7 @@
       "description": "Value represents the amount of seconds that are given for a delaying execution after voting period is ended."
     }
   },
-  "initCreationSubDAOsVotingPower": {
+  "initCreationSubDAOsVotingPowerSpecificData": {
     "functionDescription": "Initiates specific voting power data for creationSubDAOs management system, that has decision type VotingPowerERC20. All params below are specific for each management system.",
     "thresholdForInitiator": {
       "value": 100,

@@ -19,6 +19,7 @@ library LibManagementSystem {
   struct ManagementSystem {
     string nameMS;
     DecisionType decisionType;
+    address currentDecider;
     bytes32 dataPosition;
   }
 */
@@ -76,17 +77,71 @@ library LibManagementSystem {
     return ms.decisionType;
   }
 
-  function _getProposal(string memory msName, uint proposalId) internal returns(IProposal.Proposal memory proposal) {
+  function _getDecider(string memory msName) internal returns(address) {
+    IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
+    return ms.currentDecider;
+  }
+
+  function _getMSDecisionTypeSpecificDataMemory(string memory msName) internal returns(bytes memory specificData) {
+    IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
+    require(ms.dataPosition != bytes32(0), "Mananagement system is not set.");
+    IManagementSystem.MSData storage msData = LibManagementSystem._getMSData(ms.dataPosition);
+    return msData.decisionSpecificData[ms.decisionType];
+  }
+
+  function _getMSDecisionTypeSpecificDataStorage(string memory msName) internal returns(bytes storage specificData) {
+    IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
+    require(ms.dataPosition != bytes32(0), "Mananagement system is not set.");
+    IManagementSystem.MSData storage msData = LibManagementSystem._getMSData(ms.dataPosition);
+    return msData.decisionSpecificData[ms.decisionType];
+  }
+
+  function _getFreeProposalId(string memory msName) internal returns(uint256 proposalId) {
+    IManagementSystem.MSData storage msData = _getMSDataByName(msName);
+    require(msData.activeProposalsIds.length < 200, "No more proposals pls");
+    msData.proposalsCounter = msData.proposalsCounter + uint128(1);
+    proposalId = uint256(msData.proposalsCounter);
+    msData.activeProposalsIds.push(proposalId);
+  }
+
+  function _getProposal(string memory msName, uint proposalId) internal returns(IProposal.Proposal storage proposal) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     proposal = msData.proposals[proposalId];
   }
 
-  function _getActiveVotingProposalsIds(string memory msName) internal returns(uint256[] memory) {
-    IManagementSystem.MSData storage msData = _getMSDataByName(msName);
-    return msData.activeVotingProposalsIds;
+  function _removeProposal(string memory msName, uint256 proposalId) internal {
+    IProposal.Proposal storage proposal = _getProposal(msName, proposalId);
+    delete proposal.proposalAccepted;
+    delete proposal.destinationAddress;
+    delete proposal.value;
+    delete proposal.callData;
+    delete proposal.proposalExecuted;
+    delete proposal.executionTimestamp;
   }
 
-  function _getAcceptedProposalsIds(string storage msName) internal returns(uint256[] storage) {
+  function _getActiveProposalsIds(string memory msName) internal returns(uint256[] storage) {
+    IManagementSystem.MSData storage msData = _getMSDataByName(msName);
+    return msData.activeProposalsIds;
+  }
+
+  function _addProposalIdToAccepted(string memory msName, uint proposalId) internal {
+    uint[] storage acceptedProposalsIds = _getAcceptedProposalsIds(msName);
+    acceptedProposalsIds.push(proposalId);
+  }
+
+  function _removeProposalIdFromAcceptedList(string memory msName, uint proposalId) internal {
+    uint[] storage acceptedProposalsIds = _getAcceptedProposalsIds(msName);
+    require(acceptedProposalsIds.length > 0, "No accepted proposals.");
+    _removeElementFromUintArray(acceptedProposalsIds, proposalId);
+  }
+
+  function _removeProposalIdFromActiveList(string memory msName, uint proposalId) internal {
+    uint[] storage activeProposalsIds = _getActiveProposalsIds(msName);
+    require(activeProposalsIds.length > 0, "No active proposals.");
+    _removeElementFromUintArray(activeProposalsIds, proposalId);
+  }
+
+  function _getAcceptedProposalsIds(string memory msName) internal returns(uint256[] storage) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.acceptedProposalsIds;
   }
@@ -94,6 +149,27 @@ library LibManagementSystem {
   function _getProposalsCount(string memory msName) internal returns(uint256) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.proposalsCounter;
+  }
+
+  // helper function
+  function _removeElementFromUintArray(uint[] storage array, uint element) internal {
+    if (array[array.length - 1] == element) {
+      array.pop();
+    } else {
+      // try to find array index
+      uint256 indexId;
+      for (uint256 index = 0; index < array.length; index++) {
+        if (array[index] == element) {
+          indexId = index;
+        }
+      }
+      // check if element exist
+      require(array[indexId] == element, "No element in an array.");
+      // replace last
+      array[indexId] = array[array.length - 1];
+      array[array.length - 1] = element;
+      array.pop();
+    }
   }
 
 

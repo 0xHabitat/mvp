@@ -6,7 +6,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableMap.sol';
 import {LibUniswapV3Math} from "../libraries/helpers/LibUniswapV3Math.sol";
 import {IERC20} from "../libraries/openzeppelin/IERC20.sol";
 import {SafeERC20} from "../libraries/openzeppelin/SafeERC20.sol";
-import {IVotingPower} from "../interfaces/IVotingPower.sol";
+import {IVotingPower} from "../interfaces/decisionSystem/IVotingPower.sol";
 
 struct Slot0 {
     // the current price
@@ -71,7 +71,7 @@ contract StakeContractERC20UniV3 {
   IVotingPower votingPowerHolder;
   INFPositionManager nfPositionManager;
   address uniV3Factory;
-  address governanceToken;
+  address public governanceToken;
   EnumerableSet.AddressSet legalPairTokens;
   // staker => staked amount
   mapping(address => uint256) private _stakedERC20GovToken;
@@ -82,14 +82,11 @@ contract StakeContractERC20UniV3 {
 
   // prerequisites - all uniV3 pools for each pair token and fee must be initialized
   constructor(
-    address _votingPowerHolder,
     address _nfPositionManager,
     address _governanceToken,
     address[] memory _legalPairTokens
   ) {
-    require(_votingPowerHolder != address(0)); // diamond address
     require(_nfPositionManager != address(0));
-    votingPowerHolder = IVotingPower(_votingPowerHolder);
     nfPositionManager = INFPositionManager(_nfPositionManager);
     uniV3Factory = nfPositionManager.factory();
     governanceToken = _governanceToken;
@@ -98,6 +95,11 @@ contract StakeContractERC20UniV3 {
     for (uint i = 0; i < amountOfPairTokens; i++) {
       legalPairTokens.add(_legalPairTokens[i]);
     }
+  }
+
+  function setVotingPowerHolder(address _votingPowerHolder) external {
+    require(address(votingPowerHolder) == address(0), "VotingPowerHolder is set.");
+    votingPowerHolder = IVotingPower(_votingPowerHolder);
   }
 
   // should give token approval before call

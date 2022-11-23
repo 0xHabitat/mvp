@@ -8,7 +8,7 @@ interface IDAO {
     string info;
     string socials;
     address addressesProvider;
-    bytes32 managementSystemsPosition;
+    bytes32 managementSystemsPosition; // when have time rethink, anyway this value must be protected, but idl idea
     address[] createdSubDAOs;
   }
 

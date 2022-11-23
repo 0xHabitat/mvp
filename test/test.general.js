@@ -1,27 +1,33 @@
 const { expect, assert } = require("chai");
 const { ethers } = require("hardhat");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { deployDiamond } = require("../scripts/deployHabitatDAO.js");
+const { deployDAO } = require("../scripts/deployDAO.js");
 const { getContractsForUniV3, getWETH } = require('./helpers/getContractsForUniV3.js');
+const habitatABI = require('../habitatDiamondABI.json');
 
 describe('HabitatDiamond', function () {
-  async function deployHabitatDAOFixture() {
+  async function deployDAOFixture() {
     const accounts = await ethers.getSigners();
     signer = accounts[0];
-    const [habitatAddress, habitatABI, initialDistributorAddress, stakeContractAddress] = await deployDiamond();
-    const habitatDiamond = new ethers.Contract(habitatAddress, habitatABI, signer);
+    const [daoAddress, initialDistributorAddress] = await deployDAO();
+    const habitatDiamond = new ethers.Contract(daoAddress, habitatABI, signer);
     const initialDistributor = await ethers.getContractAt('InitialDistributorAbleToStake', initialDistributorAddress, signer);
+    const deciderVotingPowerAddress = await habitatDiamond.callStatic.getDecider("treasury");
+    const deciderVotingPower = await ethers.getContractAt('DeciderVotingPower', deciderVotingPowerAddress);
+    const stakeContractAddress = await deciderVotingPower.getVotingPowerManager();
     const stakeERC20Contract = await ethers.getContractAt('StakeContractERC20UniV3', stakeContractAddress, signer);
     const addresses = accounts.map((val) => {
       return val.address;
     });
-    return {habitatDiamond, initialDistributor, stakeERC20Contract, accounts, addresses};
+    return {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, accounts, addresses};
   }
 
-  async function deployHabitatDAOAndDistributeFixture() {
-    const {habitatDiamond, initialDistributor, stakeERC20Contract, accounts, addresses} = await helpers.loadFixture(deployHabitatDAOFixture);
+  async function deployDAOAndDistributeFixture() {
+    const {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, accounts, addresses} = await helpers.loadFixture(deployDAOFixture);
     // paste distribute logic
-    const hbtTotalSupply = await habitatDiamond.totalSupply();
+    const hbtAddress = await stakeERC20Contract.governanceToken();
+    const hbtToken = await ethers.getContractAt('HBT', hbtAddress);
+    const hbtTotalSupply = await hbtToken.totalSupply();
     let tx = await initialDistributor.setStakeERC20Contract(stakeERC20Contract.address);
     await tx.wait();
     const numberOfAddresses = ethers.BigNumber.from(addresses.length);
@@ -47,16 +53,18 @@ describe('HabitatDiamond', function () {
     tx = await sponsor.sendTransaction(ethTranfer);
     await tx.wait();
 
-    return {habitatDiamond, stakeERC20Contract, accounts, addresses, weth};
+    return {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses, weth};
   }
 
   it('should distribute tokens', async function () {
-    const {habitatDiamond, initialDistributor, stakeERC20Contract, addresses} = await helpers.loadFixture(deployHabitatDAOFixture);
-    const hbtTotalSupply = await habitatDiamond.totalSupply();
-    let initialDistributorBalance = await habitatDiamond.balanceOf(initialDistributor.address);
+    const {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, addresses} = await helpers.loadFixture(deployDAOFixture);
+    const hbtAddress = await stakeERC20Contract.governanceToken();
+    const hbtToken = await ethers.getContractAt('HBT', hbtAddress);
+    const hbtTotalSupply = await hbtToken.totalSupply();
+    let initialDistributorBalance = await hbtToken.balanceOf(initialDistributor.address);
     expect(initialDistributorBalance).to.eq(hbtTotalSupply);
 
-    let stakeContractBalance = await habitatDiamond.balanceOf(stakeERC20Contract.address);
+    let stakeContractBalance = await hbtToken.balanceOf(stakeERC20Contract.address);
     assert(stakeContractBalance.isZero(), 'stake contract at this point must be empty');
 
     let tx = await initialDistributor.setStakeERC20Contract(stakeERC20Contract.address);
@@ -68,19 +76,19 @@ describe('HabitatDiamond', function () {
     tx = await initialDistributor.distributeMultiple(addresses, Array(addresses.length).fill(shareOfHalfOfTokens));
     await tx.wait();
     for (let i = 0; i < addresses.length; i++) {
-      const balance = await habitatDiamond.balanceOf(addresses[i]);
+      const balance = await hbtToken.balanceOf(addresses[i]);
       expect(balance).to.eq(shareOfHalfOfTokens);
     }
-    initialDistributorBalance = await habitatDiamond.balanceOf(initialDistributor.address);
+    initialDistributorBalance = await hbtToken.balanceOf(initialDistributor.address);
     expect(initialDistributorBalance).to.eq(hbtTotalSupply.sub(halfOfTokens));
     // stake tokens in favor of addresses
     tx = await initialDistributor.stakeTokensInFavorOfMultipleAddresses(addresses, Array(addresses.length).fill(shareOfHalfOfTokens), halfOfTokens);
     receipt = await tx.wait()
 
-    initialDistributorBalance = await habitatDiamond.balanceOf(initialDistributor.address);
+    initialDistributorBalance = await hbtToken.balanceOf(initialDistributor.address);
     assert(initialDistributorBalance.isZero(), 'initial distributor at this point must be empty');
 
-    stakeContractBalance = await habitatDiamond.balanceOf(stakeERC20Contract.address);
+    stakeContractBalance = await hbtToken.balanceOf(stakeERC20Contract.address);
     expect(stakeContractBalance).to.eq(halfOfTokens);
 
     for (let i = 0; i < addresses.length; i++) {
@@ -88,52 +96,52 @@ describe('HabitatDiamond', function () {
       const stakedBalance = await stakeERC20Contract.getStakedBalanceOfGovernanceToken(addresses[i]);
       expect(stakedBalance).to.eq(shareOfHalfOfTokens);
       // second check dao contract effects
-      const votingPower = await habitatDiamond.getVoterVotingPower(addresses[i]);
+      const votingPower = await deciderVotingPower.getVoterVotingPower(addresses[i]);
       expect(votingPower).to.eq(stakedBalance);
     }
   });
 
   it('should be able to stake/unstake governance token', async function () {
-    const {habitatDiamond, stakeERC20Contract, accounts, addresses} = await helpers.loadFixture(deployHabitatDAOAndDistributeFixture);
-    const amountToStakeUnstake = await habitatDiamond.balanceOf(addresses[0]);
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+    const amountToStakeUnstake = await hbtToken.balanceOf(addresses[0]);
     // when stake/unstake totalAmountOfVotingPower increase/decrease
-    const totalAmountOfVotingPowerBeforeStaking = await habitatDiamond.getTotalAmountOfVotingPower();
+    const totalAmountOfVotingPowerBeforeStaking = await deciderVotingPower.getTotalAmountOfVotingPower();
     expect(totalAmountOfVotingPowerBeforeStaking.gt(0)).to.be.true;
     // should stake
     for (let i = 1; i < addresses.length; i++) {
-      let tokenBalance = await habitatDiamond.balanceOf(addresses[i]);
+      let tokenBalance = await hbtToken.balanceOf(addresses[i]);
       expect(tokenBalance).eq(amountToStakeUnstake);
       const stakeERC20ContractNewSigner = stakeERC20Contract.connect(accounts[i]);
-      const habitatDiamondNewSigner = habitatDiamond.connect(accounts[i]);
+      const hbtTokenNewSigner = hbtToken.connect(accounts[i]);
       // first give allowance to stake contract
-      let tx = await habitatDiamondNewSigner.approve(stakeERC20Contract.address, tokenBalance);
+      let tx = await hbtTokenNewSigner.approve(stakeERC20Contract.address, tokenBalance);
       await tx.wait();
-      const allowedAmount = await habitatDiamond.allowance(addresses[i], stakeERC20Contract.address);
+      const allowedAmount = await hbtToken.allowance(addresses[i], stakeERC20Contract.address);
       expect(allowedAmount).to.eq(tokenBalance);
       // second stake
       tx = await stakeERC20ContractNewSigner.stakeGovToken(amountToStakeUnstake);
       await tx.wait();
       // confirm effects
-      tokenBalance = await habitatDiamond.balanceOf(addresses[i]);
+      tokenBalance = await hbtToken.balanceOf(addresses[i]);
       expect(tokenBalance.isZero()).to.be.true;
       const stakedERC20GovTokenBalance = await stakeERC20Contract.getStakedBalanceOfGovernanceToken(addresses[i]);
       expect(stakedERC20GovTokenBalance.gte(amountToStakeUnstake)).to.be.true;
-      const currentTotalAmountOfVotingPower = await habitatDiamond.getTotalAmountOfVotingPower();
+      const currentTotalAmountOfVotingPower = await deciderVotingPower.getTotalAmountOfVotingPower();
       expect(currentTotalAmountOfVotingPower).to.eq(totalAmountOfVotingPowerBeforeStaking.add(amountToStakeUnstake.mul(i)));
-      const votingPower = await habitatDiamond.getVoterVotingPower(addresses[i]);
+      const votingPower = await deciderVotingPower.getVoterVotingPower(addresses[i]);
       expect(votingPower.gte(amountToStakeUnstake)).to.be.true;
     }
     // should unstake
-    const totalAmountOfVotingPowerAfterStaking = await habitatDiamond.getTotalAmountOfVotingPower();
+    const totalAmountOfVotingPowerAfterStaking = await deciderVotingPower.getTotalAmountOfVotingPower();
     expect(totalAmountOfVotingPowerAfterStaking.gt(0)).to.be.true;
     for (let i = 1; i < addresses.length; i++) {
-      const votingPower = await habitatDiamond.getVoterVotingPower(addresses[i]);
+      const votingPower = await deciderVotingPower.getVoterVotingPower(addresses[i]);
       const stakedERC20GovTokenBalance = await stakeERC20Contract.getStakedBalanceOfGovernanceToken(addresses[i]);
-      const tokenBalance = await habitatDiamond.balanceOf(addresses[i]);
+      const tokenBalance = await hbtToken.balanceOf(addresses[i]);
 
       const stakeERC20ContractNewSigner = stakeERC20Contract.connect(accounts[i]);
       // first check if able to unstake
-      const unstakeTimestamp = await habitatDiamond.getTimestampToUnstake(addresses[i]);
+      const unstakeTimestamp = await deciderVotingPower.getTimestampToUnstake(addresses[i]);
       // no voting happened (rare case) must be 0
       expect(unstakeTimestamp.isZero()).to.be.true;
       // majority of cases we take current block timestamp
@@ -146,34 +154,34 @@ describe('HabitatDiamond', function () {
       await tx.wait();
 
       // confirm effects
-      const votingPowerAfterUnstake = await habitatDiamond.getVoterVotingPower(addresses[i]);
+      const votingPowerAfterUnstake = await deciderVotingPower.getVoterVotingPower(addresses[i]);
       expect(votingPowerAfterUnstake).eq(votingPower.sub(amountToStakeUnstake));
       const stakedERC20GovTokenBalanceAfterUnstake = await stakeERC20Contract.getStakedBalanceOfGovernanceToken(addresses[i]);
       expect(stakedERC20GovTokenBalanceAfterUnstake).eq(stakedERC20GovTokenBalance.sub(amountToStakeUnstake));
-      const tokenBalanceAfterUnstake = await habitatDiamond.balanceOf(addresses[i]);
+      const tokenBalanceAfterUnstake = await hbtToken.balanceOf(addresses[i]);
       expect(tokenBalanceAfterUnstake).eq(tokenBalance.add(amountToStakeUnstake));
     }
   });
 
   it('should be able to stake/unstake NFT position', async function () {
-    const {habitatDiamond, stakeERC20Contract, accounts} = await helpers.loadFixture(deployHabitatDAOAndDistributeFixture);
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const newSigner = accounts[2];
-    const habitatDiamondNewSigner = habitatDiamond.connect(newSigner);
+    const hbtTokenNewSigner = hbtToken.connect(newSigner);
     const stakeERC20ContractNewSigner = stakeERC20Contract.connect(newSigner);
     const fee = 3000;
     const tickSpacing = 60;
-    const {weth, nfPositionManager, pool} = getContractsForUniV3(habitatDiamond.address, fee, newSigner);
+    const {weth, nfPositionManager, pool} = getContractsForUniV3(hbtToken.address, fee, newSigner);
     // first provide liquidity
     // prepare mintParams
     const block = await ethers.provider.getBlock('latest');
-    const isHBTToken0 = ethers.BigNumber.from(habitatDiamond.address).lt(ethers.BigNumber.from(weth.address));
+    const isHBTToken0 = ethers.BigNumber.from(hbtToken.address).lt(ethers.BigNumber.from(weth.address));
     const slot0 = await pool.slot0();
 
     const tickLower = slot0.tick - (slot0.tick % tickSpacing);
     const tickUpper = tickLower + tickSpacing;
     const mintParams = {
-      token0: isHBTToken0 ? habitatDiamond.address : weth.address,
-      token1: isHBTToken0 ? weth.address : habitatDiamond.address,
+      token0: isHBTToken0 ? hbtToken.address : weth.address,
+      token1: isHBTToken0 ? weth.address : hbtToken.address,
       fee: 3000,
       tickLower,
       tickUpper,
@@ -197,9 +205,9 @@ describe('HabitatDiamond', function () {
     const wethAllowedAmount = await weth.allowance(newSigner.address, nfPositionManager.address);
     //expect(wethAllowedAmount).to.eq(wethBalance);
 
-    tx = await habitatDiamondNewSigner.approve(nfPositionManager.address, ethers.constants.WeiPerEther.mul(10000));
+    tx = await hbtTokenNewSigner.approve(nfPositionManager.address, ethers.constants.WeiPerEther.mul(10000));
     await tx.wait();
-    const habitatAllowedAmount = await habitatDiamondNewSigner.allowance(newSigner.address, nfPositionManager.address);
+    const habitatAllowedAmount = await hbtTokenNewSigner.allowance(newSigner.address, nfPositionManager.address);
     expect(habitatAllowedAmount).to.eq(ethers.constants.WeiPerEther.mul(10000));
 
     // provide liquidity = mint NFTposition
@@ -215,12 +223,12 @@ describe('HabitatDiamond', function () {
     await tx.wait();
     const position = await nfPositionManager.positions(tokenId);
     expect(position.operator).to.eq(stakeERC20Contract.address);
-    expect(position.token0).to.eq(isHBTToken0 ? habitatDiamond.address : weth.address);
-    expect(position.token1).to.eq(isHBTToken0 ? weth.address : habitatDiamond.address);
+    expect(position.token0).to.eq(isHBTToken0 ? hbtToken.address : weth.address);
+    expect(position.token1).to.eq(isHBTToken0 ? weth.address : hbtToken.address);
 
     // stake NFTposition
-    const votingPowerBeforeStake = await habitatDiamond.getVoterVotingPower(newSigner.address);
-    const totalAmountOfVotingPowerBeforeStaking = await habitatDiamond.getTotalAmountOfVotingPower();
+    const votingPowerBeforeStake = await deciderVotingPower.getVoterVotingPower(newSigner.address);
+    const totalAmountOfVotingPowerBeforeStaking = await deciderVotingPower.getTotalAmountOfVotingPower();
 
     tx = await stakeERC20ContractNewSigner.stakeUniV3NFTPosition(tokenId);
     await tx.wait();
@@ -231,21 +239,21 @@ describe('HabitatDiamond', function () {
     expect(isStakedByHolder).to.be.true;
     // maybe write pure function that returns the amount without staking?
     const amountOfVotingPowerForNFT = await stakeERC20Contract.getAmountOfVotingPowerForNFTPosition(tokenId);
-    const votingPowerAfterStake = await habitatDiamond.getVoterVotingPower(newSigner.address);
+    const votingPowerAfterStake = await deciderVotingPower.getVoterVotingPower(newSigner.address);
     expect(votingPowerAfterStake).to.eq(votingPowerBeforeStake.add(amountOfVotingPowerForNFT));
-    const totalAmountOfVotingPowerAfterStaking = await habitatDiamond.getTotalAmountOfVotingPower();
+    const totalAmountOfVotingPowerAfterStaking = await deciderVotingPower.getTotalAmountOfVotingPower();
     expect(totalAmountOfVotingPowerAfterStaking).to.eq(totalAmountOfVotingPowerBeforeStaking.add(amountOfVotingPowerForNFT));
 
     // unstake nft position
-    const unstakeTimestamp = await habitatDiamond.getTimestampToUnstake(newSigner.address);
+    const unstakeTimestamp = await deciderVotingPower.getTimestampToUnstake(newSigner.address);
     // no voting happened (rare case) must be 0
     expect(unstakeTimestamp.isZero()).to.be.true;
     tx = await stakeERC20ContractNewSigner.unstakeUniV3NFTPosition(tokenId);
     await tx.wait();
     // confirm effects
-    const totalAmountOfVotingPowerAfterUnstake = await habitatDiamond.getTotalAmountOfVotingPower();
+    const totalAmountOfVotingPowerAfterUnstake = await deciderVotingPower.getTotalAmountOfVotingPower();
     expect(totalAmountOfVotingPowerAfterUnstake).to.eq(totalAmountOfVotingPowerBeforeStaking);
-    const votingPowerAfterUnstake = await habitatDiamond.getVoterVotingPower(newSigner.address);
+    const votingPowerAfterUnstake = await deciderVotingPower.getVoterVotingPower(newSigner.address);
     expect(votingPowerAfterUnstake).to.eq(votingPowerBeforeStake);
     isStakedByHolder = await stakeERC20Contract.nftPositionIsStakedByHolder(newSigner.address, tokenId);
     expect(isStakedByHolder).to.be.false;
@@ -254,60 +262,61 @@ describe('HabitatDiamond', function () {
   });
 
   it('should be able to delegate/undelegate', async function () {
-    const {habitatDiamond, stakeERC20Contract, accounts} = await helpers.loadFixture(deployHabitatDAOAndDistributeFixture);
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const delegator = accounts[1];
-    const habitatDiamondDelegator = habitatDiamond.connect(delegator);
+    const deciderVotingPowerDelegator = deciderVotingPower.connect(delegator);
     const delegatee = accounts[2];
-    const delegatorVotingPowerBefore = await habitatDiamond.getVoterVotingPower(delegator.address);
+    const delegatorVotingPowerBefore = await deciderVotingPower.getVoterVotingPower(delegator.address);
     expect(delegatorVotingPowerBefore.gt(0)).to.be.true;
-    const delegateeVotingPowerBefore = await habitatDiamond.getVoterVotingPower(delegatee.address);
+    const delegateeVotingPowerBefore = await deciderVotingPower.getVoterVotingPower(delegatee.address);
     // delegate
-    let tx = await habitatDiamondDelegator.delegateVotingPower(delegatee.address);
+    let tx = await deciderVotingPowerDelegator.delegateVotingPower(delegatee.address);
     await tx.wait();
-    const delegatorVotingPowerAfter = await habitatDiamond.getVoterVotingPower(delegator.address);
+    const delegatorVotingPowerAfter = await deciderVotingPower.getVoterVotingPower(delegator.address);
     expect(delegatorVotingPowerAfter.isZero()).to.be.true;
-    const delegateeVotingPowerAfter = await habitatDiamond.getVoterVotingPower(delegatee.address);
+    const delegateeVotingPowerAfter = await deciderVotingPower.getVoterVotingPower(delegatee.address);
     expect(delegateeVotingPowerAfter).to.eq(delegateeVotingPowerBefore.add(delegatorVotingPowerBefore));
-    const delegateeCorrect = await habitatDiamond.getDelegatee(delegator.address);
+    const delegateeCorrect = await deciderVotingPower.getDelegatee(delegator.address);
     expect(delegateeCorrect).to.eq(delegatee.address);
-    const delegatedVotingPower = await habitatDiamond.getAmountOfDelegatedVotingPower(delegator.address);
+    const delegatedVotingPower = await deciderVotingPower.getAmountOfDelegatedVotingPower(delegator.address);
     expect(delegatedVotingPower).to.eq(delegatorVotingPowerBefore);
     // undelegate
-    tx = await habitatDiamondDelegator.undelegateVotingPower();
+    tx = await deciderVotingPowerDelegator.undelegateVotingPower();
     await tx.wait();
-    const delegatorVotingPowerUndelegated = await habitatDiamond.getVoterVotingPower(delegator.address);
+    const delegatorVotingPowerUndelegated = await deciderVotingPower.getVoterVotingPower(delegator.address);
     expect(delegatorVotingPowerUndelegated).to.eq(delegatorVotingPowerBefore);
-    const delegateeVotingPowerUndelegated = await habitatDiamond.getVoterVotingPower(delegatee.address);
+    const delegateeVotingPowerUndelegated = await deciderVotingPower.getVoterVotingPower(delegatee.address);
     expect(delegateeVotingPowerUndelegated).to.eq(delegateeVotingPowerBefore);
   });
 
   it('should be able to create treasury proposal', async function () {
-    const {habitatDiamond, stakeERC20Contract, accounts, addresses, weth} = await helpers.loadFixture(deployHabitatDAOAndDistributeFixture);
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses, weth} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const ten = ethers.constants.WeiPerEther.mul(10);
     // first lets make voting power 0 and try to create treasury proposal
     const unstaker = accounts[1];
     const beneficiar = addresses[3];
-    expect(await habitatDiamond.callStatic.isEnoughVotingPower(unstaker.address, 'treasury'))
+    const thresholdForInitiatorNumerator = await habitatDiamond.callStatic.thresholdForInitiatorNumerator('treasury');
+    expect(await deciderVotingPower.callStatic.isEnoughVotingPower(unstaker.address, thresholdForInitiatorNumerator))
       .to.be.true;
     const stakedBalance = await stakeERC20Contract.getStakedBalanceOfGovernanceToken(unstaker.address);
     const stakeERC20ContractUnstaker = stakeERC20Contract.connect(unstaker);
     const habitatDiamondUnstaker = habitatDiamond.connect(unstaker);
     let tx = await stakeERC20ContractUnstaker.unstakeGovToken(stakedBalance);
     await tx.wait();
-    const unstakerVotingPower = await habitatDiamond.getVoterVotingPower(unstaker.address);
+    const unstakerVotingPower = await deciderVotingPower.getVoterVotingPower(unstaker.address);
     expect(unstakerVotingPower.isZero()).to.be.true;
-    expect(await habitatDiamond.callStatic.isEnoughVotingPower(unstaker.address, 'treasury'))
+    expect(await deciderVotingPower.callStatic.isEnoughVotingPower(unstaker.address, thresholdForInitiatorNumerator))
       .to.be.false;
     await expect(habitatDiamondUnstaker.createTreasuryProposal(unstaker.address, ten, '0x'))
       .to.be.revertedWith("Not enough voting power to create proposal.");
 
     // second lets try to create a proposal that is calling diamond itself
     await expect(habitatDiamond.createTreasuryProposal(habitatDiamond.address, '0x0', '0x11223344'))
-      .to.be.revertedWith("Treasury proposals are related only to governance token.");
+      .to.be.revertedWith("Not a treasury proposal.");
 
     // third lets try create a proposal to transfer HBT tokens from treasury
-    let callData = habitatDiamond.interface.encodeFunctionData('transfer', [beneficiar, ten.mul(1000)]);
-    const proposalId = await habitatDiamond.callStatic.createTreasuryProposal(habitatDiamond.address, '0x0', callData);
+    let callData = hbtToken.interface.encodeFunctionData('transfer', [beneficiar, ten.mul(1000)]);
+    const proposalId = await habitatDiamond.callStatic.createTreasuryProposal(hbtToken.address, '0x0', callData);
     expect(proposalId).to.eq(ethers.constants.One);
 
     // lets create proposal to transfer ETH
@@ -316,8 +325,8 @@ describe('HabitatDiamond', function () {
     const proposalIDToTransferETH = await habitatDiamond.callStatic.createTreasuryProposal(beneficiar, ten, '0x');
     let currentBlock = await ethers.provider.getBlock('latest');
     await expect(habitatDiamond.createTreasuryProposal(beneficiar, ten, '0x'))
-      .to.emit(habitatDiamond, "TreasuryProposalCreated")
-      .withArgs(proposalIDToTransferETH, treasuryVotingPeriod.add(currentBlock.timestamp + 1))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('treasury', proposalIDToTransferETH)
 
     let proposal = await habitatDiamond.callStatic.getTreasuryProposal(proposalIDToTransferETH);
     expect(proposal.proposalAccepted).to.be.false;
@@ -332,8 +341,8 @@ describe('HabitatDiamond', function () {
     const proposalIDToTransferWETH = (await habitatDiamond.callStatic.getTreasuryProposalsCount()).add(1);
     currentBlock = await ethers.provider.getBlock('latest');
     await expect(habitatDiamond.createTreasuryProposal(weth.address, '0x0', callData))
-      .to.emit(habitatDiamond, "TreasuryProposalCreated")
-      .withArgs(proposalIDToTransferWETH, treasuryVotingPeriod.add(currentBlock.timestamp + 1))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('treasury', proposalIDToTransferWETH)
 
     proposal = await habitatDiamond.callStatic.getTreasuryProposal(proposalIDToTransferWETH);
     expect(proposal.proposalAccepted).to.be.false;
@@ -345,7 +354,7 @@ describe('HabitatDiamond', function () {
   });
 
   it('should be able to decide on treasury proposal', async function () {
-    const {habitatDiamond, stakeERC20Contract, accounts, addresses} = await helpers.loadFixture(deployHabitatDAOAndDistributeFixture);
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const ten = ethers.constants.WeiPerEther.mul(10);
     const beneficiar = addresses[3];
     // first lets create treasury proposal
@@ -356,66 +365,64 @@ describe('HabitatDiamond', function () {
     const decisionType = await habitatDiamond.callStatic.getTreasuryDecisionType();
     expect(decisionType).to.eq(2);
     // lets find our proposalId in active voting
-    let activeVotingProposalIds = await habitatDiamond.callStatic.getTreasuryActiveVotingProposalsIds();
+    let activeVotingProposalIds = await habitatDiamond.callStatic.getTreasuryActiveProposalsIds();
     expect(activeVotingProposalIds.some((id) => id.eq(proposalID))).to.be.true;
     // the initiator already voted
-    expect(await habitatDiamond.callStatic.isHolderVotedForProposal('treasury', proposalID, addresses[0]))
+    expect(await deciderVotingPower.callStatic.isHolderVotedForProposal('treasury', proposalID, addresses[0]))
       .to.be.true;
-    const initiatorVotingPower = await habitatDiamond.getVoterVotingPower(accounts[0].address);
-    let votesYes = await habitatDiamond.callStatic.getProposalVotingVotesYes('treasury', proposalID);
+    const initiatorVotingPower = await deciderVotingPower.getVoterVotingPower(accounts[0].address);
+    let votesYes = await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID);
     expect(votesYes).to.eq(initiatorVotingPower);
 
     // make sure voting started
-    expect(await habitatDiamond.callStatic.isVotingForProposalStarted('treasury', proposalID))
+    expect(await deciderVotingPower.callStatic.isVotingForProposalStarted('treasury', proposalID))
       .to.be.true;
-    const votingDeadline = await habitatDiamond.callStatic.getProposalVotingDeadlineTimestamp('treasury', proposalID);
+    const votingDeadline = await deciderVotingPower.callStatic.getProposalVotingDeadlineTimestamp('treasury', proposalID);
     const currentBlock = await ethers.provider.getBlock('latest');
     expect(votingDeadline.gt(currentBlock.timestamp)).to.be.true;
 
     // lets decide
-    const voteYes = ethers.utils.defaultAbiCoder.encode(['bool'], [true]);
-    const voteNo = ethers.utils.defaultAbiCoder.encode(['bool'], [false]);
     // lets decide on non-exist proposal
-    await expect(habitatDiamond.decideOnTreasuryProposal('0x12', voteYes))
+    await expect(habitatDiamond.decideOnTreasuryProposal('0x12', true))
       .to.be.revertedWith("No voting rn.");
     // lets decide second time
-    await expect(habitatDiamond.decideOnTreasuryProposal(proposalID, voteYes))
+    await expect(habitatDiamond.decideOnTreasuryProposal(proposalID, true))
       .to.be.revertedWith("Already voted.");
     // lets stake more govTokens, get more votingPower and decide again
-    const balance = await habitatDiamond.balanceOf(addresses[0]);
-    tx = await habitatDiamond.approve(stakeERC20Contract.address, balance);
+    const balance = await hbtToken.balanceOf(addresses[0]);
+    tx = await hbtToken.approve(stakeERC20Contract.address, balance);
     await tx.wait();
     tx = await stakeERC20Contract.stakeGovToken(balance);
     await tx.wait();
-    tx = await habitatDiamond.decideOnTreasuryProposal(proposalID, voteYes);
+    tx = await habitatDiamond.decideOnTreasuryProposal(proposalID, true);
     await tx.wait();
-    votesYes = await habitatDiamond.callStatic.getProposalVotingVotesYes('treasury', proposalID);
+    votesYes = await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID);
     expect(votesYes).to.eq(initiatorVotingPower.add(balance));
 
-    // TODO go through libraries and add abis to habitatDiamondABI
-    const libVotingPowerDecisionMaking = await ethers.getContractFactory('LibVotingPowerDecisionMaking');
-    await expect(habitatDiamond.connect(accounts[1]).decideOnTreasuryProposal(proposalID, voteYes))
-      .to.emit(libVotingPowerDecisionMaking.attach(habitatDiamond.address), "Voted")
+    await expect(habitatDiamond.connect(accounts[1]).decideOnTreasuryProposal(proposalID, true))
+      .to.emit(deciderVotingPower, "Voted")
       .withArgs(addresses[1], 'treasury', proposalID, true);
 
-    const votingPowerAccount1 = await habitatDiamond.getVoterVotingPower(accounts[1].address);
-    expect(await habitatDiamond.callStatic.getProposalVotingVotesYes('treasury', proposalID))
+    const votingPowerAccount1 = await deciderVotingPower.getVoterVotingPower(accounts[1].address);
+    expect(await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID))
       .to.eq(votesYes.add(votingPowerAccount1));
 
-    await expect(habitatDiamond.connect(accounts[2]).decideOnTreasuryProposal(proposalID, voteNo))
-      .to.emit(libVotingPowerDecisionMaking.attach(habitatDiamond.address), "Voted")
+
+    await expect(habitatDiamond.connect(accounts[2]).decideOnTreasuryProposal(proposalID, false))
+      .to.emit(deciderVotingPower, "Voted")
       .withArgs(addresses[2], 'treasury', proposalID, false);
 
-    const votingPowerAccount2 = await habitatDiamond.getVoterVotingPower(accounts[2].address);
-    const votesNo = await habitatDiamond.callStatic.getProposalVotingVotesNo('treasury', proposalID);
+    const votingPowerAccount2 = await deciderVotingPower.getVoterVotingPower(accounts[2].address);
+    const votesNo = await deciderVotingPower.callStatic.getProposalVotingVotesNo('treasury', proposalID);
     expect(votesNo).to.eq(votingPowerAccount2);
 
-    const thresholdForProposalReachedVotesYes = await habitatDiamond.callStatic.isProposalThresholdReached(votesYes, 'treasury');
+    const thresholdForProposalNumerator = await habitatDiamond.callStatic.thresholdForProposalNumerator('treasury');
+    const thresholdForProposalReachedVotesYes = await deciderVotingPower.callStatic.isProposalThresholdReached(votesYes, thresholdForProposalNumerator);
     expect(thresholdForProposalReachedVotesYes).to.be.true;
 
-    const thresholdForProposal = await habitatDiamond.callStatic.absoluteThresholdForProposal('treasury');
-    votesYes = await habitatDiamond.callStatic.getProposalVotingVotesYes('treasury', proposalID);
-    expect(thresholdForProposal.lte(votesYes)).to.be.true;
+    const absoluteThresholdForProposal = await deciderVotingPower.callStatic.getAbsoluteThresholdByNumerator(thresholdForProposalNumerator);
+    votesYes = await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID);
+    expect(absoluteThresholdForProposal.lte(votesYes)).to.be.true;
 
     // accept proposal
     // lets try to accept not waiting voting period
@@ -425,13 +432,13 @@ describe('HabitatDiamond', function () {
     // lets move to timestamp when voting period is ended
     await helpers.time.increaseTo(votingDeadline);
     await expect(habitatDiamond.acceptOrRejectTreasuryProposal(proposalID))
-      .to.emit(habitatDiamond, "TreasuryProposalAccepted")
-      .withArgs(proposalID, beneficiar, ten, '0x');
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('treasury', proposalID, beneficiar, ten, '0x');
     // confirm proposalId is removed from active
-    activeVotingProposalIds = await habitatDiamond.callStatic.getTreasuryActiveVotingProposalsIds();
+    activeVotingProposalIds = await habitatDiamond.callStatic.getTreasuryActiveProposalsIds();
     expect(activeVotingProposalIds.some((id) => id.eq(proposalID))).to.be.false;
     // confirm proposal voting was removed
-    votesYes = await habitatDiamond.callStatic.getProposalVotingVotesYes('treasury', proposalID);
+    votesYes = await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID);
     expect(votesYes.isZero()).to.be.true;
     // TODO also missed acceptedProposals view func
 
@@ -448,8 +455,8 @@ describe('HabitatDiamond', function () {
     const habitatDAOETHBalanceBefore = await ethers.provider.getBalance(habitatDiamond.address);
     // let execute
     await expect(habitatDiamond.executeTreasuryProposal(proposalID))
-      .to.emit(habitatDiamond, "TreasuryProposalExecutedSuccessfully")
-      .withArgs(proposalID);
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('treasury', proposalID);
 
     // confirm receiving eth
     const beneficiarETHBalanceAfter = await ethers.provider.getBalance(beneficiar);

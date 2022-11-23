@@ -17,6 +17,7 @@ interface IManagementSystem {
   struct ManagementSystem {
     string nameMS; // very important that this item is bytes32, so the string is max 31 char
     DecisionType decisionType;
+    address currentDecider; // TODO remember to adjust modifier to protect new storage slots
     bytes32 dataPosition;
   }
 
@@ -35,7 +36,7 @@ interface IManagementSystem {
     // proposals
     //mapping(uint256 => bytes) proposals;
     mapping(uint256 => IProposal.Proposal) proposals;
-    uint256[] activeVotingProposalsIds;
+    uint256[] activeProposalsIds;
     uint256[] acceptedProposalsIds;
     uint256 proposalsCounter;
   }

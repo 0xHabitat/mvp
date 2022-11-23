@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IERC20} from "../libraries/openzeppelin/IERC20.sol";
-import {SafeERC20} from "../libraries/openzeppelin/SafeERC20.sol";
+import {IERC20} from "../../libraries/openzeppelin/IERC20.sol";
+import {SafeERC20} from "../../libraries/openzeppelin/SafeERC20.sol";
 
 contract InitialDistributor {
   using SafeERC20 for IERC20;
@@ -40,17 +40,24 @@ contract InitialDistributorAbleToStake {
   using SafeERC20 for IERC20;
 
   address owner;
+  address tokenSetter;
   address tokenToDistribute;
   address stakeERC20Contract;
 
-  constructor(address _owner, address _tokenToDistribute) {
+  constructor(address _owner, address _tokenSetter) {
     owner = _owner;
-    tokenToDistribute = _tokenToDistribute;
+    tokenSetter = _tokenSetter;
   }
 
   function setStakeERC20Contract(address _stakeERC20Contract) external {
     require(msg.sender == owner, "No rights to set contract");
     stakeERC20Contract = _stakeERC20Contract;
+  }
+
+  function setTokenToDistribute(address _token) external returns(bool) {
+    require(msg.sender == tokenSetter, "No rights to set contract");
+    tokenToDistribute = _token;
+    return true;
   }
 
   function stakeTokensInFavorOfMultipleAddresses(address[] memory beneficiaries, uint[] memory amounts, uint totalAmount) external {
