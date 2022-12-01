@@ -41,7 +41,8 @@ async function deployInitContract() {
     'DiamondInit',
     'DAOInit',
     'ManagementSystemsInit',
-    'TreasuryInit'
+    'SpecificDataInit',
+    'RemoveDiamondCutInit'
   ];
 
   for (const InitName of InitNames) {
@@ -61,10 +62,11 @@ async function deployFacets() {
     'DiamondLoupeFacet',
     'OwnershipFacet',
     'DAOViewerFacet',
+    'ManagementSystemFacet',
     'TreasuryActionsFacet',
     'TreasuryDefaultCallbackHandlerFacet',
     'TreasuryViewerFacet',
-    'VotingPowerSpecificDataFacet'
+    'SpecificDataFacet'
   ];
 
   let abi = [];
@@ -78,11 +80,34 @@ async function deployFacets() {
     abi = abi.concat(JSON.parse(facetAbi));
   }
 
+  // deploy facets with constructor args which needs extra deployment
+  const CommonNames = [
+    'Governance',
+    'ModuleManager'
+  ];
+
+  for (const CommonName of CommonNames) {
+    const MethodsContract = await ethers.getContractFactory(CommonName + 'Methods');
+    const methodsContract = await MethodsContract.deploy();
+    await methodsContract.deployed();
+
+    const FacetContract = await ethers.getContractFactory(CommonName + 'Facet');
+    const facetContract = await FacetContract.deploy(methodsContract.address);
+    await facetContract.deployed()
+    const selectors = getSelectors(facetContract);
+    facetContracts[CommonName + 'Facet'] = {address: facetContract.address, selectors};
+    FacetNames.push(CommonName + 'Facet');
+    const facetAbiString = facetContract.interface.format(ethers.utils.FormatTypes.json);
+    let facetAbi = JSON.parse(facetAbiString);
+    facetAbi = facetAbi.filter(el => el.type != 'constructor');
+    abi = abi.concat(facetAbi);
+  }
+
   // add libraries abi to diamond
   const library = await ethers.getContractFactory('LibDecisionProcess');
   const libAbi = library.interface.format(ethers.utils.FormatTypes.json);
   abi = abi.concat(JSON.parse(libAbi));
-  
+
   await fs.promises.writeFile('./habitatDiamondABI.json', JSON.stringify(abi, null, 2));
   return [facetContracts, FacetNames];
 }

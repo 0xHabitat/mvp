@@ -6,41 +6,15 @@ import {IManagementSystem} from "../interfaces/dao/IManagementSystem.sol";
 
 contract ManagementSystemsInit {
 
-  function initManagementSystems5(
+  function initManagementSystems(
+    string[] memory msNames,
     IManagementSystem.DecisionType[] memory decisionTypes,
     address[] memory deciders
   ) external {
-    IManagementSystem.ManagementSystems storage mss = LibManagementSystem._getManagementSystems();
-    mss.numberOfManagementSystems = 5;
-    mss.setAddChangeManagementSystem = IManagementSystem.ManagementSystem({
-      nameMS: "setAddChangeManagementSystem",
-      decisionType: decisionTypes[0],
-      currentDecider: deciders[0],
-      dataPosition: keccak256(abi.encodePacked(address(this), "managementSystem", "setAddChangeManagementSystem", uint(0)))
-    });
-    mss.governance = IManagementSystem.ManagementSystem({
-      nameMS: "governance",
-      decisionType: decisionTypes[1],
-      currentDecider: deciders[1],
-      dataPosition: keccak256(abi.encodePacked(address(this), "managementSystem", "governance", uint(1)))
-    });
-    mss.treasury = IManagementSystem.ManagementSystem({
-      nameMS: "treasury",
-      decisionType: decisionTypes[2],
-      currentDecider: deciders[2],
-      dataPosition: keccak256(abi.encodePacked(address(this), "managementSystem", "treasury", uint(2)))
-    });
-    mss.subDAOsCreation = IManagementSystem.ManagementSystem({
-      nameMS: "subDAOsCreation",
-      decisionType: decisionTypes[3],
-      currentDecider: deciders[3],
-      dataPosition: keccak256(abi.encodePacked(address(this), "managementSystem", "subDAOsCreation", uint(3)))
-    });
-    mss.launchPad = IManagementSystem.ManagementSystem({
-      nameMS: "launchPad",
-      decisionType: decisionTypes[4],
-      currentDecider: deciders[4],
-      dataPosition: keccak256(abi.encodePacked(address(this), "managementSystem", "launchPad", uint(4)))
-    });
+    uint numberOfManagementSystems = msNames.length;
+    require(decisionTypes.length == numberOfManagementSystems && deciders.length == numberOfManagementSystems, "Input is incorrect, check arrays length.");
+    for (uint i = 0; i < numberOfManagementSystems; i++) {
+      LibManagementSystem._setNewManagementSystem(msNames[i], decisionTypes[i], deciders[i]);
+    }
   }
 }

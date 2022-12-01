@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IManagementSystem} from "./IManagementSystem.sol";
-
 interface ISubDAO {
   struct SubDAOStorage {
     string subDAOName;
@@ -10,7 +8,6 @@ interface ISubDAO {
     string info;
     string socials;
     address mainDAO;
-    bytes32 managementSystemPosition;
     address[] createdSubDAOs;
   }
 
@@ -31,8 +28,6 @@ interface ISubDAO {
   function isSubDAOOf(address _mainDAO) external view returns (bool);
 
   function isMainDAOFor(address _subDAO) external view returns (bool);
-
-  function getManagementSystem() external view returns (IManagementSystem.ManagementSystem memory);
 /*
   function getGovernanceVotingSystem() external view returns (IManagementSystem.VotingSystem);
 

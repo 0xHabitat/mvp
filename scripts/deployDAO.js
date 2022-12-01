@@ -79,7 +79,14 @@ async function deployDAO(decisionTypes = initParams.initManagementSystems5.decis
   }
 
   // deploy dao
-  const daoMetaData = [initParams.initDAO.daoName, initParams.initDAO.purpose, initParams.initDAO.info, initParams.initDAO.socials];
+  const daoMetaData = [initParams.initDAO.daoName.value, initParams.initDAO.purpose.value, initParams.initDAO.info.value, initParams.initDAO.socials.value];
+  const msNames = [
+      "setAddChangeManagementSystem",
+      "governance",
+      "treasury",
+      "subDAOsCreation",
+      "launchPad",
+  ];
   const decidersRelatedToDecisionTypes = decisionTypes.map(
     (e) => {
       if (e == 2) {
@@ -92,8 +99,12 @@ async function deployDAO(decisionTypes = initParams.initManagementSystems5.decis
   );
 
   const abiCoder = ethers.utils.defaultAbiCoder;
+  const votingPowerSpecificData0 = abiCoder.encode(
+    ["uint256","uint256","uint256","uint256"],
+    [0,0,0,0]
+  );
   const treasuryVotingPowerSpecificData = abiCoder.encode(
-    ["uint64","uint64","uint64","uint64"],
+    ["uint256","uint256","uint256","uint256"],
     [
       initParams.initTreasuryVotingPowerSpecificData.thresholdForInitiator.value,
       initParams.initTreasuryVotingPowerSpecificData.thresholdForProposal.value,
@@ -101,24 +112,61 @@ async function deployDAO(decisionTypes = initParams.initManagementSystems5.decis
       initParams.initTreasuryVotingPowerSpecificData.secondsProposalExecutionDelayPeriod.value
     ]
   );
-  const treasurySignersSpecificData = "0x0000000000000000000000000000000000000000000000000000000000000000";
-  // get returned result - dao address
-  const daoAddress = await mainDeployer.callStatic.deployDAOMS5T(
-    addressesProviderAddress,
-    daoMetaData,
-    decisionTypes,
-    decidersRelatedToDecisionTypes,
-    treasuryVotingPowerSpecificData,
-    treasurySignersSpecificData
+  const governanceVotingPowerSpecificData = abiCoder.encode(
+    ["uint256","uint256","uint256","uint256"],
+    [
+      initParams.initGovernanceVotingPowerSpecificData.thresholdForInitiator.value,
+      initParams.initGovernanceVotingPowerSpecificData.thresholdForProposal.value,
+      initParams.initGovernanceVotingPowerSpecificData.secondsProposalVotingPeriod.value,
+      initParams.initGovernanceVotingPowerSpecificData.secondsProposalExecutionDelayPeriod.value
+    ]
   );
+  const creationSubDAOsVotingPowerSpecificData = abiCoder.encode(
+    ["uint256","uint256","uint256","uint256"],
+    [
+      initParams.initCreationSubDAOsVotingPowerSpecificData.thresholdForInitiator.value,
+      initParams.initCreationSubDAOsVotingPowerSpecificData.thresholdForProposal.value,
+      initParams.initCreationSubDAOsVotingPowerSpecificData.secondsProposalVotingPeriod.value,
+      initParams.initCreationSubDAOsVotingPowerSpecificData.secondsProposalExecutionDelayPeriod.value
+    ]
+  );
+  const votingPowerSpecificData = [
+    votingPowerSpecificData0,
+    governanceVotingPowerSpecificData,
+    treasuryVotingPowerSpecificData,
+    creationSubDAOsVotingPowerSpecificData,
+    votingPowerSpecificData0
+  ];
 
-  tx = await mainDeployer.deployDAOMS5T(
+  const signersSpecificData0 = abiCoder.encode(["uint256"],[0]);
+  const signersSpecificData = [
+    signersSpecificData0,
+    signersSpecificData0,
+    signersSpecificData0,
+    signersSpecificData0,
+    signersSpecificData0
+  ];
+
+  // get returned result - dao address
+  const daoAddress = await mainDeployer.callStatic.deployDAO(
     addressesProviderAddress,
     daoMetaData,
+    msNames,
     decisionTypes,
     decidersRelatedToDecisionTypes,
-    treasuryVotingPowerSpecificData,
-    treasurySignersSpecificData
+    votingPowerSpecificData,
+    signersSpecificData
+  );
+  console.log(daoAddress);
+
+  tx = await mainDeployer.deployDAO(
+    addressesProviderAddress,
+    daoMetaData,
+    msNames,
+    decisionTypes,
+    decidersRelatedToDecisionTypes,
+    votingPowerSpecificData,
+    signersSpecificData
   );
   receipt = await tx.wait();
   if (!receipt.status) {

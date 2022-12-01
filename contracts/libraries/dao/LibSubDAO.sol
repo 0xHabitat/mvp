@@ -2,8 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {ISubDAO} from "../../interfaces/dao/ISubDAO.sol";
-import {IManagementSystem} from "../../interfaces/dao/IManagementSystem.sol";
-import {LibManagementSystem} from "./LibManagementSystem.sol";
 
 library LibSubDAO {
   bytes32 constant SUB_DAO_STORAGE_POSITION = keccak256("habitat.diamond.standard.subdao.storage");
@@ -16,7 +14,6 @@ struct SubDAOStorage {
   string socials;
   address mainDAO;
   address[] createdSubDAOs;
-  bytes32 managementSystemPosition;
 }
 */
   function subDAOStorage() internal pure returns (ISubDAO.SubDAOStorage storage sds) {

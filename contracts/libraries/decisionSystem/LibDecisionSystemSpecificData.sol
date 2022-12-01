@@ -6,46 +6,83 @@ import {LibManagementSystem} from "../dao/LibManagementSystem.sol";
 
 // decisionSpecificData[2]
 struct VotingPowerSpecificData {
-  uint64 thresholdForInitiator;
-  uint64 thresholdForProposal;
-  uint64 secondsProposalVotingPeriod;
-  uint64 secondsProposalExecutionDelayPeriod;
+  uint256 thresholdForInitiator;
+  uint256 thresholdForProposal;
+  uint256 secondsProposalVotingPeriod;
+  uint256 secondsProposalExecutionDelayPeriod;
+}
+// decisionSpecificData[3]
+struct SignerSpecificData {
+  uint256 secondsProposalExecutionDelayPeriod;
 }
 
 library LibDecisionSystemSpecificData {
 
-  // Voting Power specific data getters - maybe better move to LibMS?
-
-  function _getMSVotingPowerSpecificData(string memory msName) internal returns(VotingPowerSpecificData memory vpsd) {
+  function _getMSVotingPowerSpecificData(string memory msName) internal view returns(VotingPowerSpecificData memory vpsd) {
     IManagementSystem.MSData storage msData = LibManagementSystem._getMSDataByName(msName);
     bytes memory specificData = msData.decisionSpecificData[IManagementSystem.DecisionType(2)];
     vpsd = abi.decode(specificData, (VotingPowerSpecificData));
   }
 
-  function _getMSVotingPowerSpecificDataStoragePointer(string memory msName) internal returns(bytes storage vpsd) {
+  function _getMSSignersSpecificData(string memory msName) internal view returns(SignerSpecificData memory ssd) {
     IManagementSystem.MSData storage msData = LibManagementSystem._getMSDataByName(msName);
-    vpsd = msData.decisionSpecificData[IManagementSystem.DecisionType(2)];
+    bytes memory specificData = msData.decisionSpecificData[IManagementSystem.DecisionType(3)];
+    ssd = abi.decode(specificData, (SignerSpecificData));
   }
 
-  // Voting Power specific data view functions
+  // specific data view functions
+  function _getSecondsProposalExecutionDelayPeriodSigners(string memory msName) internal view returns(uint256) {
+    SignerSpecificData memory ssd = _getMSSignersSpecificData(msName);
+    return ssd.secondsProposalExecutionDelayPeriod;
+  }
 
-  function _getThresholdForProposalNumerator(string memory msName) internal returns(uint64) {
+  function _getThresholdForProposalNumerator(string memory msName) internal view returns(uint256) {
     VotingPowerSpecificData memory vpsd = _getMSVotingPowerSpecificData(msName);
     return vpsd.thresholdForProposal;
   }
 
-  function _getThresholdForInitiatorNumerator(string memory msName) internal returns(uint64) {
+  function _getThresholdForInitiatorNumerator(string memory msName) internal view returns(uint256) {
     VotingPowerSpecificData memory vpsd = _getMSVotingPowerSpecificData(msName);
     return vpsd.thresholdForInitiator;
   }
 
-  function _getSecondsProposalVotingPeriod(string memory msName) internal returns(uint64) {
+  function _getSecondsProposalVotingPeriod(string memory msName) internal view returns(uint256) {
     VotingPowerSpecificData memory vpsd = _getMSVotingPowerSpecificData(msName);
     return vpsd.secondsProposalVotingPeriod;
   }
 
-  function _getSecondsProposalExecutionDelayPeriod(string memory msName) internal returns(uint64) {
+  function _getSecondsProposalExecutionDelayPeriodVP(string memory msName) internal view returns(uint256) {
     VotingPowerSpecificData memory vpsd = _getMSVotingPowerSpecificData(msName);
     return vpsd.secondsProposalExecutionDelayPeriod;
+  }
+
+  function _changedThresholdForInitiatorBytes(string memory msName, uint256 newThresholdForInitiator) internal view returns(bytes memory newVPSD) {
+    VotingPowerSpecificData memory vpsd = LibDecisionSystemSpecificData._getMSVotingPowerSpecificData(msName);
+    vpsd.thresholdForInitiator = newThresholdForInitiator;
+    newVPSD = abi.encode(vpsd);
+  }
+
+  function _changedThresholdForProposalBytes(string memory msName, uint256 newThresholdForProposal) internal view returns(bytes memory newVPSD) {
+    VotingPowerSpecificData memory vpsd = LibDecisionSystemSpecificData._getMSVotingPowerSpecificData(msName);
+    vpsd.thresholdForProposal = newThresholdForProposal;
+    newVPSD = abi.encode(vpsd);
+  }
+
+  function _changedSecondsProposalVotingPeriodBytes(string memory msName, uint256 newSecondsProposalVotingPeriod) internal view returns(bytes memory newVPSD) {
+    VotingPowerSpecificData memory vpsd = LibDecisionSystemSpecificData._getMSVotingPowerSpecificData(msName);
+    vpsd.secondsProposalVotingPeriod = newSecondsProposalVotingPeriod;
+    newVPSD = abi.encode(vpsd);
+  }
+
+  function _changedSecondsProposalExecutionDelayPeriodVPBytes(string memory msName, uint256 newSecondsProposalExecutionDelayPeriodVP) internal view returns(bytes memory newVPSD) {
+    VotingPowerSpecificData memory vpsd = LibDecisionSystemSpecificData._getMSVotingPowerSpecificData(msName);
+    vpsd.secondsProposalExecutionDelayPeriod = newSecondsProposalExecutionDelayPeriodVP;
+    newVPSD = abi.encode(vpsd);
+  }
+
+  function _changedSecondsProposalExecutionDelayPeriodSignersBytes(string memory msName, uint256 newSecondsProposalExecutionDelayPeriodSigners) internal view returns(bytes memory newSSD) {
+    SignerSpecificData memory ssd = LibDecisionSystemSpecificData._getMSSignersSpecificData(msName);
+    ssd.secondsProposalExecutionDelayPeriod = newSecondsProposalExecutionDelayPeriodSigners;
+    newSSD = abi.encode(ssd);
   }
 }

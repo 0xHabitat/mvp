@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {LibManagementSystem} from "../dao/LibManagementSystem.sol";
-import {LibDAOStorage} from "../dao/LibDAOStorage.sol";
+import {LibHabitatDiamond} from "../LibHabitatDiamond.sol";
 import {IProposal} from "../../interfaces/IProposal.sol";
 import {IDecider} from "../../interfaces/decisionSystem/IDecider.sol";
 
@@ -223,6 +223,42 @@ library LibDecisionProcess {
     }
   }
 
+  function executeProposalCallCode(
+    string memory msName,
+    uint256 proposalId,
+    bytes4 funcSelector
+  ) internal disallowChangingManagementSystems(msName) returns(bool result) {
+    // what is ms decision system?
+    IDecider decider = _getDecider(msName);
+
+    IProposal.Proposal storage proposal = LibManagementSystem._getProposal(msName, proposalId);
+    require(proposal.destinationAddress != address(0), "Proposal does not exist");
+    require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");
+    proposal.proposalExecuted = true;
+    require(proposal.executionTimestamp <= block.timestamp, "Wait until proposal delay time is expired.");
+
+    address directCaller = decider.directCaller();
+
+    // who is calling (EOA or module?)
+    if (msg.sender != directCaller && msg.sender != address(decider)) {
+      proposal.proposalExecuted = false;
+      result = decider.executeProposal(msName, proposalId, funcSelector);
+    } else if (msg.sender == directCaller || msg.sender == address(decider)) {
+      address destination = proposal.destinationAddress;
+      bytes memory callData = proposal.callData;
+
+      assembly {
+        result := callcode(gas(), destination, 0, add(callData, 0x20), mload(callData), 0, 0)
+      }
+      // return data needed?
+      // remove from accepted
+      LibManagementSystem._removeProposalIdFromAcceptedList(msName, proposalId);
+      LibManagementSystem._removeProposal(msName, proposalId);
+      if (result) emit ProposalExecutedSuccessfully(msName, proposalId);
+      else emit ProposalExecutedWithRevert(msName, proposalId);
+    }
+  }
+
   function _getDecider(string memory msName) internal returns(IDecider decider) {
     uint8 decisionType = uint8(LibManagementSystem._getDecisionType(msName));
     require(decisionType != uint8(0), "No decision type.");
@@ -238,31 +274,21 @@ library LibDecisionProcess {
     if (msNameHash == sACMSHash) {
       _;
     } else {
-      bytes32 msPos = LibDAOStorage._getManagementSystemsPosition(); // TODO also i have to take care about position value itself
-      uint numMS;
-      assembly {
-        numMS := sload(msPos)
-      }
-      bytes memory storedStructBeforeFE = new bytes(numMS * 128 + 64);
-      assembly {
-        for {let i:=0} lt(mul(i, 0x20), add(mul(numMS, 4), 2)) {i := add(i, 0x01)} {
-          let storedBlock32bytes := sload(add(msPos, i))
-          mstore(add(storedStructBeforeFE, add(0x20, mul(i, 0x20))), storedBlock32bytes)
-        }
-      }
+      bytes memory mssBefore = LibManagementSystem._getManagementSystems();
+      bytes32[] memory msSlotsBefore = LibManagementSystem._getMSPositionsValues();
+      address apBefore = LibHabitatDiamond.getAddressesProvider();
       _;
-      bytes memory storedStructAfterFE = new bytes(numMS * 128 + 64);
-      assembly {
-        for {let i:=0} lt(mul(i, 0x20), add(mul(numMS, 4), 2)) {i := add(i, 0x01)} {
-          let storedBlock32bytes := sload(add(msPos, i))
-          mstore(add(storedStructAfterFE, add(0x20, mul(i, 0x20))), storedBlock32bytes)
-        }
-      }
-      require(equal(storedStructBeforeFE, storedStructAfterFE), "Only setAddChangeManagementSystem can execute this one.");
+      bytes memory mssAfter = LibManagementSystem._getManagementSystems();
+      bytes32[] memory msSlotsAfter = LibManagementSystem._getMSPositionsValues();
+      address apAfter = LibHabitatDiamond.getAddressesProvider();
+
+      require(mssBefore.length == mssAfter.length && keccak256(mssBefore) == keccak256(mssAfter), "Only setAddChangeManagementSystem can execute this one.");
+      require(equal(msSlotsBefore, msSlotsAfter), "Only setAddChangeManagementSystem can execute this one.");
+      require(apBefore == apAfter, "Only setAddChangeManagementSystem can execute this one.");
     }
   }
 
-  function equal(bytes memory _preBytes, bytes memory _postBytes) internal pure returns (bool) {
+  function equal(bytes32[] memory _preBytes, bytes32[] memory _postBytes) internal pure returns (bool) {
     bool success = true;
 
     assembly {

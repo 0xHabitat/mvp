@@ -17,24 +17,16 @@ interface IManagementSystem {
   struct ManagementSystem {
     string nameMS; // very important that this item is bytes32, so the string is max 31 char
     DecisionType decisionType;
-    address currentDecider; // TODO remember to adjust modifier to protect new storage slots
     bytes32 dataPosition;
+    address currentDecider; // TODO remember to adjust modifier to protect new storage slots
   }
 
-  struct ManagementSystems {
-    uint numberOfManagementSystems;
-    ManagementSystem setAddChangeManagementSystem;
-    ManagementSystem governance;
-    ManagementSystem treasury;
-    ManagementSystem subDAOsCreation;
-    ManagementSystem launchPad;
-  }
   // this struct is stored at dataPosition slot
   struct MSData {
     // decisionSystem => data
     mapping(DecisionType => bytes) decisionSpecificData;
     // proposals
-    //mapping(uint256 => bytes) proposals;
+    //mapping(uint256 => bytes) proposals; // ideally slots below has to be protected as well
     mapping(uint256 => IProposal.Proposal) proposals;
     uint256[] activeProposalsIds;
     uint256[] acceptedProposalsIds;

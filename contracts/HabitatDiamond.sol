@@ -1,26 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-/******************************************************************************\
-* Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
-* EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
-*
-* Implementation of a diamond.
-/******************************************************************************/
-
 import {LibDiamond} from "./libraries/LibDiamond.sol";
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
 import {IAddressesProvider} from "./interfaces/IAddressesProvider.sol";
 import {IDAO} from "./interfaces/dao/IDAO.sol";
-import {IManagementSystem} from "./interfaces/dao/IManagementSystem.sol";
 
 contract HabitatDiamond {
   constructor(
-    address _contractOwner,
     address addressesProvider,
-    IDAO.DAOMeta memory daoMetaData
+    IDAO.DAOMeta memory daoMetaData,
+    bytes memory msCallData
   ) payable {
-    LibDiamond.setContractOwner(_contractOwner);
+    LibDiamond.setContractOwner(msg.sender);
     // make a default cut
     IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](3);
     // Add the diamondCut external function from the diamondCutFacet
@@ -56,7 +48,7 @@ contract HabitatDiamond {
 
     // DAO first
     IDiamondCut.FacetCut[] memory cutDAO = new IDiamondCut.FacetCut[](1); // when have more dao related facets than extend an array
-    address daoInit = IAddressesProvider(addressesProvider).getDAOInit();
+
     IAddressesProvider.Facet memory daoViewerFacet = IAddressesProvider(addressesProvider).getDAOViewerFacet();
     cutDAO[0] = IDiamondCut.FacetCut({
       facetAddress: daoViewerFacet.facetAddress,
@@ -72,7 +64,23 @@ contract HabitatDiamond {
       daoMetaData.socials,
       addressesProvider
     );
-    LibDiamond.diamondCut(cutDAO, daoInit, daoInitCalldata);
+    LibDiamond.diamondCut(cutDAO, IAddressesProvider(addressesProvider).getDAOInit(), daoInitCalldata);
+
+    IDiamondCut.FacetCut[] memory msCut = new IDiamondCut.FacetCut[](1);
+
+    // Add the ManagementSystemFacet
+    IAddressesProvider.Facet memory managementSystemFacet = IAddressesProvider(addressesProvider).getManagementSystemFacet();
+
+    msCut[0] = IDiamondCut.FacetCut({
+      facetAddress: managementSystemFacet.facetAddress,
+      action: IDiamondCut.FacetCutAction.Add,
+      functionSelectors: managementSystemFacet.functionSelectors
+    });
+
+    // make management system init
+    address managementSystemInit = IAddressesProvider(addressesProvider).getManagementSystemsInit();
+
+    LibDiamond.diamondCut(msCut, managementSystemInit, msCallData);
   }
 
   // Find facet for function that is called and execute the
@@ -85,7 +93,7 @@ contract HabitatDiamond {
       ds.slot := position
     }
     // get facet from function selector
-    address facet = address(bytes20(ds.facets[msg.sig]));
+    address facet = ds.selectorToFacetAndPosition[msg.sig].facetAddress;
     require(facet != address(0), "Diamond: Function does not exist");
     // Execute external function from facet using delegatecall and return any value.
     assembly {
@@ -97,12 +105,12 @@ contract HabitatDiamond {
       returndatacopy(0, 0, returndatasize())
       // return any return value or error back to the caller
       switch result
-      case 0 {
-        revert(0, returndatasize())
-      }
-      default {
-        return(0, returndatasize())
-      }
+          case 0 {
+              revert(0, returndatasize())
+          }
+          default {
+              return(0, returndatasize())
+          }
     }
   }
 

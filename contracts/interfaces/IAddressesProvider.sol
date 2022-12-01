@@ -42,11 +42,11 @@ interface IAddressesProvider {
   event ManagementSystemsInitUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
-   * @dev Emitted when the treasury init is updated.
-   * @param oldAddress The old address of the TreasuryInit
-   * @param newAddress The new address of the TreasuryInit
+   * @dev Emitted when the specific data init is updated.
+   * @param oldAddress The old address of the SpecificDataInit
+   * @param newAddress The new address of the SpecificDataInit
    */
-  event TreasuryInitUpdated(address indexed oldAddress, address indexed newAddress);
+  event SpecificDataInitUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
    * @dev Emitted when the DiamondCutFacet is updated.
@@ -77,6 +77,27 @@ interface IAddressesProvider {
   event DAOViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
+   * @dev Emitted when the management system facet is updated.
+   * @param oldAddress The old address of the ManagementSystemFacet
+   * @param newAddress The new address of the ManagementSystemFacet
+   */
+  event ManagementSystemFacetUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
+   * @dev Emitted when the module manager facet is updated.
+   * @param oldAddress The old address of the ModuleManagerFacet
+   * @param newAddress The new address of the ModuleManagerFacet
+   */
+  event ModuleManagerFacetUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
+   * @dev Emitted when the governance facet is updated.
+   * @param oldAddress The old address of the GovernanceFacet
+   * @param newAddress The new address of the GovernanceFacet
+   */
+  event GovernanceFacetUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
    * @dev Emitted when the treasury actions facet is updated.
    * @param oldAddress The old address of the TreasuryActionsFacet
    * @param newAddress The new address of the TreasuryActionsFacet
@@ -98,11 +119,11 @@ interface IAddressesProvider {
   event TreasuryDefaultCallbackHandlerFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
-   * @dev Emitted when the voting power specific data facet is updated.
-   * @param oldAddress The old address of the VotingPowerSpecificDataFacet
-   * @param newAddress The new address of the VotingPowerSpecificDataFacet
+   * @dev Emitted when the specific data facet is updated.
+   * @param oldAddress The old address of the SpecificDataFacet
+   * @param newAddress The new address of the SpecificDataFacet
    */
-  event VotingPowerSpecificDataFacetUpdated(address indexed oldAddress, address indexed newAddress);
+  event SpecificDataFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
    * @notice Returns an address by its identifier.
@@ -114,12 +135,34 @@ interface IAddressesProvider {
   function getAddress(bytes32 id) external view returns (address);
 
   /**
+   * @notice Returns a bool that describes facet address existence.
+   * @dev It returns false if there is no registered facet address
+   * @param facet Facet address
+   * @return The bool that describes facet address existence
+   */
+  function facetAddressExist(address facet) external view returns(bool);
+
+  /**
    * @notice Returns an array of facet selectors by facet address.
    * @dev It returns empty array if there is no registered selectors with the given facet
    * @param facet The facet address
    * @return An array of the registered selectors for the specified facet
    */
   function getSelectors(address facet) external view returns (bytes4[] memory);
+
+  /**
+   * @notice Returns an address of init contract for facet address.
+   * @dev It returns address(0) if there is no registered init for the given facet
+   * @param facet The facet address
+   * @return An address of init contract for the specified facet address
+   */
+  function getInitForFacet(address facet) external view returns (address);
+
+  /**
+   * @notice Temporary init contract.
+   * @return The address of the RemoveDiamondCutInit
+   */
+  function getRemoveDiamondCutInit() external view returns(address);
 
   /**
    * @notice Returns the address of the default diamond init contract.
@@ -140,10 +183,10 @@ interface IAddressesProvider {
   function getManagementSystemsInit() external view returns (address);
 
   /**
-   * @notice Returns the address of the treasury init contract.
-   * @return The address of the TreasuryInit
+   * @notice Returns the address of the specific data init contract.
+   * @return The address of the SpecificDataInit
    */
-  function getTreasuryInit() external view returns (address);
+  function getSpecificDataInit() external view returns (address);
 
   /**
    * @notice Returns the address and function to call by HabitatDiamondFactory.
@@ -200,6 +243,42 @@ interface IAddressesProvider {
   function getDAOViewerFacet() external view returns (Facet memory);
 
   /**
+   * @notice Returns the address of the management system facet contract.
+   * @return The address of the ManagementSystemFacet
+   */
+  function getManagementSystemFacetAddress() external view returns (address);
+
+  /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the ManagementSystemFacet
+   */
+  function getManagementSystemFacet() external view returns (Facet memory);
+
+  /**
+   * @notice Returns the address of the governance facet contract.
+   * @return The address of the GovernanceFacet
+   */
+  function getGovernanceFacetAddress() external view returns (address);
+
+  /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the GovernanceFacet
+   */
+  function getGovernanceFacet() external view returns (Facet memory);
+
+  /**
+   * @notice Returns the address of the module manager facet contract.
+   * @return The address of the ModuleManagerFacet
+   */
+  function getModuleManagerFacetAddress() external view returns (address);
+
+  /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the ModuleManagerFacet
+   */
+  function getModuleManagerFacet() external view returns (Facet memory);
+
+  /**
    * @notice Returns the address of the treasury actions facet contract.
    * @return The address of the TreasuryActionsFacet
    */
@@ -236,16 +315,16 @@ interface IAddressesProvider {
   function getTreasuryDefaultCallbackHandlerFacet() external view returns (Facet memory);
 
   /**
-   * @notice Returns the address of the voting power specific data facet contract.
-   * @return The address of the VotingPowerSpecificDataFacet
+   * @notice Returns the address of the specific data facet contract.
+   * @return The address of the SpecificDataFacet
    */
-  function getVotingPowerSpecificDataFacetAddress() external view returns (address);
+  function getSpecificDataFacetAddress() external view returns (address);
 
   /**
    * @notice Returns Facet (facet address and an array of the facet selectors).
-   * @return Facet struct of the VotingPowerSpecificDataFacet
+   * @return Facet struct of the SpecificDataFacet
    */
-  function getVotingPowerSpecificDataFacet() external view returns (Facet memory);
+  function getSpecificDataFacet() external view returns (Facet memory);
 
   /**
    * @notice Sets an address for an id replacing the address saved in the addresses map.
@@ -254,6 +333,11 @@ interface IAddressesProvider {
    * @param newAddress The address to set
    */
   function setAddress(bytes32 id, address newAddress) external;
+
+  /**
+   * @notice Temporary init.
+   */
+  function setRemoveDiamondCutInit(address init) external;
 
   /**
    * @notice Updates the address of the default diamond init.
@@ -274,10 +358,10 @@ interface IAddressesProvider {
   function setManagementSystemsInit(address newManagementSystemsInit) external;
 
   /**
-   * @notice Updates the address of the treasury init.
-   * @param newTreasuryInit The address of the new TreasuryInit
+   * @notice Updates the address of the specific data init.
+   * @param newSpecificDataInit The address of the new SpecificDataInit
    */
-  function setTreasuryInit(address newTreasuryInit) external;
+  function setSpecificDataInit(address newSpecificDataInit) external;
 
   /**
    * @notice Updates the address of the diamond cut facet.
@@ -304,6 +388,24 @@ interface IAddressesProvider {
   function setDAOViewerFacet(address newDAOViewerFacet, bytes4[] memory selectors) external;
 
   /**
+   * @notice Updates the address of the management system facet.
+   * @param newManagementSystemFacet The address of the new ManagementSystemFacet
+   */
+  function setManagementSystemFacet(address newManagementSystemFacet, bytes4[] memory selectors) external;
+
+  /**
+   * @notice Updates the address of the module manager facet.
+   * @param newModuleManagerFacet The address of the new ModuleManagerFacet
+   */
+  function setModuleManagerFacet(address newModuleManagerFacet, bytes4[] memory selectors) external;
+
+  /**
+   * @notice Updates the address of the governance facet.
+   * @param newGovernanceFacet The address of the new GovernanceFacet
+   */
+  function setGovernanceFacet(address newGovernanceFacet, bytes4[] memory selectors) external;
+
+  /**
    * @notice Updates the address of the treasury actions facet.
    * @param newTreasuryActionsFacet The address of the new TreasuryActionsFacet
    */
@@ -322,8 +424,8 @@ interface IAddressesProvider {
   function setTreasuryDefaultCallbackHandlerFacet(address newTreasuryDefaultCallbackHandlerFacet, bytes4[] memory selectors) external;
 
   /**
-   * @notice Updates the address of the voting power specific data facet.
-   * @param newVotingPowerSpecificDataFacet The address of the new VotingPowerSpecificDataFacet
+   * @notice Updates the address of the specific data facet.
+   * @param newSpecificDataFacet The address of the new SpecificDataFacet
    */
-  function setVotingPowerSpecificDataFacet(address newVotingPowerSpecificDataFacet, bytes4[] memory selectors) external;
+  function setSpecificDataFacet(address newSpecificDataFacet, bytes4[] memory selectors) external;
 }

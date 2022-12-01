@@ -31,10 +31,10 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
   }
 
   struct VotingPowerSpecificData {
-    uint64 thresholdForInitiator;
-    uint64 thresholdForProposal;
-    uint64 secondsProposalVotingPeriod;
-    uint64 secondsProposalExecutionDelayPeriod;
+    uint256 thresholdForInitiator;
+    uint256 thresholdForProposal;
+    uint256 secondsProposalVotingPeriod;
+    uint256 secondsProposalExecutionDelayPeriod;
   }
 
   event NewVoting(
@@ -122,8 +122,8 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
 
     proposalVoting.votingStarted = true;
 
-    proposalVoting.votingEndTimestamp = uint256(vpsd.secondsProposalVotingPeriod) + block.timestamp;
-    executionTimestamp = uint256(vpsd.secondsProposalExecutionDelayPeriod) + proposalVoting.votingEndTimestamp;
+    proposalVoting.votingEndTimestamp = vpsd.secondsProposalVotingPeriod + block.timestamp;
+    executionTimestamp = vpsd.secondsProposalExecutionDelayPeriod + proposalVoting.votingEndTimestamp;
 
     proposalVoting.unstakeTimestamp = executionTimestamp;
     emit NewDecisionProcess(proposalKey, msName, proposalId);
@@ -167,7 +167,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     uint votesYes = proposalVoting.votesYes;
     uint votesNo = proposalVoting.votesNo;
     _removeProposalVoting(proposalKey);
-    uint64 thresholdForProposal = vpsd.thresholdForProposal;
+    uint256 thresholdForProposal = vpsd.thresholdForProposal;
     bool proposalThresholdReachedYes = _calculateIsProposalThresholdReached(votesYes, thresholdForProposal);
     bool proposalThresholdReachedNo = _calculateIsProposalThresholdReached(votesNo, thresholdForProposal);
     emit FinalVotes(msName, proposalId, votesYes, votesNo);
@@ -301,35 +301,35 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     // rethink votedAmount
   }
 
-  function _calculateIsEnoughVotingPower(address holder, uint64 thresholdForInitiator) internal view returns (bool) {
+  function _calculateIsEnoughVotingPower(address holder, uint256 thresholdForInitiator) internal view returns (bool) {
     if (totalAmountOfVotingPower < maxAmountOfVotingPower) {
       return
         votingPower[holder] >=
-        ((uint256(thresholdForInitiator) * maxAmountOfVotingPower) / precision);
+        ((thresholdForInitiator * maxAmountOfVotingPower) / precision);
     } else {
       return
         votingPower[holder] >=
-        ((uint256(thresholdForInitiator) * totalAmountOfVotingPower) / precision);
+        ((thresholdForInitiator * totalAmountOfVotingPower) / precision);
     }
   }
 
-  function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint64 thresholdForProposal) internal view returns (bool) {
+  function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint256 thresholdForProposal) internal view returns (bool) {
     if (totalAmountOfVotingPower < maxAmountOfVotingPower) {
       return
         amountOfVotes >=
-        ((uint256(thresholdForProposal) * maxAmountOfVotingPower) / precision);
+        ((thresholdForProposal * maxAmountOfVotingPower) / precision);
     } else {
       return
         amountOfVotes >=
-        ((uint256(thresholdForProposal) * totalAmountOfVotingPower) / precision);
+        ((thresholdForProposal * totalAmountOfVotingPower) / precision);
     }
   }
 
-  function _calculateAbsoluteThresholdValue(uint64 thresholdNumerator) internal view returns (uint256) {
+  function _calculateAbsoluteThresholdValue(uint256 thresholdNumerator) internal view returns (uint256) {
     if (totalAmountOfVotingPower < maxAmountOfVotingPower) {
-      return ((uint256(thresholdNumerator) * maxAmountOfVotingPower) / precision);
+      return ((thresholdNumerator * maxAmountOfVotingPower) / precision);
     } else {
-      return ((uint256(thresholdNumerator) * totalAmountOfVotingPower) / precision);
+      return ((thresholdNumerator * totalAmountOfVotingPower) / precision);
     }
   }
 
@@ -427,15 +427,15 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
   // View function that args are taken from dao storage
   // Now i decide to get value from the back, but maybe i change my mind and
   // make call to dao inside functions
-  function getAbsoluteThresholdByNumerator(uint64 thresholdNumerator) external view returns (uint256) {
+  function getAbsoluteThresholdByNumerator(uint256 thresholdNumerator) external view returns (uint256) {
     return _calculateAbsoluteThresholdValue(thresholdNumerator);
   }
 
-  function isEnoughVotingPower(address holder, uint64 thresholdForInitiatorNumerator) external view returns (bool) {
+  function isEnoughVotingPower(address holder, uint256 thresholdForInitiatorNumerator) external view returns (bool) {
     return _calculateIsEnoughVotingPower(holder, thresholdForInitiatorNumerator);
   }
 
-  function isProposalThresholdReached(uint256 amountOfVotes, uint64 thresholdForProposal) external view returns (bool) {
+  function isProposalThresholdReached(uint256 amountOfVotes, uint256 thresholdForProposal) external view returns (bool) {
     return _calculateIsProposalThresholdReached(amountOfVotes, thresholdForProposal);
   }
 }
