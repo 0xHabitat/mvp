@@ -80,6 +80,7 @@ async function deployDAO(decisionTypes = initParams.initManagementSystems5.decis
 
   // deploy dao
   const daoMetaData = [initParams.initDAO.daoName.value, initParams.initDAO.purpose.value, initParams.initDAO.info.value, initParams.initDAO.socials.value];
+
   const msNames = [
       "setAddChangeManagementSystem",
       "governance",
@@ -87,6 +88,7 @@ async function deployDAO(decisionTypes = initParams.initManagementSystems5.decis
       "subDAOsCreation",
       "launchPad",
   ];
+
   const decidersRelatedToDecisionTypes = decisionTypes.map(
     (e) => {
       if (e == 2) {
