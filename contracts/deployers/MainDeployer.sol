@@ -75,11 +75,10 @@ interface IDAODeploer {
     //BountyCreation - gardener, worker, reviewer - 3 signers
   }
 
-  function deployDAOMS5(
+  function deployDAO(
     address addressesProvider,
     DAOMeta memory daoMetaData,
-    DecisionType[] memory decisionTypes,
-    address[] memory deciders
+    bytes memory msCallData
   ) external returns(address);
 }
 
@@ -179,37 +178,122 @@ contract MainDeployer {
     emit VotingPowerManagerDecider(stakeContract, deciderVotingPower);
   }
 
-  function deployDAOMS5T(
+  function deployDAO(
     address addressesProvider,
     IDAODeploer.DAOMeta memory daoMetaData,
+    string[] memory msNames,
     IDAODeploer.DecisionType[] memory decisionTypes,
     address[] memory deciders,
-    bytes memory treasuryVotingPowerSpecificData,
-    bytes memory treasurySignersSpecificData
+    bytes[] memory votingPowerSpecificDatas,
+    bytes[] memory signersSpecificDatas
   ) external returns(address) {
-    address dao = daoDeployer.deployDAOMS5(
-      addressesProvider,
-      daoMetaData,
+
+    bytes memory msCallData = abi.encodeWithSignature(
+      "initManagementSystems(string[],uint8[],address[])",
+      msNames,
       decisionTypes,
       deciders
     );
-    makeTreasuryCut(
-      dao,
-      treasuryVotingPowerSpecificData,
-      treasurySignersSpecificData
+
+    address dao = daoDeployer.deployDAO(
+      addressesProvider,
+      daoMetaData,
+      msCallData
     );
-    IOwnership(dao).transferOwnership(msg.sender);
+
+    makeSpecificDataCut(
+      dao,
+      msNames,
+      votingPowerSpecificDatas,
+      signersSpecificDatas
+    );
+
+    makeModuleManagerCut(dao);
+
+    makeGovernanceCut(dao);
+
+    makeTreasuryCut(
+      dao
+    );
+
+    removeOwnershipAndDiamondCut(
+      dao
+    );
+
     return dao;
   }
 
-  function makeTreasuryCut(
+  function makeSpecificDataCut(
     address dao,
-    bytes memory treasuryVotingPowerSpecificData,
-    bytes memory treasurySignersSpecificData
+    string[] memory msNames,
+    bytes[] memory votingPowerSpecificDatas,
+    bytes[] memory signersSpecificDatas
+  ) internal {
+    // make specific data cut
+    address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
+    IDiamondCut.FacetCut[] memory specificDataCut = new IDiamondCut.FacetCut[](1);
+    // Add specific data facet
+    IAddressesProvider.Facet memory specificDataFacet = IAddressesProvider(addressesProvider).getSpecificDataFacet();
+
+    specificDataCut[0] = IDiamondCut.FacetCut({
+      facetAddress: specificDataFacet.facetAddress,
+      action: IDiamondCut.FacetCutAction.Add,
+      functionSelectors: specificDataFacet.functionSelectors
+    });
+
+    address specificDataInit = IAddressesProvider(addressesProvider).getSpecificDataInit();
+    bytes memory specificDataCallData = abi.encodeWithSignature(
+      "initVotingPowerAndSignersSpecificData(string[],bytes[],bytes[])",
+      msNames,
+      votingPowerSpecificDatas,
+      signersSpecificDatas
+    );
+
+    IDiamondCut(dao).diamondCut(specificDataCut, specificDataInit, specificDataCallData);
+  }
+
+  function makeModuleManagerCut(
+    address dao
   ) internal {
     // make treasury cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
-    IDiamondCut.FacetCut[] memory treasuryCut = new IDiamondCut.FacetCut[](4);
+    IDiamondCut.FacetCut[] memory moduleManagerCut = new IDiamondCut.FacetCut[](1);
+    // Add module manager facet
+    IAddressesProvider.Facet memory moduleManagerFacet = IAddressesProvider(addressesProvider).getModuleManagerFacet();
+
+    moduleManagerCut[0] = IDiamondCut.FacetCut({
+      facetAddress: moduleManagerFacet.facetAddress,
+      action: IDiamondCut.FacetCutAction.Add,
+      functionSelectors: moduleManagerFacet.functionSelectors
+    });
+
+    IDiamondCut(dao).diamondCut(moduleManagerCut, address(0), "");
+  }
+
+  function makeGovernanceCut(
+    address dao
+  ) internal {
+    // make treasury cut
+    address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
+    IDiamondCut.FacetCut[] memory governanceCut = new IDiamondCut.FacetCut[](1);
+    // Add module manager facet
+    IAddressesProvider.Facet memory governanceFacet = IAddressesProvider(addressesProvider).getGovernanceFacet();
+
+    governanceCut[0] = IDiamondCut.FacetCut({
+      facetAddress: governanceFacet.facetAddress,
+      action: IDiamondCut.FacetCutAction.Add,
+      functionSelectors: governanceFacet.functionSelectors
+    });
+
+    IDiamondCut(dao).diamondCut(governanceCut, address(0), "");
+  }
+
+  function makeTreasuryCut(
+    address dao
+  ) internal {
+    // make treasury cut
+    address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
+    IDiamondCut.FacetCut[] memory treasuryCut = new IDiamondCut.FacetCut[](3);
     // Add treasury actions facet
     IAddressesProvider.Facet memory treasuryActionsFacet = IAddressesProvider(addressesProvider).getTreasuryActionsFacet();
 
@@ -237,21 +321,36 @@ contract MainDeployer {
       functionSelectors: treasuryDefaultCallbackFacet.functionSelectors
     });
 
-    // add voting power specific data facet
-    IAddressesProvider.Facet memory votingPowerSpecificDataFacet = IAddressesProvider(addressesProvider).getVotingPowerSpecificDataFacet();
+    IDiamondCut(dao).diamondCut(treasuryCut, address(0), "");
+  }
 
-    treasuryCut[3] = IDiamondCut.FacetCut({
-      facetAddress: votingPowerSpecificDataFacet.facetAddress,
-      action: IDiamondCut.FacetCutAction.Add,
-      functionSelectors: votingPowerSpecificDataFacet.functionSelectors
+  // temporary solution - later edit with better experience
+  function removeOwnershipAndDiamondCut(
+    address dao
+  ) internal {
+    address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
+    // make a default cut
+    IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](2);
+    // Add the diamondCut external function from the diamondCutFacet
+    IAddressesProvider.Facet memory diamondCutFacet = IAddressesProvider(addressesProvider).getDiamondCutFacet();
+
+    cut[0] = IDiamondCut.FacetCut({
+      facetAddress: address(0),
+      action: IDiamondCut.FacetCutAction.Remove,
+      functionSelectors: diamondCutFacet.functionSelectors
     });
 
-    address treasuryInit = IAddressesProvider(addressesProvider).getTreasuryInit();
-    bytes memory treasuryCallData = abi.encodeWithSignature(
-      "initTreasuryVotingPowerAndSignersSpecificData(bytes,bytes)",
-      treasuryVotingPowerSpecificData,
-      treasurySignersSpecificData
-    );
-    IDiamondCut(dao).diamondCut(treasuryCut, treasuryInit, treasuryCallData);
+    // Add the default diamondOwnershipFacet - remove after governance is set
+    IAddressesProvider.Facet memory diamondOwnershipFacet = IAddressesProvider(addressesProvider).getOwnershipFacet();
+
+    cut[1] = IDiamondCut.FacetCut({
+      facetAddress: address(0),
+      action: IDiamondCut.FacetCutAction.Remove,
+      functionSelectors: diamondOwnershipFacet.functionSelectors
+    });
+
+    address removeDiamondCutInit = IAddressesProvider(addressesProvider).getRemoveDiamondCutInit();
+    bytes memory callData = abi.encodeWithSignature("setAddressesProviderInsteadOfOwner()");
+    IDiamondCut(dao).diamondCut(cut, removeDiamondCutInit, callData);
   }
 }

@@ -92,7 +92,7 @@
       "description": "Value represents the amount of seconds that are given for voting actions. After proposal is created the countdown started, votingPowerHolder are able to vote. After voting period is ended the proposal can be accepted or rejected depending on the voting results."
     },
     "secondsProposalExecutionDelayPeriod" : {
-      "value": 3600,
+      "value": 43200,
       "description": "Value represents the amount of seconds that are given for a delaying execution after voting period is ended."
     }
   },
@@ -111,7 +111,7 @@
       "description": "Value represents the amount of seconds that are given for voting actions. After proposal is created the countdown started, votingPowerHolder are able to vote. After voting period is ended the proposal can be accepted or rejected depending on the voting results."
     },
     "secondsProposalExecutionDelayPeriod" : {
-      "value": 3600,
+      "value": 43200,
       "description": "Value represents the amount of seconds that are given for a delaying execution after voting period is ended."
     }
   },
@@ -130,7 +130,7 @@
       "description": "Value represents the amount of seconds that are given for voting actions. After proposal is created the countdown started, votingPowerHolder are able to vote. After voting period is ended the proposal can be accepted or rejected depending on the voting results."
     },
     "secondsProposalExecutionDelayPeriod" : {
-      "value": 3600,
+      "value": 43200,
       "description": "Value represents the amount of seconds that are given for a delaying execution after voting period is ended."
     }
   }

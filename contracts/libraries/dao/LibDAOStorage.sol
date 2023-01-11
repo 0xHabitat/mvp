@@ -2,8 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {IDAO} from "../../interfaces/dao/IDAO.sol";
-//import {IManagementSystem} from "../../interfaces/dao/IManagementSystem.sol";
-//import {LibManagementSystem} from "./LibManagementSystem.sol";
 
 library LibDAOStorage {
   bytes32 constant DAO_STORAGE_POSITION = keccak256("habitat.diamond.standard.dao.storage");
@@ -15,7 +13,6 @@ struct DAOStorage {
   string info;
   string socials;
   address addressesProvider;
-  bytes32 managementSystemsPosition;
   address[] createdSubDAOs;
 }
 */
@@ -72,14 +69,6 @@ struct DAOStorage {
     return false;
   }
 
-  function _getManagementSystemsPosition()
-    internal
-    view
-    returns (bytes32)
-  {
-    IDAO.DAOStorage storage ds = daoStorage();
-    return ds.managementSystemsPosition;
-  }
 /*
   function _getGovernanceVotingSystem() internal view returns (IManagementSystem.VotingSystem gvs) {
     IDAO.DAOStorage storage ds = daoStorage();

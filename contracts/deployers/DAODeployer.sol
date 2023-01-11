@@ -13,23 +13,12 @@ interface IOwnership {
 
 contract DAODeployer {
 
-  function deployDAOMS5(
+  function deployDAO(
     address addressesProvider,
     IDAO.DAOMeta memory daoMetaData,
-    IManagementSystem.DecisionType[] memory decisionTypes,
-    address[] memory deciders
+    bytes memory msCallData
   ) external returns(address) {
-    HabitatDiamond dao = new HabitatDiamond(address(this), addressesProvider, daoMetaData);
-
-    // make management system init
-    IDiamondCut.FacetCut[] memory emptyCut;
-    address managementSystemInit = IAddressesProvider(addressesProvider).getManagementSystemsInit();
-    bytes memory msCallData = abi.encodeWithSignature(
-      "initManagementSystems5(uint8[],address[])",
-      decisionTypes,
-      deciders
-    );
-    IDiamondCut(address(dao)).diamondCut(emptyCut, managementSystemInit, msCallData);
+    HabitatDiamond dao = new HabitatDiamond(addressesProvider, daoMetaData, msCallData);
 
     IOwnership(address(dao)).transferOwnership(msg.sender);
 

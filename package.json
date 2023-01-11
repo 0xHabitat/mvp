@@ -43,7 +43,7 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
     "ethereum-waffle": "^3.4.0",
-    "ethers": "^5.4.1",
+    "ethers": "^5.7.2",
     "hardhat": "^2.9.3",
     "hardhat-ethers": "^1.0.1",
     "prettier": "^2.6.2",

@@ -8,7 +8,6 @@ interface IDAO {
     string info;
     string socials;
     address addressesProvider;
-    bytes32 managementSystemsPosition; // when have time rethink, anyway this value must be protected, but idl idea
     address[] createdSubDAOs;
   }
 
@@ -34,8 +33,6 @@ interface IDAO {
   function getCreatedSubDAOs() external view returns (address[] memory);
 
   function isMainDAOFor(address _subDAO) external view returns (bool);
-
-  function getManagementSystemsPosition() external view returns (bytes32);
 /*
   function getVotingPowerManager() external view returns (address);
 

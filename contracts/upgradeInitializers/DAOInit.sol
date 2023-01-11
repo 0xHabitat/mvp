@@ -20,6 +20,5 @@ contract DAOInit {
     daoStruct.info = info;
     daoStruct.socials = socials;
     daoStruct.addressesProvider = addressesProvider;
-    daoStruct.managementSystemsPosition = keccak256(bytes.concat(bytes(daoName), bytes(purpose), bytes(info), bytes(socials)));
   }
 }

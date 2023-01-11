@@ -3,14 +3,8 @@ pragma solidity ^0.8.9;
 
 import {IDAO} from "../../interfaces/dao/IDAO.sol";
 import {LibDAOStorage} from "../../libraries/dao/LibDAOStorage.sol";
-// temporary before msViewer is implemented
-import {LibManagementSystem} from "../../libraries/dao/LibManagementSystem.sol";
 
 contract DAOViewerFacet {
-  // temporary before msViewer is implemented
-  function getDecider(string memory msName) external returns(address) {
-    return LibManagementSystem._getDecider(msName);
-  }
 
   function getDAOName() external view returns (string memory) {
     return LibDAOStorage._getDAOName();
@@ -42,9 +36,5 @@ contract DAOViewerFacet {
 
   function isMainDAOFor(address _subDAO) external view returns (bool) {
 
-  }
-
-  function getManagementSystemsPosition() external view returns (bytes32) {
-    return LibDAOStorage._getManagementSystemsPosition();
   }
 }

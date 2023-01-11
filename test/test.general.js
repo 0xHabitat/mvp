@@ -320,7 +320,7 @@ describe('HabitatDiamond', function () {
     expect(proposalId).to.eq(ethers.constants.One);
 
     // lets create proposal to transfer ETH
-    const treasuryExecutionDelay = await habitatDiamond.callStatic.getSecondsProposalExecutionDelayPeriod('treasury');
+    const treasuryExecutionDelay = await habitatDiamond.callStatic.getSecondsProposalExecutionDelayPeriodVP('treasury');
     const treasuryVotingPeriod = await habitatDiamond.callStatic.getSecondsProposalVotingPeriod('treasury');
     const proposalIDToTransferETH = await habitatDiamond.callStatic.createTreasuryProposal(beneficiar, ten, '0x');
     let currentBlock = await ethers.provider.getBlock('latest');
