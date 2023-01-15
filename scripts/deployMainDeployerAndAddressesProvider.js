@@ -66,6 +66,7 @@ async function deployFacets() {
     'TreasuryActionsFacet',
     'TreasuryDefaultCallbackHandlerFacet',
     'TreasuryViewerFacet',
+    'ModuleViewerFacet',
     'SpecificDataFacet'
   ];
 

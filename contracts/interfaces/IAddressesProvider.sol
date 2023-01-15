@@ -77,6 +77,13 @@ interface IAddressesProvider {
   event DAOViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
+   * @dev Emitted when the module viewer facet is updated.
+   * @param oldAddress The old address of the ModuleViewerFacet
+   * @param newAddress The new address of the ModuleViewerFacet
+   */
+  event ModuleViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
    * @dev Emitted when the management system facet is updated.
    * @param oldAddress The old address of the ManagementSystemFacet
    * @param newAddress The new address of the ManagementSystemFacet
@@ -243,6 +250,18 @@ interface IAddressesProvider {
   function getDAOViewerFacet() external view returns (Facet memory);
 
   /**
+   * @notice Returns the address of the Module viewer facet contract.
+   * @return The address of the ModuleViewerFacet
+   */
+  function getModuleViewerFacetAddress() external view returns (address);
+
+  /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the ModuleViewerFacet
+   */
+  function getModuleViewerFacet() external view returns (Facet memory);
+
+  /**
    * @notice Returns the address of the management system facet contract.
    * @return The address of the ManagementSystemFacet
    */
@@ -386,6 +405,12 @@ interface IAddressesProvider {
    * @param newDAOViewerFacet The address of the new DAOViewerFacet
    */
   function setDAOViewerFacet(address newDAOViewerFacet, bytes4[] memory selectors) external;
+
+  /**
+   * @notice Updates the address of the Module viewer facet.
+   * @param newModuleViewerFacet The address of the new ModuleViewerFacet
+   */
+  function setModuleViewerFacet(address newModuleViewerFacet, bytes4[] memory selectors) external;
 
   /**
    * @notice Updates the address of the management system facet.

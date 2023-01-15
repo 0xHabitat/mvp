@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-
+// DEPRECATED
+// TODO remove this facet and all usage in code
+// Use instead general viewer facet for modules: ModuleViewerFacet
 import {IManagementSystem} from "../../interfaces/dao/IManagementSystem.sol";
 import {LibManagementSystem} from "../../libraries/dao/LibManagementSystem.sol";
 import {IProposal} from "../../interfaces/IProposal.sol";

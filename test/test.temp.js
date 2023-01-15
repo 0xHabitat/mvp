@@ -7,7 +7,7 @@ const habitatABI = require('../habitatDiamondABI.json');
 
 describe('HabitatDiamond', function () {
 
-  it("Cover treasury proposal process with decision type signers", async function () {
+  it("Signers/Treasury module: Cover treasury proposal process with decision type signers", async function () {
     const accounts = await ethers.getSigners();
     signer = accounts[0];
     const beneficiarAddress = accounts[8].address;

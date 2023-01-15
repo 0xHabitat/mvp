@@ -56,7 +56,7 @@ describe('HabitatDiamond', function () {
     return {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses, weth};
   }
 
-  it('should distribute tokens', async function () {
+  it('VotingPower/ERC20: should distribute tokens', async function () {
     const {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, addresses} = await helpers.loadFixture(deployDAOFixture);
     const hbtAddress = await stakeERC20Contract.governanceToken();
     const hbtToken = await ethers.getContractAt('HBT', hbtAddress);
@@ -101,7 +101,7 @@ describe('HabitatDiamond', function () {
     }
   });
 
-  it('should be able to stake/unstake governance token', async function () {
+  it('VotingPower/ERC20Staking: should be able to stake/unstake governance token', async function () {
     const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const amountToStakeUnstake = await hbtToken.balanceOf(addresses[0]);
     // when stake/unstake totalAmountOfVotingPower increase/decrease
@@ -163,7 +163,7 @@ describe('HabitatDiamond', function () {
     }
   });
 
-  it('should be able to stake/unstake NFT position', async function () {
+  it('VotingPower/UNIV3Staking: should be able to stake/unstake NFT position', async function () {
     const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const newSigner = accounts[2];
     const hbtTokenNewSigner = hbtToken.connect(newSigner);
@@ -261,7 +261,7 @@ describe('HabitatDiamond', function () {
     expect(newOwnerOfNFTposition).to.eq(newSigner.address);
   });
 
-  it('should be able to delegate/undelegate', async function () {
+  it('VotingPower/Delegation: should be able to delegate/undelegate', async function () {
     const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const delegator = accounts[1];
     const deciderVotingPowerDelegator = deciderVotingPower.connect(delegator);
@@ -289,7 +289,7 @@ describe('HabitatDiamond', function () {
     expect(delegateeVotingPowerUndelegated).to.eq(delegateeVotingPowerBefore);
   });
 
-  it('should be able to create treasury proposal', async function () {
+  it('VotingPower/Treasury module: should be able to create treasury proposal', async function () {
     const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses, weth} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const ten = ethers.constants.WeiPerEther.mul(10);
     // first lets make voting power 0 and try to create treasury proposal
@@ -353,7 +353,7 @@ describe('HabitatDiamond', function () {
     expect(proposal.executionTimestamp).to.eq(treasuryVotingPeriod.add(currentBlock.timestamp + 1).add(treasuryExecutionDelay));
   });
 
-  it('should be able to decide on treasury proposal', async function () {
+  it('VotingPower/Treasury module: should be able to decide on treasury proposal', async function () {
     const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     const ten = ethers.constants.WeiPerEther.mul(10);
     const beneficiar = addresses[3];
@@ -464,6 +464,83 @@ describe('HabitatDiamond', function () {
     const habitatDAOETHBalanceAfter = await ethers.provider.getBalance(habitatDiamond.address);
     expect(habitatDAOETHBalanceBefore.sub(ten)).to.eq(habitatDAOETHBalanceAfter);
     // TODO create proposal to transfer WETH and vote no to reject
+  });
+
+  it('Governance module(VP): test changeThresholdForInitiator governance method', async function () {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+    // testing our Governance module functionality
+    // we try to change value of specific data of decision type Voting Power
+    // value is threshold for initiator (description: "Value is the percentage (0.1% - 0.001 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.")
+    // first: for Treasury module - which currently has Voting Power as decision type
+    //   which after proposal will be executed will have immediate effect on Treasury
+    //   decision process (if we increase/decrease value less/more voting power holders
+    //   are able to create treasury proposals)
+    // second: for Module manager - which currently has Signers as decision type
+    //   which after proposal will be executed will not have immediate effect on
+    //   Module manager decision process and only would have if it's decision type
+    //   would be changed to Voting Power by Module Manager functionality
+
+    // first
+    // this value (percentage) we try to change
+    const thresholdForInitiatorTreasuryNumerator = await habitatDiamond.thresholdForInitiatorNumerator("treasury");
+    /*
+    // how we got decider
+    const deciderVotingPowerAddress = await habitatDiamond.getDecider("treasury");
+    const deciderVotingPower = await ethers.getContractAt('DeciderVotingPower', deciderVotingPowerAddress);
+    */
+    // let's get absolute value of voting power
+    const thresholdForInitiatorTreasuryVotingPower = await deciderVotingPower.getAbsoluteThresholdByNumerator(thresholdForInitiatorTreasuryNumerator);
+    // the distribution was equal, let's see the absolute value of voting power for one holder
+    const holderAmountOfVotingPower = await deciderVotingPower. addresses
+    console.log(thresholdForInitiatorTreasuryNumerator);
+    console.log(thresholdForInitiatorTreasuryVotingPower);
+
+
+
 
   });
+
+  it('Governance module(VP): test changeThresholdForProposal governance method', async function () {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+    // all methods that must be executed:
+    // write it() for each method
+    // changeDecisionData - as it is general one, we can use it as just adding new decision type
+    // changeThresholdForInitiator
+    // changeThresholdForProposal
+    // changeSecondsProposalVotingPeriod
+    // changeSecondsProposalExecutionDelayPeriodVP
+    // changeSecondsProposalExecutionDelayPeriodSigners
+  });
+
+  it('Governance module(VP): test changeSecondsProposalVotingPeriod governance method', async function () {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+
+  });
+
+  it('Governance module(VP): test changeSecondsProposalExecutionDelayPeriodVP governance method', async function () {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+
+  });
+
+  it('Governance module(VP): test changeSecondsProposalExecutionDelayPeriodSigners governance method', async function () {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+
+  });
+
+  it('Governance module(VP): test changeDecisionData governance method', async function () {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+
+  });
+
+  it('Governance module/Voting Power: should be able to execute updateFacet governance proposal', async function () {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+
+  });
+
+  it('Governance module/Voting Power: should be able to execute updateFacetAndState governance proposal', async function () {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+
+  });
+
+
 });

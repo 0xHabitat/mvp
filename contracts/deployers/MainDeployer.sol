@@ -201,6 +201,10 @@ contract MainDeployer {
       msCallData
     );
 
+    makeModuleViewerCut(
+      dao
+    );
+
     makeSpecificDataCut(
       dao,
       msNames,
@@ -221,6 +225,25 @@ contract MainDeployer {
     );
 
     return dao;
+  }
+
+  // temporary make external, but probably has to be in ms initialization
+  function makeModuleViewerCut(
+    address dao
+  ) internal {
+    // make treasury cut
+    address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
+    IDiamondCut.FacetCut[] memory moduleViewerCut = new IDiamondCut.FacetCut[](1);
+    // Add module viewer facet
+    IAddressesProvider.Facet memory moduleViewerFacet = IAddressesProvider(addressesProvider).getModuleViewerFacet();
+
+    moduleViewerCut[0] = IDiamondCut.FacetCut({
+      facetAddress: moduleViewerFacet.facetAddress,
+      action: IDiamondCut.FacetCutAction.Add,
+      functionSelectors: moduleViewerFacet.functionSelectors
+    });
+
+    IDiamondCut(dao).diamondCut(moduleViewerCut, address(0), "");
   }
 
   function makeSpecificDataCut(

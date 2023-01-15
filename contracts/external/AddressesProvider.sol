@@ -18,6 +18,7 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   bytes32 private constant OWNERSHIP_FACET = 'OWNERSHIP_FACET';
   bytes32 private constant DIAMOND_LOUPE_FACET = 'DIAMOND_LOUPE_FACET';
   bytes32 private constant DAO_VIEWER_FACET = 'DAO_VIEWER_FACET';
+  bytes32 private constant MODULE_VIEWER_FACET = 'MODULE_VIEWER_FACET';
   bytes32 private constant MANAGEMENT_SYSTEM_FACET = 'MANAGEMENT_SYSTEM_FACET';
   bytes32 private constant MODULE_MANAGER_FACET = 'MODULE_MANAGER_FACET';
   bytes32 private constant GOVERNANCE_FACET = 'GOVERNANCE_FACET';
@@ -137,6 +138,20 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     return Facet({
       facetAddress: daoViewerFacet,
       functionSelectors: getSelectors(daoViewerFacet)
+    });
+  }
+
+  /// @inheritdoc IAddressesProvider
+  function getModuleViewerFacetAddress() external view returns(address) {
+    return getAddress(MODULE_VIEWER_FACET);
+  }
+
+  /// @inheritdoc IAddressesProvider
+  function getModuleViewerFacet() external view override returns(Facet memory) {
+    address moduleViewerFacet = getAddress(MODULE_VIEWER_FACET);
+    return Facet({
+      facetAddress: moduleViewerFacet,
+      functionSelectors: getSelectors(moduleViewerFacet)
     });
   }
 
@@ -322,6 +337,16 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     _selectors[newDAOViewerFacet] = selectors;
     _facetToInit[newDAOViewerFacet] = getAddress(DAO_INIT);
     emit DAOViewerFacetUpdated(oldDAOViewerFacet, newDAOViewerFacet);
+  }
+
+  /// @inheritdoc IAddressesProvider
+  function setModuleViewerFacet(address newModuleViewerFacet, bytes4[] memory selectors) external override {
+    require(msg.sender == owner, "Only owner can call.");
+    address oldModuleViewerFacet = _addresses[MODULE_VIEWER_FACET];
+    _addresses[MODULE_VIEWER_FACET] = newModuleViewerFacet;
+    _selectors[newModuleViewerFacet] = selectors;
+    _facetToInit[newModuleViewerFacet] = getAddress(MANAGEMENT_SYSTEMS_INIT);
+    emit ModuleViewerFacetUpdated(oldModuleViewerFacet, newModuleViewerFacet);
   }
 
   /// @inheritdoc IAddressesProvider
