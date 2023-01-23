@@ -56,6 +56,16 @@ describe('HabitatDiamond', function () {
     return {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses, weth};
   }
 
+  async function deployDAOAndDistributeAndVPEnoughForGovernanceFixture() {
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+    // let's give addresses[0] enough voting power to create governance proposals
+    // by delegating from addresses[9]
+    const tx = await deciderVotingPower.connect(accounts[9]).delegateVotingPower(addresses[0]);
+    await tx.wait();
+
+    return {habitatDiamond, deciderVotingPower, accounts, addresses};
+  }
+
   it('VotingPower/ERC20: should distribute tokens', async function () {
     const {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, addresses} = await helpers.loadFixture(deployDAOFixture);
     const hbtAddress = await stakeERC20Contract.governanceToken();
@@ -334,7 +344,7 @@ describe('HabitatDiamond', function () {
     expect(proposal.value).to.eq(ten);
     expect(proposal.callData).to.eq('0x');
     expect(proposal.proposalExecuted).to.be.false;
-    expect(proposal.executionTimestamp).to.eq(treasuryVotingPeriod.add(currentBlock.timestamp + 1).add(treasuryExecutionDelay));
+    expect(proposal.executionTimestamp).to.be.closeTo(treasuryVotingPeriod.add(currentBlock.timestamp).add(treasuryExecutionDelay), 3);
 
     // lets create proposal to transfer WETH
     callData = weth.interface.encodeFunctionData('transfer', [beneficiar, ten]);
@@ -350,7 +360,7 @@ describe('HabitatDiamond', function () {
     expect(proposal.value.isZero()).to.be.true;
     expect(proposal.callData).to.eq(callData);
     expect(proposal.proposalExecuted).to.be.false;
-    expect(proposal.executionTimestamp).to.eq(treasuryVotingPeriod.add(currentBlock.timestamp + 1).add(treasuryExecutionDelay));
+    expect(proposal.executionTimestamp).to.be.closeTo(treasuryVotingPeriod.add(currentBlock.timestamp).add(treasuryExecutionDelay), 3);
   });
 
   it('VotingPower/Treasury module: should be able to decide on treasury proposal', async function () {
@@ -467,41 +477,571 @@ describe('HabitatDiamond', function () {
   });
 
   it('Governance module(VP): test changeThresholdForInitiator governance method', async function () {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+    const thresholdForInitiatorGovernanceNumerator = await habitatDiamond.thresholdForInitiatorNumerator("governance");
+    let allowedToInitiateGovernanceProposal = await deciderVotingPower.isEnoughVotingPower(addresses[0], thresholdForInitiatorGovernanceNumerator);
+    expect(allowedToInitiateGovernanceProposal).to.be.false;
+    // let's give addresses[0] enough voting power to create governance proposals
+    // by delegating from addresses[9]
+    const delegateeAmountOfVotingPowerBefore = await deciderVotingPower.getVoterVotingPower(addresses[0]);
+    await deciderVotingPower.connect(accounts[9]).delegateVotingPower(addresses[0]);
+    const delegateeAmountOfVotingPowerAfter = await deciderVotingPower.getVoterVotingPower(addresses[0]);
+    expect(delegateeAmountOfVotingPowerBefore.mul(2)).to.eq(delegateeAmountOfVotingPowerAfter);
+    allowedToInitiateGovernanceProposal = await deciderVotingPower.isEnoughVotingPower(addresses[0], thresholdForInitiatorGovernanceNumerator);
+    expect(allowedToInitiateGovernanceProposal).to.be.true;
+
     // testing our Governance module functionality
     // we try to change value of specific data of decision type Voting Power
     // value is threshold for initiator (description: "Value is the percentage (0.1% - 0.001 * 10000). The percentage helps to calculate the thresholdForInitiator by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for creating proposals (comparison: if initiator amount of votingPower is less than a value - is not able to create.")
-    // first: for Treasury module - which currently has Voting Power as decision type
+    // testing case:
+    //   Treasury module - which currently has Voting Power as decision type
     //   which after proposal will be executed will have immediate effect on Treasury
     //   decision process (if we increase/decrease value less/more voting power holders
     //   are able to create treasury proposals)
-    // second: for Module manager - which currently has Signers as decision type
-    //   which after proposal will be executed will not have immediate effect on
-    //   Module manager decision process and only would have if it's decision type
+    // notice: if we try to change this value for Module manager
+    //   which currently has Signers as decision type after proposal will be executed
+    //   will not have immediate effect on Module manager decision process
+    //   and only would have if it's decision type
     //   would be changed to Voting Power by Module Manager functionality
 
-    // first
     // this value (percentage) we try to change
-    const thresholdForInitiatorTreasuryNumerator = await habitatDiamond.thresholdForInitiatorNumerator("treasury");
+    const treasuryThresholdForInitiatorNumerator = await habitatDiamond.thresholdForInitiatorNumerator("treasury");
+    expect(treasuryThresholdForInitiatorNumerator.eq(50)).to.be.true;
+
+    // let's prove that holder 4 is able to create treasury proposal with threshold equals 0.5%
+    const tProposalId1 = await habitatDiamond.connect(accounts[4]).callStatic.createTreasuryProposal(addresses[4],0,'0x')
+    await expect(habitatDiamond.connect(accounts[4]).createTreasuryProposal(addresses[4],0,'0x'))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('treasury', tProposalId1);
+
+
     /*
-    // how we got decider
-    const deciderVotingPowerAddress = await habitatDiamond.getDecider("treasury");
-    const deciderVotingPower = await ethers.getContractAt('DeciderVotingPower', deciderVotingPowerAddress);
+    // how are we getting decider instance?
+    async function getDeciderContractInstance(moduleName) {
+      const deciderType = await habitatDiamond.getModuleDecisionType(moduleName);
+      const deciderAddress = await habitatDiamond.getDecider(moduleName);
+      if (deciderType !== 2 || deciderType !== 3) return "decider is not implemented";
+      const deciderABI = deciderType == 2 ? 'DeciderVotingPower' : 'DeciderSigners';
+      const deciderInstance = await ethers.getContractAt(deciderABI, deciderAddress);
+      return deciderInstance;
+    }
     */
+
     // let's get absolute value of voting power
-    const thresholdForInitiatorTreasuryVotingPower = await deciderVotingPower.getAbsoluteThresholdByNumerator(thresholdForInitiatorTreasuryNumerator);
+    const treasuryThresholdForInitiatorVotingPower = await deciderVotingPower.getAbsoluteThresholdByNumerator(treasuryThresholdForInitiatorNumerator);
     // the distribution was equal, let's see the absolute value of voting power for one holder
-    const holderAmountOfVotingPower = await deciderVotingPower. addresses
-    console.log(thresholdForInitiatorTreasuryNumerator);
-    console.log(thresholdForInitiatorTreasuryVotingPower);
+    const holderAmountOfVotingPower = await deciderVotingPower.getVoterVotingPower(addresses[1]);
+    // ensure that current threshold is reachable by holder
+    expect(holderAmountOfVotingPower.gt(treasuryThresholdForInitiatorVotingPower)).to.be.true;
 
+    // current threshold is 0.5%, let's increase to 3% - this way current holders
+    // will not be able to create treasury proposals until they will not increase
+    // their voting power by staking or receiving delegated vp
 
+    // creation of governance proposal to increase threshold:
+    // changeThresholdForInitiator is 4 action in governanceActions enum
+    // callData is bytes (encoded string module name and uint256 new value)
+    const callData = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint256'],
+      ["treasury", 300]
+    );
+    const proposalId = await habitatDiamond.callStatic.createGovernanceProposal(4, callData);
 
+    await expect(habitatDiamond.createGovernanceProposal(4, callData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId);
 
+    const activeGovernanceProposals = await habitatDiamond.getModuleActiveProposalsIds('governance');
+    expect(activeGovernanceProposals).to.deep.include(proposalId);
+
+    // let's decide on proposal to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(1, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(1, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId, true);
+
+    // let's check that we have enough votes for proposal to be accepted
+    // first we can get absolute amount of voting power that is required for
+    // proposal to be accepted
+    const thresholdForProposalNumerator = await habitatDiamond.thresholdForProposalNumerator('governance');
+    const amountOfVotingPowerRequiredToAcceptGovernanceProposal = await deciderVotingPower.getAbsoluteThresholdByNumerator(thresholdForProposalNumerator);
+    // then we are getting current amount of yes votes (skipped: if amount of votes no is more - proposal will be rejected)
+    const amountOfVotesYes = await deciderVotingPower.getProposalVotingVotesYes(
+      'governance',
+      1
+    );
+    expect(amountOfVotesYes).to.be.at.least(amountOfVotingPowerRequiredToAcceptGovernanceProposal);
+
+    // let's accept proposal (moving in future is required)
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId);
+
+    await helpers.time.increaseTo(votingDeadline);
+
+    const governanceMethods = await habitatDiamond.getGovernanceMethods();
+    const iface = new ethers.utils.Interface(["function changeThresholdForInitiator(string,uint256)"]);
+    const validCallData = iface.encodeFunctionData(
+      'changeThresholdForInitiator',
+      [
+        "treasury",
+        300
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId, governanceMethods, 0, validCallData);
+
+    // execute the proposal
+    // lets move to timestamp when execution delay period is ended
+    const proposal = await habitatDiamond.getModuleProposal("governance",proposalId);
+    await helpers.time.increaseTo(proposal.executionTimestamp);
+
+    // let execute
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId);
+
+    // let's check that the value we wanted to change has changed
+    const currentTreasuryThresholdForInitiatorNumerator = await habitatDiamond.thresholdForInitiatorNumerator("treasury");
+    expect(currentTreasuryThresholdForInitiatorNumerator.eq(300)).to.be.true;
+
+    // CHECK EFFECTS
+
+    // let's prove that holder 4 is not able to create treasury proposal
+    // after threshold was changed from 0.5% to 3%
+    await expect(habitatDiamond.connect(accounts[4]).createTreasuryProposal(addresses[4],0,'0x'))
+      .to.be.revertedWith("Not enough voting power to create proposal.");
   });
 
   it('Governance module(VP): test changeThresholdForProposal governance method', async function () {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our Governance module functionality
+    // we try to change value of specific data of decision type Voting Power
+    // value is threshold for proposal (description: "Value is the percentage (34% - 0.34 * 10000). The percentage helps to calculate the thresholdForProposal by multiplying with maxAmountOfVotingPower (or with totalAmountOfVotingPower if it is more). Absolute value is used as a restriction for accepting proposals (comparison: if votesYes and/or votesNo more than a value - proposal reached threshold, if votesYes more than votesNo - proposal is accepted, otherwise is rejected.)"
+    // testing case:
+    //   Governance module - which currently has Voting Power as decision type
+    //   which after proposal will be executed will have immediate effect on Governance
+    //   decision process (if we increase/decrease value more/less voting power
+    //   is needed for yes/no votes for proposal to be accepted/rejected)
+    // notice: if we try to change this value for LaunchPad
+    //   which currently has Signers as decision type after proposal will be executed
+    //   will not have immediate effect on Module manager decision process
+    //   and only would have if it's decision type
+    //   would be changed to Voting Power by Module Manager functionality
+
+    // this value (percentage) we try to change
+    const governanceThresholdForProposalNumerator = await habitatDiamond.thresholdForProposalNumerator("governance");
+    // set in initParams and was used in deployment
+    expect(governanceThresholdForProposalNumerator.eq(1000)).to.be.true;
+
+    // let's get absolute value of voting power
+    const governanceThresholdForProposalVotingPower = await deciderVotingPower.getAbsoluteThresholdByNumerator(governanceThresholdForProposalNumerator);
+    const signerAmountOfVotingPower = await deciderVotingPower.getVoterVotingPower(addresses[0]);
+    // ensure that current threshold is not reachable only by our signer,
+    // because current threshold is 10%, signer has only 5% (need others votes)
+    expect(signerAmountOfVotingPower.lt(governanceThresholdForProposalVotingPower)).to.be.true;
+
+    // current threshold is 10%, let's decrease to 5% - this way our signer
+    // will be able to accept governance proposals by himself
+    // if others holders with more than 5% of voting power will not vote
+    // against his proposals (otherwise proposals will be rejected)
+
+    // creation of governance proposal to decrease threshold:
+    // changeThresholdForProposal is 5 action in governanceActions enum
+    // callData is bytes (encoded string module name and uint256 new value)
+    const callData = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint256'],
+      ["governance", 500]
+    );
+    const proposalId = await habitatDiamond.callStatic.createGovernanceProposal(5, callData);
+
+    await expect(habitatDiamond.createGovernanceProposal(5, callData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId);
+
+    const activeGovernanceProposals = await habitatDiamond.getModuleActiveProposalsIds('governance');
+    expect(activeGovernanceProposals).to.deep.include(proposalId);
+
+    // let's prove that governance proposal now with 10% threshold value
+    // can not be accepted by 5% votes that our signer has
+    const signerVoted = await deciderVotingPower.isHolderVotedForProposal("governance", proposalId, addresses[0]);
+    expect(signerVoted).to.be.true;
+    const amountOfVotesYes = await deciderVotingPower.getProposalVotingVotesYes("governance", proposalId);
+    const proposalThresholdReached = await deciderVotingPower.isProposalThresholdReached(amountOfVotesYes, governanceThresholdForProposalNumerator);
+    expect(proposalThresholdReached).to.be.false;
+
+    // let's give more votes to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId, true);
+
+    // let's accept proposal (moving in future is required)
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId);
+
+    await helpers.time.increaseTo(votingDeadline);
+
+    const governanceMethods = await habitatDiamond.getGovernanceMethods();
+    const iface = new ethers.utils.Interface(["function changeThresholdForProposal(string,uint256)"]);
+    const validCallData = iface.encodeFunctionData(
+      'changeThresholdForProposal',
+      [
+        "governance",
+        500
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId, governanceMethods, 0, validCallData);
+
+    // execute the proposal
+    // lets move to timestamp when execution delay period is ended
+    const proposal = await habitatDiamond.getModuleProposal("governance",proposalId);
+    await helpers.time.increaseTo(proposal.executionTimestamp);
+
+    // let execute
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId);
+
+    // let's check that the value we wanted to change has changed
+    const currentGovernanceThresholdForProposalNumerator = await habitatDiamond.thresholdForProposalNumerator("governance");
+    expect(currentGovernanceThresholdForProposalNumerator.eq(500)).to.be.true;
+
+    // CHECK EFFECTS
+
+    // let's prove that our signer now is able to accept governance proposals
+    // by himself (as he has 5% of voting power and threshold is also 5%)
+    // signer will execute proposal to change the value back to 10%
+    // he resigns to have so much power inside the DAO ;)
+    const anotherCallData = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint256'],
+      ["governance", 1000]
+    );
+    const proposalID = await habitatDiamond.callStatic.createGovernanceProposal(5, anotherCallData);
+
+    await expect(habitatDiamond.createGovernanceProposal(5, anotherCallData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalID);
+
+    // move in time and accept
+    const newVotingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalID);
+    await helpers.time.increaseTo(newVotingDeadline);
+    const newValidCallData = iface.encodeFunctionData(
+      'changeThresholdForProposal',
+      [
+        "governance",
+        1000
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalID))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalID, governanceMethods, 0, newValidCallData);
+
+    // execute the proposal
+    // lets move to timestamp when execution delay period is ended
+    const newProposal = await habitatDiamond.getModuleProposal("governance",proposalID);
+    await helpers.time.increaseTo(newProposal.executionTimestamp);
+
+    // let execute
+    await expect(habitatDiamond.executeGovernanceProposal(proposalID))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalID);
+
+    // let's check that the value we wanted to change has changed again
+    const newCurrentGovernanceThresholdForProposalNumerator = await habitatDiamond.thresholdForProposalNumerator("governance");
+    expect(newCurrentGovernanceThresholdForProposalNumerator.eq(1000)).to.be.true;
+  });
+
+  it('Governance module(VP): test changeSecondsProposalVotingPeriod governance method', async function () {
+    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our Governance module functionality
+    // we try to change value of specific data of decision type Voting Power
+    // value is secondsProposalVotingPeriod (description: "Value represents the time in seconds that is given for voting yes or no for proposals (no voting after expired). After proposal is created the countdown started, votingPowerHolder are able to vote. After voting period is ended the proposal can be accepted or rejected depending on the voting results."
+    // testing case:
+    //   Governance module - which currently has Voting Power as decision type
+    //   which after proposal will be executed will have immediate effect on Governance
+    //   decision process (if we increase/decrease value more/less time is given for
+    //   voting power holders to make their decision on specific proposal)
+    // notice: if we try to change this value for Module manager
+    //   which currently has Signers as decision type after proposal will be executed
+    //   will not have immediate effect on Module manager decision process
+    //   and only would have if it's decision type
+    //   would be switched to Voting Power by Module Manager functionality
+
+    // this value (seconds) we try to change
+    const governanceSecondsProposalVotingPeriod = await habitatDiamond.getSecondsProposalVotingPeriod("governance");
+    // was set in initParams.json
+    expect(governanceSecondsProposalVotingPeriod.eq(604800)).to.be.true;
+
+    // current voting period for governance is 7 days, let's decrease to 0 seconds
+    // this way current holders will not be able to vote for proposals,
+    // only initiator votes will be counted - if he has enough voting power
+    // to reach proposal threshold then he is able to accept->execute proposal
+    // if not the proposal can only be rejected (exception: the case where someone that has significant amount of vp and is clever enough to read and analize the mempool (looks like the case on optimism, although each tx is a block, tens of txs have same timestamp) and has the ability to put his tx in the same timestamp)
+    // if there is no holder with enough voting power governance will stuck until
+    // someone gets enough voting power by staking or receiving delegated vp
+    // which will make no need in others to execute governance proposals
+
+    // creation of governance proposal to decrease voting period (set 0 seconds):
+    // changeSecondsProposalVotingPeriod is 6 action in governanceActions enum
+    // callData is bytes (encoded string module name and uint256 new value)
+    const callData = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint256'],
+      ["governance", 0]
+    );
+    const proposalId = await habitatDiamond.callStatic.createGovernanceProposal(6, callData);
+
+    await expect(habitatDiamond.createGovernanceProposal(6, callData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId);
+
+    // let's decide on proposal to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(1, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(1, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId, true);
+
+    let isVotingEnded = await deciderVotingPower.isVotingForProposalEnded("governance", proposalId);
+    expect(isVotingEnded).to.be.false;
+    // let's prove that we cannot accept proposal until voting period is not ended
+    // we have to wait the time in seconds (our previous value, which is 7 days)
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.be.revertedWith("Voting period is not ended yet.");
+
+    // let's move in future and accept proposal
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId);
+    await helpers.time.increaseTo(votingDeadline);
+
+    isVotingEnded = await deciderVotingPower.isVotingForProposalEnded("governance", proposalId);
+    expect(isVotingEnded).to.be.true;
+
+    const governanceMethods = await habitatDiamond.getGovernanceMethods();
+    const iface = new ethers.utils.Interface(["function changeSecondsProposalVotingPeriod(string,uint256)"]);
+    const validCallData = iface.encodeFunctionData(
+      'changeSecondsProposalVotingPeriod',
+      [
+        "governance",
+        0
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId, governanceMethods, 0, validCallData);
+
+    // execute the proposal
+    // lets move to timestamp when execution delay period is ended
+    const proposal = await habitatDiamond.getModuleProposal("governance",proposalId);
+    await helpers.time.increaseTo(proposal.executionTimestamp);
+
+    // let execute
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId);
+
+    // let's check that the value we wanted to change has changed
+    const currentGovernanceSecondsProposalVotingPeriod = await habitatDiamond.getSecondsProposalVotingPeriod("governance");
+    expect(currentGovernanceSecondsProposalVotingPeriod.eq(0)).to.be.true;
+
+    // CHECK EFFECTS
+
+    // let's prove that we don't need to jump in a future anymore to accept proposal
+    // as our signer doesn't have enough vp the proposal could be only rejected
+    const callData2 = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint256'],
+      ["governance", 604800]
+    );
+    const proposalId2 = await habitatDiamond.callStatic.createGovernanceProposal(6, callData2);
+
+    await expect(habitatDiamond.createGovernanceProposal(6, callData2))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId2);
+
+    isVotingEnded = await deciderVotingPower.isVotingForProposalEnded(
+      "governance",
+      proposalId2
+    );
+    expect(isVotingEnded).to.be.true;
+
+    // let's try to decide on proposal
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(proposalId2, true))
+      .to.be.revertedWith("Voting period is ended.");
+
+
+    const validCallData2 = iface.encodeFunctionData(
+      'changeSecondsProposalVotingPeriod',
+      [
+        "governance",
+        604800
+      ]
+    );
+    // let's reject the proposal
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId2))
+      .to.emit(habitatDiamond, "ProposalRejected")
+      .withArgs('governance', proposalId2, governanceMethods, 0, validCallData2);
+  });
+
+  it('Governance module(VP): test changeSecondsProposalExecutionDelayPeriodVP governance method', async function () {
+    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our Governance module functionality
+    // we try to change value of specific data of decision type Voting Power
+    // value is secondsProposalExecutionDelayPeriodVP (description: "Value represents the time in seconds that is given for a delaying execution after voting period is ended."
+    // testing case:
+    //   Governance module - which currently has Voting Power as decision type
+    //   which after proposal will be executed will have immediate effect on Governance
+    //   decision process (if we increase/decrease value more/less time is required
+    //   to wait after voting is ended to be able to execute the proposal)
+    // notice: if we try to change this value for Module manager
+    //   which currently has Signers as decision type after proposal will be executed
+    //   will not have immediate effect on Module manager decision process
+    //   and only would have if it's decision type
+    //   would be switched to Voting Power by Module Manager functionality
+
+    // this value (seconds) we try to change
+    const governanceSecondsProposalExecutionDelayPeriodVP = await habitatDiamond.getSecondsProposalExecutionDelayPeriodVP("governance");
+    // was set in initParams.json
+    expect(governanceSecondsProposalExecutionDelayPeriodVP.eq(43200)).to.be.true;
+
+    // current execution delay period for governance is 12 hours, let's decrease to 0 seconds
+    // this way accepted proposals will be executed right after voting period is ended,
+    // meaning that the someone who somehow gets a lot of voting power is able to
+    // change the voting proportion in a last second and immediately execute proposal
+    // which opens the ability for attack vectors (like flashloan attacks)
+
+    // creation of governance proposal to decrease execution delay period (set 0 seconds):
+    // changeSecondsProposalExecutionDelayPeriodVP is 7 action in governanceActions enum
+    // callData is bytes (encoded string module name and uint256 new value)
+    const callData = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint256'],
+      ["governance", 0]
+    );
+    const proposalId = await habitatDiamond.callStatic.createGovernanceProposal(7, callData);
+
+    await expect(habitatDiamond.createGovernanceProposal(7, callData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId);
+
+    // let's decide on proposal to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId, true);
+
+    // let's move in future and accept proposal
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId);
+    await helpers.time.increaseTo(votingDeadline);
+
+    const governanceMethods = await habitatDiamond.getGovernanceMethods();
+    const iface = new ethers.utils.Interface(["function changeSecondsProposalExecutionDelayPeriodVP(string,uint256)"]);
+    const validCallData = iface.encodeFunctionData(
+      'changeSecondsProposalExecutionDelayPeriodVP',
+      [
+        "governance",
+        0
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId, governanceMethods, 0, validCallData);
+
+    let acceptedGovernanceProposals = await habitatDiamond.getModuleAcceptedProposalsIds("governance");
+    expect(acceptedGovernanceProposals).to.deep.include(proposalId)
+
+    // execute the proposal
+    // our value is important at this step (right after acceptance)
+    // lets prove that we are not able to execute right away as our value is non-zero
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.be.revertedWith("Wait until proposal delay time is expired.");
+    // let's jump into a future through our value (which is our delay in seconds)
+    await helpers.time.increase(governanceSecondsProposalExecutionDelayPeriodVP);
+    // we are in a future, let's try to execute
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId);
+
+    // let's check that the value we wanted to change has changed
+    const currentGovernanceSecondsProposalExecutionDelayPeriodVP = await habitatDiamond.getSecondsProposalExecutionDelayPeriodVP("governance");
+    expect(currentGovernanceSecondsProposalExecutionDelayPeriodVP.eq(0)).to.be.true;
+
+    // CHECK EFFECTS
+
+    // let's prove that we don't need to wait any delay to execute proposals
+    const callData2 = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint256'],
+      ["governance", 43200]
+    );
+    const proposalId2 = await habitatDiamond.callStatic.createGovernanceProposal(7, callData2);
+
+    await expect(habitatDiamond.createGovernanceProposal(7, callData2))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId2);
+
+    // let's decide on proposal to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(proposalId2, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId2, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(proposalId2, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId2, true);
+
+    const validCallData2 = iface.encodeFunctionData(
+      'changeSecondsProposalExecutionDelayPeriodVP',
+      [
+        "governance",
+        43200
+      ]
+    );
+    // let's move in future and accept proposal
+    const votingDeadline2 = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId2);
+    await helpers.time.increaseTo(votingDeadline2);
+
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId2))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId2, governanceMethods, 0, validCallData2);
+
+    // proposal is accepted
+    acceptedGovernanceProposals = await habitatDiamond.getModuleAcceptedProposalsIds("governance");
+    expect(acceptedGovernanceProposals).to.deep.include(proposalId2)
+
+    // now as our delay period is 0 we don't need to wait and executing right away
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId2))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId2);
+
+    // let's check that the value was changed again
+    const currentGovernanceSecondsProposalExecutionDelayPeriodVP2 = await habitatDiamond.getSecondsProposalExecutionDelayPeriodVP("governance");
+    expect(currentGovernanceSecondsProposalExecutionDelayPeriodVP2.eq(43200)).to.be.true;
+  });
+
+  it('Governance module(VP): test changeSecondsProposalExecutionDelayPeriodSigners governance method', async function () {
+    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+
+  });
+
+  it('Governance module(VP): test changeDecisionData governance method', async function () {
+    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+
+  });
+
+  it('Governance module/Voting Power: should be able to execute updateFacet governance proposal', async function () {
+    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+
+  });
+
+  it('Governance module/Voting Power: should be able to execute updateFacetAndState governance proposal', async function () {
+    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
     // all methods that must be executed:
     // write it() for each method
     // changeDecisionData - as it is general one, we can use it as just adding new decision type
@@ -510,36 +1050,6 @@ describe('HabitatDiamond', function () {
     // changeSecondsProposalVotingPeriod
     // changeSecondsProposalExecutionDelayPeriodVP
     // changeSecondsProposalExecutionDelayPeriodSigners
-  });
-
-  it('Governance module(VP): test changeSecondsProposalVotingPeriod governance method', async function () {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
-
-  });
-
-  it('Governance module(VP): test changeSecondsProposalExecutionDelayPeriodVP governance method', async function () {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
-
-  });
-
-  it('Governance module(VP): test changeSecondsProposalExecutionDelayPeriodSigners governance method', async function () {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
-
-  });
-
-  it('Governance module(VP): test changeDecisionData governance method', async function () {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
-
-  });
-
-  it('Governance module/Voting Power: should be able to execute updateFacet governance proposal', async function () {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
-
-  });
-
-  it('Governance module/Voting Power: should be able to execute updateFacetAndState governance proposal', async function () {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
-
   });
 
 

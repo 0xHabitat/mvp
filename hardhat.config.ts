@@ -20,7 +20,8 @@ task('accounts', 'Prints the list of accounts', async (args, hre) => {
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
-
+const goerli = "https://eth-goerli.g.alchemy.com/v2/";
+const optimism = "https://opt-mainnet.g.alchemy.com/v2/";
 const config = {
   defaultNetwork: 'localhost',
   networks: {
@@ -29,7 +30,7 @@ const config = {
     },
     hardhat: {
       forking: {
-        url: 'https://opt-mainnet.g.alchemy.com/v2/' + alchemyToken
+        url: optimism + alchemyToken,
       },
       timeout: 100000
     },

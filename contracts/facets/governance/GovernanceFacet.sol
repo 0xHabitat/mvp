@@ -24,6 +24,10 @@ contract GovernanceFacet {
     governanceMethods = _governanceMethods;
   }
 
+  function getGovernanceMethods() external view returns(address) {
+    return governanceMethods;
+  }
+
   function createGovernanceProposal(
     GovernanceAction governanceAction,
     bytes memory callData

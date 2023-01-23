@@ -33,6 +33,24 @@ library LibManagementSystem {
     }
   }
 
+  function _getModuleNames()
+    internal
+    view
+    returns(string[] memory moduleNames)
+  {
+    bytes32[] memory msPositions = _getMSPositionsValues();
+    moduleNames = new string[](msPositions.length);
+    for (uint i = 0; i < msPositions.length; i++) {
+      bytes32 pos = msPositions[i];
+      bytes32 moduleName32;
+      assembly {
+        moduleName32 := sload(pos)
+      }
+      string memory moduleName = toString(moduleName32);
+      moduleNames[i] = moduleName;
+    }
+  }
+
   // general function to set new management system (module)
   function _setNewManagementSystem(
     string memory msName,
@@ -302,6 +320,23 @@ library LibManagementSystem {
       array[indexId] = array[array.length - 1];
       array[array.length - 1] = element;
       array.pop();
+    }
+  }
+
+  function toString(bytes32 source)
+    internal
+    pure
+    returns (string memory result)
+  {
+    uint8 length = uint8(source[31]) / uint8(2);
+    assembly {
+        result := mload(0x40)
+        // new "memory end" including padding (the string isn't larger than 32 bytes)
+        mstore(0x40, add(result, 0x40))
+        // store length in memory
+        mstore(result, length)
+        // write actual data
+        mstore(add(result, 0x20), source)
     }
   }
 

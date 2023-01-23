@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {BaseDecider} from "./BaseDecider.sol";
 import {IVotingPower} from "../../interfaces/decisionSystem/IVotingPower.sol";
+import {VotingPowerSpecificData} from "../../interfaces/decisionSystem/SpecificDataStructs.sol";
 
 interface IERC20 {
   function totalSupply() external view returns(uint256);
@@ -28,13 +29,6 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     uint unstakeTimestamp;
     uint votesYes;
     uint votesNo;
-  }
-
-  struct VotingPowerSpecificData {
-    uint256 thresholdForInitiator;
-    uint256 thresholdForProposal;
-    uint256 secondsProposalVotingPeriod;
-    uint256 secondsProposalExecutionDelayPeriod;
   }
 
   event NewVoting(
@@ -139,6 +133,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     require(proposalVoting.votingStarted, "No voting rn.");
+    require(proposalVoting.votingEndTimestamp >= block.timestamp, "Voting period is ended.");
     uint deciderVotingPower = getVoterVotingPower(decider);
     require(proposalVoting.votedAmount[decider] < deciderVotingPower, "Already voted.");
     _setTimestampToUnstake(decider, proposalVoting.unstakeTimestamp);
@@ -152,7 +147,9 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     }
     emit Voted(decider, msName, proposalId, decision);
   }
-
+  // Must be called right after the proposal voting period deadline is expired
+  // Otherwise can be manipulated (e.g. governance effects proposal threshold)
+  // Best to have service that will call immediately
   function acceptOrRejectProposal(
     string memory msName,
     uint256 proposalId,
@@ -287,10 +284,14 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     }
   }
 
-  function _getProposalVoting(bytes32 proposalKey) internal returns(ProposalVoting storage pV) {
+  function _getProposalVoting(bytes32 proposalKey) internal view returns(ProposalVoting storage pV) {
     pV = proposalsVoting[proposalKey];
   }
   // rethink if remove as well
+  // Now i think that we will not remove voting,
+  // because we want the source of results as we don't use a server and parsing
+  // blockchain logs
+  // we just put votingStarted false (looks enough to protect doublespending)
   function _removeProposalVoting(bytes32 proposalKey) internal {
     ProposalVoting storage pV = _getProposalVoting(proposalKey);
     delete pV.votingStarted;
@@ -385,6 +386,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
   // return ProposalVoting struct
   function getProposalVotingVotesYes(string memory msName, uint256 proposalId)
     external
+    view
     returns (uint256)
   {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
@@ -394,6 +396,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
 
   function getProposalVotingVotesNo(string memory msName, uint256 proposalId)
     external
+    view
     returns (uint256)
   {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
@@ -403,6 +406,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
 
   function getProposalVotingDeadlineTimestamp(string memory msName, uint256 proposalId)
     external
+    view
     returns (uint256)
   {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
@@ -412,6 +416,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
 
   function isHolderVotedForProposal(string memory msName, uint256 proposalId, address holder)
     external
+    view
     returns (bool)
   {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
@@ -419,10 +424,16 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return proposalVoting.votedAmount[holder] > 0;
   }
 
-  function isVotingForProposalStarted(string memory msName, uint256 proposalId) external returns (bool) {
+  function isVotingForProposalStarted(string memory msName, uint256 proposalId) external view returns (bool) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     return proposalVoting.votingStarted;
+  }
+
+  function isVotingForProposalEnded(string memory msName, uint256 proposalId) external view returns(bool) {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
+    ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
+    return proposalVoting.votingEndTimestamp <= block.timestamp;
   }
   // View function that args are taken from dao storage
   // Now i decide to get value from the back, but maybe i change my mind and

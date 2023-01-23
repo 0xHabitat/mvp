@@ -22,6 +22,10 @@ contract ModuleManagerFacet {
     moduleManagerMethods = _moduleManagerMethods;
   }
 
+  function getModuleManagerMethods() external view returns(address) {
+    return moduleManagerMethods;
+  }
+
   function createModuleManagerProposal(
     ModuleManagerAction moduleManagerAction,
     bytes memory callData

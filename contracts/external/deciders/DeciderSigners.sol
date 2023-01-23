@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {BaseDecider} from "./BaseDecider.sol";
+import {SignerSpecificData} from "../../interfaces/decisionSystem/SpecificDataStructs.sol";
 
 enum Operation {Call, DelegateCall}
 
@@ -11,10 +12,6 @@ interface IGnosisSafe {
 }
 
 contract DeciderSigners is BaseDecider {
-
-  struct SignerSpecificData {
-    uint256 secondsProposalExecutionDelayPeriod;
-  }
 
   struct ProposalDecision {
     bool decisionProcessStarted;

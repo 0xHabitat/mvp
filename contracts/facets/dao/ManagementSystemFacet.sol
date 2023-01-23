@@ -15,6 +15,10 @@ contract ManagementSystemFacet {
     return LibManagementSystem._getManagementSystemsHR();
   }
 
+  function getModuleNames() external view returns(string[] memory moduleNames) {
+    return LibManagementSystem._getModuleNames();
+  }
+
   function getDecider(string memory msName) external view returns(address) {
     return LibManagementSystem._getDecider(msName);
   }

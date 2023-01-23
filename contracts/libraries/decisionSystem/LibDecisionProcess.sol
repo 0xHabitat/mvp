@@ -197,7 +197,7 @@ library LibDecisionProcess {
 
     IProposal.Proposal storage proposal = LibManagementSystem._getProposal(msName, proposalId);
     require(proposal.destinationAddress != address(0), "Proposal does not exist");
-    require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal does not accepted.");
+    require(proposal.proposalAccepted && !proposal.proposalExecuted, "Proposal is not accepted.");
     proposal.proposalExecuted = true;
     require(proposal.executionTimestamp <= block.timestamp, "Wait until proposal delay time is expired.");
 

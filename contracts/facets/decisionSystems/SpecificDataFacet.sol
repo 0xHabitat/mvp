@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {LibDecisionSystemSpecificData} from "../../libraries/decisionSystem/LibDecisionSystemSpecificData.sol";
+import {VotingPowerSpecificData, SignerSpecificData} from "../../interfaces/decisionSystem/SpecificDataStructs.sol";
 
 contract SpecificDataFacet {
 
@@ -23,5 +24,13 @@ contract SpecificDataFacet {
 
   function getSecondsProposalExecutionDelayPeriodSigners(string memory msName) external view returns(uint256) {
     return LibDecisionSystemSpecificData._getSecondsProposalExecutionDelayPeriodSigners(msName);
+  }
+
+  function getMSVotingPowerSpecificData(string memory msName) external view returns(VotingPowerSpecificData memory vpsd) {
+    return LibDecisionSystemSpecificData._getMSVotingPowerSpecificData(msName);
+  }
+
+  function getMSSignersSpecificData(string memory msName) external view returns(SignerSpecificData memory ssd) {
+    return LibDecisionSystemSpecificData._getMSSignersSpecificData(msName);
   }
 }
