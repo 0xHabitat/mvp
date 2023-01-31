@@ -72,6 +72,7 @@ describe('Stake', function () {
   });
 
   it('positionValueTest should calculate correct', async function () {
+    this.timeout(0);
     for (fee in pools) {
 
       const block = await ethers.provider.getBlock();

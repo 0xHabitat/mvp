@@ -29,7 +29,7 @@ contract ModuleManagerFacet {
   function createModuleManagerProposal(
     ModuleManagerAction moduleManagerAction,
     bytes memory callData
-  ) public  returns (uint256 proposalId) {
+  ) public returns (uint256 proposalId) {
     bytes memory validCallData;
     if (moduleManagerAction == ModuleManagerAction.SwitchModuleDecider) {
       (string memory msName, address newDecider) = abi.decode(callData, (string,address));
@@ -43,9 +43,9 @@ contract ModuleManagerFacet {
         address[] memory facetAddresses,
         bytes4[][] memory facetSelectors
       ) = abi.decode(callData, (string,uint8,address,address[],bytes4[][]));
-      bytes4 addNewManagementSystemWithFacets = bytes4(keccak256(bytes("addNewManagementSystemWithFacets(string,uint8,address,address[],bytes4[][])")));
+      bytes4 addNewModuleWithFacets = bytes4(keccak256(bytes("addNewModuleWithFacets(string,uint8,address,address[],bytes4[][])")));
       validCallData = abi.encodeWithSelector(
-        addNewManagementSystemWithFacets,
+        addNewModuleWithFacets,
         msName,
         decisionType,
         deciderAddress,
@@ -62,9 +62,9 @@ contract ModuleManagerFacet {
         address initAddress,
         bytes memory _callData
       ) = abi.decode(callData, (string,uint8,address,address[],bytes4[][],address,bytes));
-      bytes4 addNewManagementSystemWithFacetsAndStateUpdate = bytes4(keccak256(bytes("addNewManagementSystemWithFacetsAndStateUpdate(string,uint8,address,address[],bytes4[][],address,bytes)")));
+      bytes4 addNewModuleWithFacetsAndStateUpdate = bytes4(keccak256(bytes("addNewModuleWithFacetsAndStateUpdate(string,uint8,address,address[],bytes4[][],address,bytes)")));
       validCallData = abi.encodeWithSelector(
-        addNewManagementSystemWithFacetsAndStateUpdate,
+        addNewModuleWithFacetsAndStateUpdate,
         msName,
         decisionType,
         deciderAddress,
@@ -97,20 +97,20 @@ contract ModuleManagerFacet {
     } else {
       revert("No valid ModuleManager action was requested.");
     }
-    proposalId = LibDecisionProcess.createProposal("setAddChangeManagementSystem", moduleManagerMethods, 0, validCallData);
+    proposalId = LibDecisionProcess.createProposal("moduleManager", moduleManagerMethods, 0, validCallData);
   }
 
   function decideOnModuleManagerProposal(uint256 proposalId, bool decision) public  {
-    LibDecisionProcess.decideOnProposal("setAddChangeManagementSystem", proposalId, decision);
+    LibDecisionProcess.decideOnProposal("moduleManager", proposalId, decision);
   }
 
   function acceptOrRejectModuleManagerProposal(uint256 proposalId) public  {
-    LibDecisionProcess.acceptOrRejectProposal("setAddChangeManagementSystem", proposalId);
+    LibDecisionProcess.acceptOrRejectProposal("moduleManager", proposalId);
   }
 
   function executeModuleManagerProposal(uint256 proposalId) public  returns (bool result) {
     bytes4 thisSelector = bytes4(keccak256(bytes("executeModuleManagerProposal(uint256)")));
-    result = LibDecisionProcess.executeProposalDelegateCall("setAddChangeManagementSystem", proposalId, thisSelector);
+    result = LibDecisionProcess.executeProposalDelegateCall("moduleManager", proposalId, thisSelector);
   }
 
   // few wrappers
@@ -118,18 +118,18 @@ contract ModuleManagerFacet {
   function switchModuleDeciderInitProposal(
     string memory msName,
     address newDecider
-  ) public  returns(uint256 proposalId) {
+  ) public returns(uint256 proposalId) {
     bytes memory callData = abi.encode(msName, newDecider);
     proposalId = createModuleManagerProposal(ModuleManagerAction.SwitchModuleDecider, callData);
   }
 
-  function addNewManagementSystemWithFacetsInitProposal(
+  function addNewModuleWithFacetsInitProposal(
     string memory msName,
     IManagementSystem.DecisionType decisionType,
     address deciderAddress,
     address[] memory facetAddresses,
     bytes4[][] memory facetSelectors
-  ) public  returns(uint256 proposalId) {
+  ) public returns(uint256 proposalId) {
     bytes memory callData = abi.encode(
       msName,
       decisionType,
@@ -140,7 +140,7 @@ contract ModuleManagerFacet {
     proposalId = createModuleManagerProposal(ModuleManagerAction.AddNewModule, callData);
   }
 
-  function addNewManagementSystemWithFacetsAndStateUpdateInitProposal(
+  function addNewModuleWithFacetsAndStateUpdateInitProposal(
     string memory msName,
     IManagementSystem.DecisionType decisionType,
     address deciderAddress,
@@ -148,7 +148,7 @@ contract ModuleManagerFacet {
     bytes4[][] memory facetSelectors,
     address initAddress,
     bytes memory _callData
-  ) public  returns(uint256 proposalId) {
+  ) public returns(uint256 proposalId) {
     bytes memory callData = abi.encode(
       msName,
       decisionType,
@@ -203,14 +203,14 @@ contract ModuleManagerFacet {
     result = executeModuleManagerProposal(proposalId);
   }
 
-  function addNewManagementSystemWithFacetsBatchedExecution(
+  function addNewModuleWithFacetsBatchedExecution(
     string memory msName,
     IManagementSystem.DecisionType decisionType,
     address deciderAddress,
     address[] memory facetAddresses,
     bytes4[][] memory facetSelectors
   ) public returns(bool result) {
-    uint256 proposalId = addNewManagementSystemWithFacetsInitProposal(
+    uint256 proposalId = addNewModuleWithFacetsInitProposal(
       msName,
       decisionType,
       deciderAddress,
@@ -221,7 +221,7 @@ contract ModuleManagerFacet {
     result = executeModuleManagerProposal(proposalId);
   }
 
-  function addNewManagementSystemWithFacetsAndStateUpdateBatchedExecution(
+  function addNewModuleWithFacetsAndStateUpdateBatchedExecution(
     string memory msName,
     IManagementSystem.DecisionType decisionType,
     address deciderAddress,
@@ -229,8 +229,8 @@ contract ModuleManagerFacet {
     bytes4[][] memory facetSelectors,
     address initAddress,
     bytes memory _callData
-  ) public  returns(bool result) {
-    uint256 proposalId = addNewManagementSystemWithFacetsAndStateUpdateInitProposal(
+  ) public returns(bool result) {
+    uint256 proposalId = addNewModuleWithFacetsAndStateUpdateInitProposal(
       msName,
       decisionType,
       deciderAddress,

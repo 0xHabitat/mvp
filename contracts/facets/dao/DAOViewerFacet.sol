@@ -18,7 +18,7 @@ contract DAOViewerFacet {
     return LibDAOStorage._getDAOInfo();
   }
 
-  function getDAOSocials() external view returns (string memory) {
+  function getDAOSocials() external view virtual returns (string memory) {
     return LibDAOStorage._getDAOSocials();
   }
 

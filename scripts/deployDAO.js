@@ -82,7 +82,7 @@ async function deployDAO(decisionTypes = initParams.initManagementSystems5.decis
   const daoMetaData = [initParams.initDAO.daoName.value, initParams.initDAO.purpose.value, initParams.initDAO.info.value, initParams.initDAO.socials.value];
 
   const msNames = [
-      "setAddChangeManagementSystem",
+      "moduleManager",
       "governance",
       "treasury",
       "subDAOsCreation",

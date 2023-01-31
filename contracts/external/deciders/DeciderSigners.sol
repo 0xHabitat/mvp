@@ -56,8 +56,9 @@ contract DeciderSigners is BaseDecider {
   }
 
   function directCallerExecutionTimestamp(bytes memory specificData) external override onlyDAO returns(uint256) {
-    SignerSpecificData memory ssd = abi.decode(specificData, (SignerSpecificData));
-    return ssd.secondsProposalExecutionDelayPeriod + block.timestamp;
+    // we don't want governance module to be allowed to effect our DeciderSigners
+    //SignerSpecificData memory ssd = abi.decode(specificData, (SignerSpecificData));
+    return block.timestamp;
   }
 
   function isCallerAllowedToCreateProposal(
@@ -78,8 +79,8 @@ contract DeciderSigners is BaseDecider {
     ProposalDecision storage proposalDecision = _getProposalDecision(proposalKey);
     require(!proposalDecision.decisionProcessStarted, "Decision process is already started.");
     proposalDecision.decisionProcessStarted = true;
-    SignerSpecificData memory ssd = abi.decode(specificData, (SignerSpecificData));
-    executionTimestamp = ssd.secondsProposalExecutionDelayPeriod + block.timestamp;
+    //SignerSpecificData memory ssd = abi.decode(specificData, (SignerSpecificData));
+    executionTimestamp = block.timestamp;
     emit NewDecisionProcess(proposalKey, msName, proposalId);
   }
 

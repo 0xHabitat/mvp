@@ -270,7 +270,7 @@ library LibDecisionProcess {
 
   modifier disallowChangingManagementSystems(string memory msName) {
     bytes32 msNameHash = keccak256(abi.encodePacked(msName));
-    bytes32 sACMSHash = keccak256(abi.encodePacked("setAddChangeManagementSystem"));
+    bytes32 sACMSHash = keccak256(abi.encodePacked("moduleManager"));
     if (msNameHash == sACMSHash) {
       _;
     } else {
@@ -282,9 +282,9 @@ library LibDecisionProcess {
       bytes32[] memory msSlotsAfter = LibManagementSystem._getMSPositionsValues();
       address apAfter = LibHabitatDiamond.getAddressesProvider();
 
-      require(mssBefore.length == mssAfter.length && keccak256(mssBefore) == keccak256(mssAfter), "Only setAddChangeManagementSystem can execute this one.");
-      require(equal(msSlotsBefore, msSlotsAfter), "Only setAddChangeManagementSystem can execute this one.");
-      require(apBefore == apAfter, "Only setAddChangeManagementSystem can execute this one.");
+      require(mssBefore.length == mssAfter.length && keccak256(mssBefore) == keccak256(mssAfter), "Only moduleManager can execute this one.");
+      require(equal(msSlotsBefore, msSlotsAfter), "Only moduleManager can execute this one.");
+      require(apBefore == apAfter, "Only moduleManager can execute this one.");
     }
   }
 

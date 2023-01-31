@@ -13,7 +13,7 @@ contract ModuleManagerMethods {
     LibManagementSystem._switchDeciderOfManagementSystem(msName, newDecider);
   }
 
-  function addNewManagementSystemWithFacets(
+  function addNewModuleWithFacets(
     string memory msName,
     IManagementSystem.DecisionType decisionType,
     address deciderAddress,
@@ -24,7 +24,7 @@ contract ModuleManagerMethods {
     LibHabitatDiamond.addFacets(facetAddresses, facetSelectors);
   }
 
-  function addNewManagementSystemWithFacetsAndStateUpdate(
+  function addNewModuleWithFacetsAndStateUpdate(
     string memory msName,
     IManagementSystem.DecisionType decisionType,
     address deciderAddress,

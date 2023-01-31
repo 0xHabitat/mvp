@@ -39,6 +39,12 @@ interface ITreasuryActions {
     uint256 value
   ) external returns(uint256 proposalId);
 
+  function sendERC721FromTreasuryInitProposal(
+    address token,
+    address receiver,
+    uint256 tokenId
+  ) external returns(uint256 proposalId);
+
   function batchedTreasuryProposalExecution(
     address destination,
     uint256 value,
@@ -60,5 +66,11 @@ interface ITreasuryActions {
   function sendETHFromTreasuryBatchedExecution(
     address receiver,
     uint256 value
+  ) external returns(bool result);
+
+  function sendERC721FromTreasuryBatchedExecution(
+    address token,
+    address receiver,
+    uint256 tokenId
   ) external returns(bool result);
 }

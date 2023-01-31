@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import {ITreasuryActions} from "../../interfaces/treasury/ITreasuryActions.sol";
 import {LibDecisionProcess} from "../../libraries/decisionSystem/LibDecisionProcess.sol";
 import {IERC20} from "../../libraries/openzeppelin/IERC20.sol";
+import {IERC721} from "../../libraries/openzeppelin/IERC721.sol";
 
 contract TreasuryActionsFacet is ITreasuryActions {
   // TODO for MS: add addresses and add active -> adjust diamondCut not to cut facets that are active ms through governance
@@ -50,6 +51,16 @@ contract TreasuryActionsFacet is ITreasuryActions {
     proposalId = createTreasuryProposal(receiver, value, callData);
   }
 
+  function sendERC721FromTreasuryInitProposal(
+    address token,
+    address receiver,
+    uint256 tokenId
+  ) public override returns(uint256 proposalId) {
+    require(IERC721(token).ownerOf(tokenId) == address(this), "Token does not belong to treasury.");
+    bytes memory callData = abi.encodeWithSelector(IERC721.safeTransferFrom.selector, address(this), receiver, tokenId);
+    proposalId = createTreasuryProposal(token, uint256(0), callData);
+  }
+
   // batch for direct caller
   function batchedTreasuryProposalExecution(
     address destination,
@@ -76,6 +87,16 @@ contract TreasuryActionsFacet is ITreasuryActions {
     uint256 value
   ) public override returns(bool result) {
     uint256 proposalId = sendETHFromTreasuryInitProposal(receiver, value);
+    acceptOrRejectTreasuryProposal(proposalId);
+    result = executeTreasuryProposal(proposalId);
+  }
+
+  function sendERC721FromTreasuryBatchedExecution(
+    address token,
+    address receiver,
+    uint256 tokenId
+  ) public override returns(bool result) {
+    uint256 proposalId = sendERC721FromTreasuryInitProposal(token, receiver, tokenId);
     acceptOrRejectTreasuryProposal(proposalId);
     result = executeTreasuryProposal(proposalId);
   }

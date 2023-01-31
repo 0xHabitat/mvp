@@ -8,6 +8,7 @@ const habitatABI = require('../habitatDiamondABI.json');
 describe('HabitatDiamond', function () {
 
   it("Signers/Treasury module: Cover treasury proposal process with decision type signers", async function () {
+    this.timeout(0);
     const accounts = await ethers.getSigners();
     signer = accounts[0];
     const beneficiarAddress = accounts[8].address;
@@ -15,7 +16,7 @@ describe('HabitatDiamond', function () {
     const [daoAddress, initialDistributorAddress] = await deployDAO([3,2,3,2,3]);
     const habitatDiamond = new ethers.Contract(daoAddress, habitatABI, signer);
     // first lets have DeciderSigners instance
-    const deciderSignersAddress = await habitatDiamond.callStatic.getDecider('treasury');
+    const deciderSignersAddress = await habitatDiamond.getModuleDecider('treasury');
     const deciderSigners = await ethers.getContractAt('DeciderSigners', deciderSignersAddress);
     const gnosisSafe = await deciderSigners.gnosisSafe();
 

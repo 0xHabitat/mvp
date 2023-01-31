@@ -9,5 +9,7 @@ interface IProposal {
       bytes callData;
       bool proposalExecuted;
       uint executionTimestamp;
+      //bytes ipfsHash;
+      //address proposer;
   }
 }

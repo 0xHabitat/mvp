@@ -42,7 +42,7 @@ contract GovernanceMethods {
   }
 
   function changeSecondsProposalExecutionDelayPeriodSigners(string memory msName, uint256 newSecondsProposalExecutionDelayPeriodSigners) external {
-    bytes memory newSSD = LibDecisionSystemSpecificData._changedSecondsProposalExecutionDelayPeriodVPBytes(msName,newSecondsProposalExecutionDelayPeriodSigners);
+    bytes memory newSSD = LibDecisionSystemSpecificData._changedSecondsProposalExecutionDelayPeriodSignersBytes(msName,newSecondsProposalExecutionDelayPeriodSigners);
     LibManagementSystem._setMSSpecificDataForDecisionType(msName, IManagementSystem.DecisionType(3), newSSD);
   }
 

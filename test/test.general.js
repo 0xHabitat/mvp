@@ -12,18 +12,22 @@ describe('HabitatDiamond', function () {
     const [daoAddress, initialDistributorAddress] = await deployDAO();
     const habitatDiamond = new ethers.Contract(daoAddress, habitatABI, signer);
     const initialDistributor = await ethers.getContractAt('InitialDistributorAbleToStake', initialDistributorAddress, signer);
-    const deciderVotingPowerAddress = await habitatDiamond.callStatic.getDecider("treasury");
+    const deciderVotingPowerAddress = await habitatDiamond.getModuleDecider("treasury");
     const deciderVotingPower = await ethers.getContractAt('DeciderVotingPower', deciderVotingPowerAddress);
+    const deciderSignersAddress = await habitatDiamond.getModuleDecider('moduleManager');
+    const deciderSigners = await ethers.getContractAt('DeciderSigners', deciderSignersAddress);
     const stakeContractAddress = await deciderVotingPower.getVotingPowerManager();
     const stakeERC20Contract = await ethers.getContractAt('StakeContractERC20UniV3', stakeContractAddress, signer);
+    const addressesProviderAddress = await habitatDiamond.getAddressesProvider();
+    const addressesProvider = await ethers.getContractAt('AddressesProvider', addressesProviderAddress, signer);
     const addresses = accounts.map((val) => {
       return val.address;
     });
-    return {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, accounts, addresses};
+    return {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, deciderSigners, addressesProvider, accounts, addresses};
   }
 
   async function deployDAOAndDistributeFixture() {
-    const {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, accounts, addresses} = await helpers.loadFixture(deployDAOFixture);
+    const {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, deciderSigners, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOFixture);
     // paste distribute logic
     const hbtAddress = await stakeERC20Contract.governanceToken();
     const hbtToken = await ethers.getContractAt('HBT', hbtAddress);
@@ -53,21 +57,22 @@ describe('HabitatDiamond', function () {
     tx = await sponsor.sendTransaction(ethTranfer);
     await tx.wait();
 
-    return {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses, weth};
+    return {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, deciderSigners, addressesProvider, accounts, addresses, weth};
   }
 
   async function deployDAOAndDistributeAndVPEnoughForGovernanceFixture() {
-    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
+    const {habitatDiamond, hbtToken, stakeERC20Contract, deciderVotingPower, deciderSigners, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeFixture);
     // let's give addresses[0] enough voting power to create governance proposals
     // by delegating from addresses[9]
     const tx = await deciderVotingPower.connect(accounts[9]).delegateVotingPower(addresses[0]);
     await tx.wait();
 
-    return {habitatDiamond, deciderVotingPower, accounts, addresses};
+    return {habitatDiamond, deciderVotingPower, deciderSigners, addressesProvider, accounts, addresses};
   }
 
   it('VotingPower/ERC20: should distribute tokens', async function () {
     const {habitatDiamond, initialDistributor, deciderVotingPower, stakeERC20Contract, addresses} = await helpers.loadFixture(deployDAOFixture);
+    this.timeout(0);
     const hbtAddress = await stakeERC20Contract.governanceToken();
     const hbtToken = await ethers.getContractAt('HBT', hbtAddress);
     const hbtTotalSupply = await hbtToken.totalSupply();
@@ -517,9 +522,9 @@ describe('HabitatDiamond', function () {
 
     /*
     // how are we getting decider instance?
-    async function getDeciderContractInstance(moduleName) {
+    async function getModuleDeciderContractInstance(moduleName) {
       const deciderType = await habitatDiamond.getModuleDecisionType(moduleName);
-      const deciderAddress = await habitatDiamond.getDecider(moduleName);
+      const deciderAddress = await habitatDiamond.getModuleDecider(moduleName);
       if (deciderType !== 2 || deciderType !== 3) return "decider is not implemented";
       const deciderABI = deciderType == 2 ? 'DeciderVotingPower' : 'DeciderSigners';
       const deciderInstance = await ethers.getContractAt(deciderABI, deciderAddress);
@@ -1026,31 +1031,533 @@ describe('HabitatDiamond', function () {
   });
 
   it('Governance module(VP): test changeSecondsProposalExecutionDelayPeriodSigners governance method', async function () {
-    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    const {habitatDiamond, deciderVotingPower, deciderSigners, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our Governance module functionality
+    // we try to change value of specific data of decision type Signers
+    // value is changeSecondsProposalExecutionDelayPeriodSigners (description: "Value must represent the time in seconds that is given for a delaying execution after signers accepted the proposal. But our DeciderSigner is implemented in a way that it ignores this value, because we want to have a full control."
+    // testing case:
+    //   ModuleManager - which currently has Signers as decision type
+    //   which after proposal will be executed should have immediate effect
+    //   on ModuleManager decision process (if we increase/decrease value more/less
+    //   time is required to wait after signers have accepted the proposal to be able
+    //   to execute it, but in reality it will have no effect, because
+    //   our DeciderSigner is implemented in a way it ignores this value)
 
+    // this value (seconds) we try to change
+    const moduleManagerSecondsProposalExecutionDelayPeriodSigners = await habitatDiamond.getSecondsProposalExecutionDelayPeriodSigners("moduleManager");
+    expect(moduleManagerSecondsProposalExecutionDelayPeriodSigners.eq(0)).to.be.true;
+
+    // current execution delay period for moduleManager is 0 seconds,
+    // let's increase to 1 day this way accepted proposals shoul be executed
+    // only after waiting 1 day, we have to prove that it's not gonna happen
+    // the value inside dao will change, but will not have any effect on
+    // moduleManager decision process
+
+    // let's take prechanges example of moduleManager behaviour
+
+    // block of moduleManager
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+    await helpers.impersonateAccount(gnosisSafe);
+    const impersonatedGnosisSafe = await ethers.getSigner(gnosisSafe);
+
+    const daoGnosisSigner = habitatDiamond.connect(impersonatedGnosisSafe);
+    // as an example let's change addressesProvider
+    const addressesProviderAddress = await habitatDiamond.getAddressesProvider();
+    const randomAddress = ethers.Wallet.createRandom().address;
+    await daoGnosisSigner.changeAddressesProviderBatchedExecution(randomAddress);
+    const currentAddressesProviderAddress = await habitatDiamond.getAddressesProvider();
+    expect(currentAddressesProviderAddress).to.eq(randomAddress);
+    // block of moduleManager
+
+    // creation of governance proposal to increase execution delay period:
+    // changeSecondsProposalExecutionDelayPeriodSigners is 8 action in governanceActions enum
+    // callData is bytes (encoded string module name and uint256 new value)
+    const callData = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint256'],
+      ["moduleManager", 86400]
+    );
+    const proposalId = await habitatDiamond.callStatic.createGovernanceProposal(8, callData);
+
+    await expect(habitatDiamond.createGovernanceProposal(8, callData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId);
+
+    // let's decide on proposal to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId, true);
+
+    // let's move in future and accept proposal
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId);
+    await helpers.time.increaseTo(votingDeadline);
+
+    const governanceMethods = await habitatDiamond.getGovernanceMethods();
+    const iface = new ethers.utils.Interface(["function changeSecondsProposalExecutionDelayPeriodSigners(string,uint256)"]);
+    const validCallData = iface.encodeFunctionData(
+      'changeSecondsProposalExecutionDelayPeriodSigners',
+      [
+        "moduleManager",
+        86400
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId, governanceMethods, 0, validCallData);
+
+    const acceptedGovernanceProposals = await habitatDiamond.getModuleAcceptedProposalsIds("governance");
+    expect(acceptedGovernanceProposals).to.deep.include(proposalId)
+
+    // execute the proposal
+    // lets move to timestamp when execution delay period is ended
+    const proposal = await habitatDiamond.getModuleProposal("governance", proposalId);
+    await helpers.time.increaseTo(proposal.executionTimestamp);
+
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId);
+
+    // let's check that the value we wanted to change has changed
+    const currentModuleManagerSecondsProposalExecutionDelayPeriodSigners = await habitatDiamond.getSecondsProposalExecutionDelayPeriodSigners("moduleManager");
+    expect(currentModuleManagerSecondsProposalExecutionDelayPeriodSigners.eq(86400)).to.be.true;
+
+    // CHECK EFFECTS
+
+    // with new value effects batched txs will be not possible, let see if they are
+
+    // as an example let's set normal addressesProvider back
+    await expect(daoGnosisSigner.changeAddressesProviderBatchedExecution(addressesProviderAddress))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('moduleManager', 2);
+
+    const postAddressesProviderAddress = await habitatDiamond.getAddressesProvider();
+    expect(postAddressesProviderAddress).to.eq(addressesProviderAddress);
   });
 
   it('Governance module(VP): test changeDecisionData governance method', async function () {
-    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    const {habitatDiamond, deciderVotingPower, deciderSigners, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our Governance module functionality
+    // time to try out our general function for decision data
+    // this function can change all previously described values in one go.
+    // the main usecase is to set the whole configuration values of
+    // any decision system for any module
 
+    // testing case:
+    //   ModuleManager - which currently has Signers as decision type
+    //   our ModuleManager does not have any configuration data related
+    //   to decision type Voting Power (because it uses Signers)
+    //   let's first (can be done anytime) use ModuleManager function
+    //   "switchModuleDecider" to switch ModuleManager active decision system
+    //   from Signers to VotingPower and see what happens and then use changeDecisionData
+    //   to set the whole configuration for VotingPower decision type for
+    //   our ModuleManager and check the effects
+
+    // current ModuleManager config for VotingPower (was not set up)
+    const moduleManagerVotingPowerDecisionData = await habitatDiamond.getMSVotingPowerSpecificData("moduleManager");
+    expect(moduleManagerVotingPowerDecisionData.thresholdForInitiator).to.eq(0);
+    expect(moduleManagerVotingPowerDecisionData.thresholdForProposal).to.eq(0);
+    expect(moduleManagerVotingPowerDecisionData.secondsProposalVotingPeriod).to.eq(0);
+    expect(moduleManagerVotingPowerDecisionData.secondsProposalExecutionDelayPeriod).to.eq(0);
+
+    // let's switch decider for ModuleManager
+
+    // block of moduleManager
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+    await helpers.impersonateAccount(gnosisSafe);
+    const impersonatedGnosisSafe = await ethers.getSigner(gnosisSafe);
+
+    const daoGnosisSigner = habitatDiamond.connect(impersonatedGnosisSafe);
+    // prechanges value
+    let moduleManagerDecider = await habitatDiamond.getModuleDecider("moduleManager");
+    expect(moduleManagerDecider).to.eq(deciderSigners.address);
+
+    await daoGnosisSigner.switchModuleDeciderBatchedExecution("moduleManager", deciderVotingPower.address);
+    // postchanges value
+    moduleManagerDecider = await habitatDiamond.getModuleDecider("moduleManager");
+    expect(moduleManagerDecider).to.eq(deciderVotingPower.address);
+
+    // let's try to execute module manager proposal, e.g. changeAddressesProvider
+    const addressesProviderAddress = await habitatDiamond.getAddressesProvider();
+    const randomAddress = ethers.Wallet.createRandom().address;
+    // let's try to use batched execution, because there is no initiator threshold,
+    // no proposal threshold, no voting period and no execution delay.
+    // meaning almost anyone can execute whatever in one go - VERY DANGEROUS
+    // NEVER ALLOW THIS TO HAPPEN - ALL CONFIG VALUES MUST BE SET UP BEFORE SWITCH
+    await expect(habitatDiamond.changeAddressesProviderBatchedExecution(randomAddress))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('moduleManager', 2);
+
+    const currentAddressesProviderAddress = await habitatDiamond.getAddressesProvider();
+    expect(currentAddressesProviderAddress).to.eq(randomAddress);
+
+    // block of moduleManager
+
+    // creation of governance proposal to set voting power config for ModuleManager
+    // changeDecisionData is 3 action in governanceActions enum
+    // callData is bytes (encoded string module name - "moduleManager";
+    // and uint8 decisionType - 2; and bytes memory newDecisionData:
+    // uint256 initiator threshold - 20%, uint256 proposal threshold - 50%,
+    // uint256 voting period - 7days, uint256 execution delay - 1 day)
+    const newDecisionData = ethers.utils.defaultAbiCoder.encode(
+      ["uint256","uint256","uint256","uint256"],
+      [2000, 5000, 604800, 86400]
+    );
+    const callData = ethers.utils.defaultAbiCoder.encode(
+      ['string','uint8', 'bytes'],
+      ["moduleManager", 2, newDecisionData]
+    );
+    const proposalId = await habitatDiamond.callStatic.createGovernanceProposal(3, callData);
+
+    await expect(habitatDiamond.createGovernanceProposal(3, callData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId);
+
+    // let's decide on proposal to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId, true);
+
+    // let's move in future and accept proposal
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId);
+    await helpers.time.increaseTo(votingDeadline);
+
+    const governanceMethods = await habitatDiamond.getGovernanceMethods();
+    const iface = new ethers.utils.Interface(["function changeDecisionData(string,uint8,bytes)"]);
+    const validCallData = iface.encodeFunctionData(
+      'changeDecisionData',
+      [
+        "moduleManager",
+        2,
+        newDecisionData
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId, governanceMethods, 0, validCallData);
+
+    const acceptedGovernanceProposals = await habitatDiamond.getModuleAcceptedProposalsIds("governance");
+    expect(acceptedGovernanceProposals).to.deep.include(proposalId)
+
+    // execute the proposal
+    // lets move to timestamp when execution delay period is ended
+    const proposal = await habitatDiamond.getModuleProposal("governance", proposalId);
+    await helpers.time.increaseTo(proposal.executionTimestamp);
+
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId);
+
+    // let's check that the decisionData we wanted to change has changed
+    const currentModuleManagerVotingPowerDecisionData = await habitatDiamond.getMSVotingPowerSpecificData("moduleManager");
+    expect(currentModuleManagerVotingPowerDecisionData.thresholdForInitiator).to.eq(2000);
+    expect(currentModuleManagerVotingPowerDecisionData.thresholdForProposal).to.eq(5000);
+    expect(currentModuleManagerVotingPowerDecisionData.secondsProposalVotingPeriod).to.eq(604800);
+    expect(currentModuleManagerVotingPowerDecisionData.secondsProposalExecutionDelayPeriod).to.eq(86400);
+
+    // CHECK EFFECTS
+
+    // batched transaction must be reverted, because the threshold for initiator
+    // is not reachable for our signer
+    await expect(habitatDiamond.changeAddressesProviderBatchedExecution(addressesProviderAddress))
+      .to.be.revertedWith("Not enough voting power to create proposal.");
   });
 
   it('Governance module/Voting Power: should be able to execute updateFacet governance proposal', async function () {
-    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    const {habitatDiamond, deciderVotingPower, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our Governance module functionality
+    // time to try out updateFacet function
+    // currently we have AddressesProvider which is the only one trusted source
+    // to get updates for our DAO.
+    // updateFacet function gets as an input only facet address (which has to be
+    // known by AddressesProvider)
+    // the new facet must replace old facet (all the previous function selectors
+    // must be inlcuded, which means that api must stay the same or extended
+    // with new functions and only the previous functions logic can be updated)
 
+    // testing case:
+    //   we have upgraded dao viewer facet
+    //   as our signer is an owner of AddressesProvider, we set new DAOViewerFacet
+    //   and try to execute update through governance
+
+    // let's first get selectors that must be included in our new facet
+    const daoViewerFacet = await addressesProvider.getDAOViewerFacet();
+    const oldDAOViewerAddress = daoViewerFacet.facetAddress;
+    const daoViewerSelectors = daoViewerFacet.functionSelectors;
+
+    // let's prove that selectors are included in our dao
+    const oldFacetAddress = await habitatDiamond.facetAddress(daoViewerSelectors[0]);
+    expect(oldFacetAddress).to.eq(oldDAOViewerAddress);
+    const oldFacetSelectors = await habitatDiamond.facetFunctionSelectors(oldFacetAddress);
+    expect(oldFacetSelectors).to.deep.eq(daoViewerSelectors);
+
+    // deploy our upgraded dao viewer facet that has same selectors as old one
+    // (some of the functions with new logic) and few new functions
+    const DAOViewerFacetTest = await ethers.getContractFactory('DAOViewerFacetTest');
+    const newDAOViewerFacet = await DAOViewerFacetTest.deploy();
+    await newDAOViewerFacet.deployed();
+
+    // as updateFacet rule said new facet must include all previous selectors
+    const newSelectors = [...daoViewerSelectors];
+    // added two new functions
+    newSelectors.push(newDAOViewerFacet.interface.getSighash("newDAOViewerFunction1"));
+    newSelectors.push(newDAOViewerFacet.interface.getSighash("newDAOViewerFunction2"));
+
+    // let's make the facet upgrade inside our AddressesProvider,
+    // by setting new address and attaching old selectors + new one
+    await expect(addressesProvider.setDAOViewerFacet(newDAOViewerFacet.address, newSelectors))
+      .to.emit(addressesProvider, "DAOViewerFacetUpdated")
+      .withArgs(oldDAOViewerAddress, newDAOViewerFacet.address);
+
+    const newFacetAddress = await addressesProvider.getDAOViewerFacetAddress();
+    expect(newFacetAddress).to.eq(newDAOViewerFacet.address);
+
+    // prechanges call result of function that will change the logic
+    let daoSocials = await habitatDiamond.getDAOSocials();
+    expect(daoSocials).to.eq("https://0xhabitat.org/");
+    // prechanges call result of function that will not change the logic
+    let daoName = await habitatDiamond.getDAOName();
+    expect(daoName).to.eq("HabitatDAO");
+
+    // creation of governance proposal of facet update
+    // updateFacet is 1 action in governanceActions enum
+    // callData is bytes (encoded new facet address)
+    const callData = ethers.utils.defaultAbiCoder.encode(
+      ['address'],
+      [newFacetAddress]
+    );
+    const proposalId = await habitatDiamond.callStatic.createGovernanceProposal(1, callData);
+
+    await expect(habitatDiamond.createGovernanceProposal(1, callData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId);
+
+    // let's decide on proposal to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId, true);
+
+    // let's move in future and accept proposal
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId);
+    await helpers.time.increaseTo(votingDeadline);
+
+    const governanceMethods = await habitatDiamond.getGovernanceMethods();
+    const iface = new ethers.utils.Interface(["function updateFacet(address)"]);
+    const validCallData = iface.encodeFunctionData(
+      'updateFacet',
+      [
+        newFacetAddress
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId, governanceMethods, 0, validCallData);
+
+    const acceptedGovernanceProposals = await habitatDiamond.getModuleAcceptedProposalsIds("governance");
+    expect(acceptedGovernanceProposals).to.deep.include(proposalId)
+
+    // execute the proposal
+    // lets move to timestamp when execution delay period is ended
+    const proposal = await habitatDiamond.getModuleProposal("governance", proposalId);
+    await helpers.time.increaseTo(proposal.executionTimestamp);
+
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId);
+
+    // CHECK EFFECTS
+
+    // let's prove that our old selectors now redirects the calls to new address
+    const newDAOViewerFacetAddress = await habitatDiamond.facetAddress(daoViewerSelectors[0]);
+    expect(newDAOViewerFacetAddress).to.eq(newFacetAddress);
+    const newFacetSelectors = await habitatDiamond.facetFunctionSelectors(newDAOViewerFacetAddress);
+    expect(newFacetSelectors).to.deep.eq(newSelectors);
+
+    // postchanges call result of function that has changed the logic
+    daoSocials = await habitatDiamond.getDAOSocials();
+    expect(daoSocials).to.eq("new dao socials");
+    // postchanges call result of function that hasn't changed the logic
+    daoName = await habitatDiamond.getDAOName();
+    expect(daoName).to.eq("HabitatDAO");
+    // new dao functions works
+    let resultOfNewFunctionCall = await newDAOViewerFacet.attach(habitatDiamond.address).newDAOViewerFunction1();
+    expect(resultOfNewFunctionCall).to.eq(256);
+
+    resultOfNewFunctionCall = await newDAOViewerFacet.attach(habitatDiamond.address).newDAOViewerFunction2();
+    expect(resultOfNewFunctionCall).to.eq("some another new string");
+
+    // RESET STATE of ADDRESSES PROVIDER (loadfixture does not work perfectly)
+    // reset dao viewer facet
+    await expect(addressesProvider.setDAOViewerFacet(oldDAOViewerAddress, daoViewerSelectors))
+      .to.emit(addressesProvider, "DAOViewerFacetUpdated")
+      .withArgs(newFacetAddress, oldDAOViewerAddress);
   });
 
   it('Governance module/Voting Power: should be able to execute updateFacetAndState governance proposal', async function () {
-    const {habitatDiamond, deciderVotingPower, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
-    // all methods that must be executed:
-    // write it() for each method
-    // changeDecisionData - as it is general one, we can use it as just adding new decision type
-    // changeThresholdForInitiator
-    // changeThresholdForProposal
-    // changeSecondsProposalVotingPeriod
-    // changeSecondsProposalExecutionDelayPeriodVP
-    // changeSecondsProposalExecutionDelayPeriodSigners
-  });
+    const {habitatDiamond, deciderVotingPower, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our Governance module functionality
+    // time to try out updateFacet function
+    // currently we have AddressesProvider which is the only one trusted source
+    // to get updates for our DAO.
+    // updateFacetAndState function gets as an input facet address (which has to be
+    // known by AddressesProvider) and the calldata for init contract (contains
+    // function selector of init contract and this function input data)
+    // the new facet must replace old facet (all the previous function selectors
+    // must be inlcuded, which means that api must stay the same or extended
+    // with new functions and only the previous functions logic can be updated)
 
+    // testing case:
+    //   we have upgraded dao viewer facet and upgraded dao init contract
+    //   as our signer is an owner of AddressesProvider, we set new DAOInit
+    //   and new DAOViewerFacet
+    //   after that try to execute update through governance
+
+    // deploy our upgraded dao init contract and dao viewer facet that has
+    // same selectors as old one (some of the functions with new logic) and few new functions
+    const DAOInitTest = await ethers.getContractFactory('DAOInitTest');
+    const newDAOInit = await DAOInitTest.deploy();
+    await newDAOInit.deployed();
+
+    const DAOViewerFacetTest = await ethers.getContractFactory('DAOViewerFacetTest');
+    const newDAOViewerFacet = await DAOViewerFacetTest.deploy();
+    await newDAOViewerFacet.deployed();
+    const signatures = Object.keys(newDAOViewerFacet.interface.functions)
+    const selectors = signatures.reduce((acc, val) => {
+      acc.push(newDAOViewerFacet.interface.getSighash(val))
+      return acc
+    }, []);
+
+    const oldDAOInitAddress = await addressesProvider.getDAOInit();
+    // let's make the dao init upgrade inside our AddressesProvider
+    // important to set init first, because it will be used as init for new facet
+    await expect(addressesProvider.setDAOInit(newDAOInit.address))
+      .to.emit(addressesProvider, "DAOInitUpdated")
+      .withArgs(oldDAOInitAddress, newDAOInit.address);
+
+    const newInitAddress = await addressesProvider.getDAOInit();
+    expect(newInitAddress).to.eq(newDAOInit.address);
+
+    const oldDAOViewerAddress = await addressesProvider.getDAOViewerFacetAddress();
+    const oldFacet = await addressesProvider.getDAOViewerFacet();
+    const oldDAOViewerSelectors = oldFacet.functionSelectors;
+    // let's make the facet upgrade inside our AddressesProvider,
+    // by setting new address and attaching it's selectors
+    await expect(addressesProvider.setDAOViewerFacet(newDAOViewerFacet.address, selectors))
+      .to.emit(addressesProvider, "DAOViewerFacetUpdated")
+      .withArgs(oldDAOViewerAddress, newDAOViewerFacet.address);
+
+    const newFacetAddress = await addressesProvider.getDAOViewerFacetAddress();
+    expect(newFacetAddress).to.eq(newDAOViewerFacet.address);
+
+    // let's have dao instance with dao viewer interface
+    const habitatDAO = newDAOViewerFacet.attach(habitatDiamond.address);
+
+    // preupdate call result of function that reads new state
+    await expect(habitatDAO.readNewDAOState())
+      .to.be.revertedWith("Diamond: Function does not exist");
+
+    // let's read the storage slot that will be written to during updateState
+    const storageSlot = ethers.BigNumber.from(ethers.utils.id("habitat.diamond.standard.dao.storage")).add(6).toHexString();
+    const valueAtSlot = await ethers.provider.getStorageAt(
+      habitatDiamond.address,
+      storageSlot
+    );
+    expect(valueAtSlot).to.eq('0x0000000000000000000000000000000000000000000000000000000000000000');
+
+    // creation of governance proposal of facet update
+    // updateFacetAndState is 2 action in governanceActions enum
+    // callData is bytes (encoded new facet address and stateUpdate for init contract)
+    const stateUpdate = newDAOInit.interface.encodeFunctionData(
+      'initNewStringInDAOStorage(string)',
+      ["it's our new state string"]
+    );
+    const callData = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [newFacetAddress, stateUpdate]
+    );
+    const proposalId = await habitatDiamond.callStatic.createGovernanceProposal(2, callData);
+
+    await expect(habitatDiamond.createGovernanceProposal(2, callData))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('governance', proposalId);
+
+    // let's decide on proposal to make it accepted
+    await expect(habitatDiamond.connect(accounts[2]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[2], 'governance', proposalId, true);
+
+    await expect(habitatDiamond.connect(accounts[3]).decideOnGovernanceProposal(proposalId, true))
+      .to.emit(deciderVotingPower, "Voted")
+      .withArgs(addresses[3], 'governance', proposalId, true);
+
+    // let's move in future and accept proposal
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('governance', proposalId);
+    await helpers.time.increaseTo(votingDeadline);
+
+    const governanceMethods = await habitatDiamond.getGovernanceMethods();
+    const iface = new ethers.utils.Interface(["function updateFacetAndState(address,bytes)"]);
+    const validCallData = iface.encodeFunctionData(
+      'updateFacetAndState',
+      [
+        newFacetAddress,
+        stateUpdate
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('governance', proposalId, governanceMethods, 0, validCallData);
+
+    const acceptedGovernanceProposals = await habitatDiamond.getModuleAcceptedProposalsIds("governance");
+    expect(acceptedGovernanceProposals).to.deep.include(proposalId)
+
+    // execute the proposal
+    // lets move to timestamp when execution delay period is ended
+    const proposal = await habitatDiamond.getModuleProposal("governance", proposalId);
+    await helpers.time.increaseTo(proposal.executionTimestamp);
+
+    await expect(habitatDiamond.executeGovernanceProposal(proposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('governance', proposalId);
+
+    // CHECK EFFECTS
+
+    // let's prove that our old selectors now redirects the calls to new address
+    const newDAOViewerFacetAddress = await habitatDiamond.facetAddress(selectors[0]);
+    expect(newDAOViewerFacetAddress).to.eq(newFacetAddress);
+    const newFacetSelectors = await habitatDiamond.facetFunctionSelectors(newDAOViewerFacetAddress);
+    expect(newFacetSelectors).to.deep.eq(selectors);
+
+    // postupdate call result of function that reads new state
+    const newStringInDAOStorage = await habitatDAO.readNewDAOState();
+    expect(newStringInDAOStorage).to.eq("it's our new state string");
+
+    // let's read the storage slot that was written to during updateState
+    const currentValueAtSlot = await ethers.provider.getStorageAt(
+      habitatDiamond.address,
+      storageSlot
+    );
+    expect(currentValueAtSlot).to.eq("0x69742773206f7572206e657720737461746520737472696e6700000000000032");
+
+    // RESET STATE of ADDRESSES PROVIDER (loadfixture does not work perfectly)
+    // reset dao init
+    await expect(addressesProvider.setDAOInit(oldDAOInitAddress))
+      .to.emit(addressesProvider, "DAOInitUpdated")
+      .withArgs(newInitAddress, oldDAOInitAddress);
+
+    // reset dao viewer facet
+    await expect(addressesProvider.setDAOViewerFacet(oldDAOViewerAddress, oldDAOViewerSelectors))
+      .to.emit(addressesProvider, "DAOViewerFacetUpdated")
+      .withArgs(newFacetAddress, oldDAOViewerAddress);
+  });
 
 });
