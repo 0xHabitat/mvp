@@ -231,7 +231,7 @@ contract MainDeployer {
   function makeModuleViewerCut(
     address dao
   ) internal {
-    // make treasury cut
+    // make module viewer cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
     IDiamondCut.FacetCut[] memory moduleViewerCut = new IDiamondCut.FacetCut[](1);
     // Add module viewer facet
@@ -316,7 +316,7 @@ contract MainDeployer {
   ) internal {
     // make treasury cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
-    IDiamondCut.FacetCut[] memory treasuryCut = new IDiamondCut.FacetCut[](3);
+    IDiamondCut.FacetCut[] memory treasuryCut = new IDiamondCut.FacetCut[](2);
     // Add treasury actions facet
     IAddressesProvider.Facet memory treasuryActionsFacet = IAddressesProvider(addressesProvider).getTreasuryActionsFacet();
 
@@ -326,19 +326,10 @@ contract MainDeployer {
       functionSelectors: treasuryActionsFacet.functionSelectors
     });
 
-    // Add treasury viewer facet
-    IAddressesProvider.Facet memory treasuryViewerFacet = IAddressesProvider(addressesProvider).getTreasuryViewerFacet();
-
-    treasuryCut[1] = IDiamondCut.FacetCut({
-      facetAddress: treasuryViewerFacet.facetAddress,
-      action: IDiamondCut.FacetCutAction.Add,
-      functionSelectors: treasuryViewerFacet.functionSelectors
-    });
-
     // Add the treasury default callback facet
     IAddressesProvider.Facet memory treasuryDefaultCallbackFacet = IAddressesProvider(addressesProvider).getTreasuryDefaultCallbackHandlerFacet();
 
-    treasuryCut[2] = IDiamondCut.FacetCut({
+    treasuryCut[1] = IDiamondCut.FacetCut({
       facetAddress: treasuryDefaultCallbackFacet.facetAddress,
       action: IDiamondCut.FacetCutAction.Add,
       functionSelectors: treasuryDefaultCallbackFacet.functionSelectors

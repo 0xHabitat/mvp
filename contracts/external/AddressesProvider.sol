@@ -23,7 +23,6 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   bytes32 private constant MODULE_MANAGER_FACET = 'MODULE_MANAGER_FACET';
   bytes32 private constant GOVERNANCE_FACET = 'GOVERNANCE_FACET';
   bytes32 private constant TREASURY_ACTIONS_FACET = 'TREASURY_ACTIONS_FACET';
-  bytes32 private constant TREASURY_VIEWER_FACET = 'TREASURY_VIEWER_FACET';
   bytes32 private constant TREASURY_DEFAULT_CALLBACK_FACET = 'TREASURY_DEFAULT_CALLBACK_FACET';
   bytes32 private constant SPECIFIC_DATA_FACET = 'SPECIFIC_DATA_FACET';
 
@@ -212,20 +211,6 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function getTreasuryViewerFacetAddress() external view returns(address) {
-    return getAddress(TREASURY_VIEWER_FACET);
-  }
-
-  /// @inheritdoc IAddressesProvider
-  function getTreasuryViewerFacet() external view override returns(Facet memory) {
-    address treasuryViewerFacet = getAddress(TREASURY_VIEWER_FACET);
-    return Facet({
-      facetAddress: treasuryViewerFacet,
-      functionSelectors: getSelectors(treasuryViewerFacet)
-    });
-  }
-
-  /// @inheritdoc IAddressesProvider
   function getTreasuryDefaultCallbackHandlerFacetAddress() external view returns(address) {
     return getAddress(TREASURY_DEFAULT_CALLBACK_FACET);
   }
@@ -386,15 +371,6 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     _addresses[TREASURY_ACTIONS_FACET] = newTreasuryActionsFacet;
     _selectors[newTreasuryActionsFacet] = selectors;
     emit TreasuryActionsFacetUpdated(oldTreasuryActionsFacet, newTreasuryActionsFacet);
-  }
-
-  /// @inheritdoc IAddressesProvider
-  function setTreasuryViewerFacet(address newTreasuryViewerFacet, bytes4[] memory selectors) external override {
-    require(msg.sender == owner, "Only owner can call.");
-    address oldTreasuryViewerFacet = _addresses[TREASURY_VIEWER_FACET];
-    _addresses[TREASURY_VIEWER_FACET] = newTreasuryViewerFacet;
-    _selectors[newTreasuryViewerFacet] = selectors;
-    emit TreasuryViewerFacetUpdated(oldTreasuryViewerFacet, newTreasuryViewerFacet);
   }
 
   /// @inheritdoc IAddressesProvider

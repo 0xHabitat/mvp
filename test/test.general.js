@@ -310,8 +310,8 @@ describe('HabitatDiamond', function () {
     // first lets make voting power 0 and try to create treasury proposal
     const unstaker = accounts[1];
     const beneficiar = addresses[3];
-    const thresholdForInitiatorNumerator = await habitatDiamond.callStatic.thresholdForInitiatorNumerator('treasury');
-    expect(await deciderVotingPower.callStatic.isEnoughVotingPower(unstaker.address, thresholdForInitiatorNumerator))
+    const thresholdForInitiatorNumerator = await habitatDiamond.thresholdForInitiatorNumerator('treasury');
+    expect(await deciderVotingPower.isEnoughVotingPower(unstaker.address, thresholdForInitiatorNumerator))
       .to.be.true;
     const stakedBalance = await stakeERC20Contract.getStakedBalanceOfGovernanceToken(unstaker.address);
     const stakeERC20ContractUnstaker = stakeERC20Contract.connect(unstaker);
@@ -320,7 +320,7 @@ describe('HabitatDiamond', function () {
     await tx.wait();
     const unstakerVotingPower = await deciderVotingPower.getVoterVotingPower(unstaker.address);
     expect(unstakerVotingPower.isZero()).to.be.true;
-    expect(await deciderVotingPower.callStatic.isEnoughVotingPower(unstaker.address, thresholdForInitiatorNumerator))
+    expect(await deciderVotingPower.isEnoughVotingPower(unstaker.address, thresholdForInitiatorNumerator))
       .to.be.false;
     await expect(habitatDiamondUnstaker.createTreasuryProposal(unstaker.address, ten, '0x'))
       .to.be.revertedWith("Not enough voting power to create proposal.");
@@ -335,15 +335,15 @@ describe('HabitatDiamond', function () {
     expect(proposalId).to.eq(ethers.constants.One);
 
     // lets create proposal to transfer ETH
-    const treasuryExecutionDelay = await habitatDiamond.callStatic.getSecondsProposalExecutionDelayPeriodVP('treasury');
-    const treasuryVotingPeriod = await habitatDiamond.callStatic.getSecondsProposalVotingPeriod('treasury');
+    const treasuryExecutionDelay = await habitatDiamond.getSecondsProposalExecutionDelayPeriodVP('treasury');
+    const treasuryVotingPeriod = await habitatDiamond.getSecondsProposalVotingPeriod('treasury');
     const proposalIDToTransferETH = await habitatDiamond.callStatic.createTreasuryProposal(beneficiar, ten, '0x');
     let currentBlock = await ethers.provider.getBlock('latest');
     await expect(habitatDiamond.createTreasuryProposal(beneficiar, ten, '0x'))
       .to.emit(habitatDiamond, "ProposalCreated")
       .withArgs('treasury', proposalIDToTransferETH)
 
-    let proposal = await habitatDiamond.callStatic.getTreasuryProposal(proposalIDToTransferETH);
+    let proposal = await habitatDiamond.getModuleProposal("treasury", proposalIDToTransferETH);
     expect(proposal.proposalAccepted).to.be.false;
     expect(proposal.destinationAddress).to.eq(beneficiar);
     expect(proposal.value).to.eq(ten);
@@ -353,13 +353,13 @@ describe('HabitatDiamond', function () {
 
     // lets create proposal to transfer WETH
     callData = weth.interface.encodeFunctionData('transfer', [beneficiar, ten]);
-    const proposalIDToTransferWETH = (await habitatDiamond.callStatic.getTreasuryProposalsCount()).add(1);
+    const proposalIDToTransferWETH = (await habitatDiamond.getModuleProposalsCount("treasury")).add(1);
     currentBlock = await ethers.provider.getBlock('latest');
     await expect(habitatDiamond.createTreasuryProposal(weth.address, '0x0', callData))
       .to.emit(habitatDiamond, "ProposalCreated")
       .withArgs('treasury', proposalIDToTransferWETH)
 
-    proposal = await habitatDiamond.callStatic.getTreasuryProposal(proposalIDToTransferWETH);
+    proposal = await habitatDiamond.getModuleProposal("treasury",proposalIDToTransferWETH);
     expect(proposal.proposalAccepted).to.be.false;
     expect(proposal.destinationAddress).to.eq(weth.address);
     expect(proposal.value.isZero()).to.be.true;
@@ -373,26 +373,26 @@ describe('HabitatDiamond', function () {
     const ten = ethers.constants.WeiPerEther.mul(10);
     const beneficiar = addresses[3];
     // first lets create treasury proposal
-    const proposalID = (await habitatDiamond.callStatic.getTreasuryProposalsCount()).add(1);
+    const proposalID = (await habitatDiamond.getModuleProposalsCount("treasury")).add(1);
     let tx = await habitatDiamond.createTreasuryProposal(beneficiar, ten, '0x');
     await tx.wait();
     // make sure that treasury decisionType is votingPowerERC20
-    const decisionType = await habitatDiamond.callStatic.getTreasuryDecisionType();
+    const decisionType = await habitatDiamond.getModuleDecisionType("treasury");
     expect(decisionType).to.eq(2);
     // lets find our proposalId in active voting
-    let activeVotingProposalIds = await habitatDiamond.callStatic.getTreasuryActiveProposalsIds();
+    let activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds("treasury");
     expect(activeVotingProposalIds.some((id) => id.eq(proposalID))).to.be.true;
     // the initiator already voted
-    expect(await deciderVotingPower.callStatic.isHolderVotedForProposal('treasury', proposalID, addresses[0]))
+    expect(await deciderVotingPower.isHolderVotedForProposal('treasury', proposalID, addresses[0]))
       .to.be.true;
     const initiatorVotingPower = await deciderVotingPower.getVoterVotingPower(accounts[0].address);
-    let votesYes = await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID);
+    let votesYes = await deciderVotingPower.getProposalVotingVotesYes('treasury', proposalID);
     expect(votesYes).to.eq(initiatorVotingPower);
 
     // make sure voting started
-    expect(await deciderVotingPower.callStatic.isVotingForProposalStarted('treasury', proposalID))
+    expect(await deciderVotingPower.isVotingForProposalStarted('treasury', proposalID))
       .to.be.true;
-    const votingDeadline = await deciderVotingPower.callStatic.getProposalVotingDeadlineTimestamp('treasury', proposalID);
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp('treasury', proposalID);
     const currentBlock = await ethers.provider.getBlock('latest');
     expect(votingDeadline.gt(currentBlock.timestamp)).to.be.true;
 
@@ -411,7 +411,7 @@ describe('HabitatDiamond', function () {
     await tx.wait();
     tx = await habitatDiamond.decideOnTreasuryProposal(proposalID, true);
     await tx.wait();
-    votesYes = await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID);
+    votesYes = await deciderVotingPower.getProposalVotingVotesYes('treasury', proposalID);
     expect(votesYes).to.eq(initiatorVotingPower.add(balance));
 
     await expect(habitatDiamond.connect(accounts[1]).decideOnTreasuryProposal(proposalID, true))
@@ -419,7 +419,7 @@ describe('HabitatDiamond', function () {
       .withArgs(addresses[1], 'treasury', proposalID, true);
 
     const votingPowerAccount1 = await deciderVotingPower.getVoterVotingPower(accounts[1].address);
-    expect(await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID))
+    expect(await deciderVotingPower.getProposalVotingVotesYes('treasury', proposalID))
       .to.eq(votesYes.add(votingPowerAccount1));
 
 
@@ -428,15 +428,15 @@ describe('HabitatDiamond', function () {
       .withArgs(addresses[2], 'treasury', proposalID, false);
 
     const votingPowerAccount2 = await deciderVotingPower.getVoterVotingPower(accounts[2].address);
-    const votesNo = await deciderVotingPower.callStatic.getProposalVotingVotesNo('treasury', proposalID);
+    const votesNo = await deciderVotingPower.getProposalVotingVotesNo('treasury', proposalID);
     expect(votesNo).to.eq(votingPowerAccount2);
 
-    const thresholdForProposalNumerator = await habitatDiamond.callStatic.thresholdForProposalNumerator('treasury');
-    const thresholdForProposalReachedVotesYes = await deciderVotingPower.callStatic.isProposalThresholdReached(votesYes, thresholdForProposalNumerator);
+    const thresholdForProposalNumerator = await habitatDiamond.thresholdForProposalNumerator('treasury');
+    const thresholdForProposalReachedVotesYes = await deciderVotingPower.isProposalThresholdReached(votesYes, thresholdForProposalNumerator);
     expect(thresholdForProposalReachedVotesYes).to.be.true;
 
-    const absoluteThresholdForProposal = await deciderVotingPower.callStatic.getAbsoluteThresholdByNumerator(thresholdForProposalNumerator);
-    votesYes = await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID);
+    const absoluteThresholdForProposal = await deciderVotingPower.getAbsoluteThresholdByNumerator(thresholdForProposalNumerator);
+    votesYes = await deciderVotingPower.getProposalVotingVotesYes('treasury', proposalID);
     expect(absoluteThresholdForProposal.lte(votesYes)).to.be.true;
 
     // accept proposal
@@ -450,10 +450,10 @@ describe('HabitatDiamond', function () {
       .to.emit(habitatDiamond, "ProposalAccepted")
       .withArgs('treasury', proposalID, beneficiar, ten, '0x');
     // confirm proposalId is removed from active
-    activeVotingProposalIds = await habitatDiamond.callStatic.getTreasuryActiveProposalsIds();
+    activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds("treasury");
     expect(activeVotingProposalIds.some((id) => id.eq(proposalID))).to.be.false;
     // confirm proposal voting was removed
-    votesYes = await deciderVotingPower.callStatic.getProposalVotingVotesYes('treasury', proposalID);
+    votesYes = await deciderVotingPower.getProposalVotingVotesYes('treasury', proposalID);
     expect(votesYes.isZero()).to.be.true;
     // TODO also missed acceptedProposals view func
 
@@ -463,7 +463,7 @@ describe('HabitatDiamond', function () {
       .to.be.revertedWith("Wait until proposal delay time is expired.");
 
     // lets move to timestamp when execution delay period is ended
-    const proposal = await habitatDiamond.callStatic.getTreasuryProposal(proposalID);
+    const proposal = await habitatDiamond.getModuleProposal("treasury",proposalID);
     await helpers.time.increaseTo(proposal.executionTimestamp);
 
     const beneficiarETHBalanceBefore = await ethers.provider.getBalance(beneficiar);

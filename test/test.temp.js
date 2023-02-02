@@ -87,23 +87,23 @@ describe('HabitatDiamond', function () {
     }
 
     // second lets create treasury proposal from one of the gnosis signers
-    const proposalID = (await habitatDiamond.callStatic.getTreasuryProposalsCount()).add(1);
+    const proposalID = (await habitatDiamond.getModuleProposalsCount("treasury")).add(1);
     tx = await habitatDiamond.connect(impersonatedSigners[0]).createTreasuryProposal(beneficiarAddress, ten, '0x');
     await tx.wait();
     // make sure that treasury decisionType is Signers
-    const decisionType = await habitatDiamond.callStatic.getTreasuryDecisionType();
+    const decisionType = await habitatDiamond.getModuleDecisionType("treasury");
     expect(decisionType).to.eq(3);
     // lets find our proposalId in active voting
-    let activeVotingProposalIds = await habitatDiamond.callStatic.getTreasuryActiveProposalsIds();
+    let activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds("treasury");
     expect(activeVotingProposalIds.some((id) => id.eq(proposalID))).to.be.true;
 
     const proposalKey = await deciderSigners.computeProposalKey('treasury', proposalID);
     // the initiator already decided
-    expect(await deciderSigners.callStatic.isSignerDecided(proposalKey, impersonatedSigners[0].address))
+    expect(await deciderSigners.isSignerDecided(proposalKey, impersonatedSigners[0].address))
       .to.be.true;
 
     // make sure decision process started
-    expect(await deciderSigners.callStatic.isDecisionProcessStarted(proposalKey))
+    expect(await deciderSigners.isDecisionProcessStarted(proposalKey))
       .to.be.true;
 
     // lets decide
@@ -139,7 +139,7 @@ describe('HabitatDiamond', function () {
       .withArgs('treasury', proposalID, beneficiarAddress, ten, '0x');
 
     // confirm proposalId is removed from active
-    activeVotingProposalIds = await habitatDiamond.callStatic.getTreasuryActiveProposalsIds();
+    activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds("treasury");
     expect(activeVotingProposalIds.some((id) => id.eq(proposalID))).to.be.false;
 
     // execute proposal

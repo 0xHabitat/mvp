@@ -112,13 +112,6 @@ interface IAddressesProvider {
   event TreasuryActionsFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
-   * @dev Emitted when the treasury viewer facet is updated.
-   * @param oldAddress The old address of the TreasuryViewerFacet
-   * @param newAddress The new address of the TreasuryViewerFacet
-   */
-  event TreasuryViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
-
-  /**
    * @dev Emitted when the treasury default callback handler facet is updated.
    * @param oldAddress The old address of the TreasuryDefaultCallbackHandlerFacet
    * @param newAddress The new address of the TreasuryDefaultCallbackHandlerFacet
@@ -310,18 +303,6 @@ interface IAddressesProvider {
   function getTreasuryActionsFacet() external view returns (Facet memory);
 
   /**
-   * @notice Returns the address of the dao viewer facet contract.
-   * @return The address of the TreasuryViewerFacet
-   */
-  function getTreasuryViewerFacetAddress() external view returns (address);
-
-  /**
-   * @notice Returns Facet (facet address and an array of the facet selectors).
-   * @return Facet struct of the TreasuryViewerFacet
-   */
-  function getTreasuryViewerFacet() external view returns (Facet memory);
-
-  /**
    * @notice Returns the address of the treasury default callback handler facet contract.
    * @return The address of the TreasuryDefaultCallbackHandlerFacet
    */
@@ -435,12 +416,6 @@ interface IAddressesProvider {
    * @param newTreasuryActionsFacet The address of the new TreasuryActionsFacet
    */
   function setTreasuryActionsFacet(address newTreasuryActionsFacet, bytes4[] memory selectors) external;
-
-  /**
-   * @notice Updates the address of the treasury viewer facet.
-   * @param newTreasuryViewerFacet The address of the new TreasuryViewerFacet
-   */
-  function setTreasuryViewerFacet(address newTreasuryViewerFacet, bytes4[] memory selectors) external;
 
   /**
    * @notice Updates the address of the treasury default callback handler facet.
