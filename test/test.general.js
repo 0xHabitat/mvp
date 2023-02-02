@@ -1560,4 +1560,476 @@ describe('HabitatDiamond', function () {
       .withArgs(newFacetAddress, oldDAOViewerAddress);
   });
 
+  it('ModuleManager/Signers: should be able to execute switchModuleDecider proposal', async function () {
+    const {habitatDiamond, deciderSigners, deciderVotingPower, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our ModuleManager functionality (Decision type: Signers)
+    // switchModuleDecider method
+    // this method is able to switch decider for any module, e.i.
+    // module was using one decider, after method execution new decision process
+    // applies for a module
+
+    // testing case:
+    //   we try interesting case, we will switch decider for Treasury module
+    //   from Voting Power to Signers
+    //   but first we will have the case where bad actor got enough voting power
+    //   to execute Treasury proposal, and he tries to withdraw all ETH from treasury
+    //   and accepted the proposal and just waiting execution delay period
+    //   let's see what happen with the "rug" proposal after switching the decider
+    //   bad actor is our signer = accounts[0]
+
+    // Treasury block
+    let treasuryDeciderAddress = await habitatDiamond.getModuleDecider("treasury");
+    expect(treasuryDeciderAddress).eq(deciderVotingPower.address);
+
+    const daoETHBalance = await ethers.provider.getBalance(habitatDiamond.address);
+    expect(daoETHBalance).to.eq(ethers.constants.WeiPerEther.mul(10));
+
+    // bad actor initialize treasury proposal to send him all ETH
+    const badProposalId = await habitatDiamond.callStatic.sendETHFromTreasuryInitProposal(addresses[0], daoETHBalance);
+    await expect(habitatDiamond.sendETHFromTreasuryInitProposal(addresses[0], daoETHBalance))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs("treasury", badProposalId);
+
+    // as bad actor has enough voting power, he just waits proposal period to accept
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp(
+      'treasury',
+      badProposalId
+    );
+    await helpers.time.increaseTo(votingDeadline);
+    // bad actor accepts proposal
+    await expect(habitatDiamond.acceptOrRejectTreasuryProposal(badProposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('treasury', badProposalId, addresses[0], daoETHBalance, '0x');
+    // at this point bad actor have to wait treasury execution delay period
+    // Treasury block
+
+    // the team recognize bad behaviour and decided to intervene
+    const moduleManagerDeciderAddress = await habitatDiamond.getModuleDecider("moduleManager");
+    expect(deciderSigners.address).eq(moduleManagerDeciderAddress);
+
+    // let's simulate the gnosis offchain decision process by executing from
+    // gnosis safe address
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+    await helpers.impersonateAccount(gnosisSafe);
+    const impersonatedGnosisSafe = await ethers.getSigner(gnosisSafe);
+    const habitatDAOGnosisSigner = habitatDiamond.connect(impersonatedGnosisSafe);
+
+    // we are able to call batched tx (includes proposal creation, decision, execution stages)
+    const switchProposalId = await habitatDAOGnosisSigner.callStatic.switchModuleDeciderInitProposal("treasury", deciderSigners.address);
+
+    // let's switch decider for our Treasury module to Signers
+    await expect(habitatDAOGnosisSigner.switchModuleDeciderBatchedExecution("treasury", deciderSigners.address))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('moduleManager', switchProposalId);
+
+    // let's prove that treasury now has another decider
+    treasuryDeciderAddress = await habitatDiamond.getModuleDecider("treasury");
+    expect(treasuryDeciderAddress).eq(deciderSigners.address);
+
+    // Treasury block
+    // bad actor have not noticed that we switched the decider and waits delay
+    const proposal = await habitatDiamond.getModuleProposal("treasury", badProposalId);
+    await helpers.time.increaseTo(proposal.executionTimestamp);
+    // he finally executes his proposal
+    await expect(habitatDiamond.executeTreasuryProposal(badProposalId))
+      .to.revertedWith("Decider: Proposal cannot be executed.");
+    // Treasury block
+
+    // TODO as proposal data stuck forever - we need the method to clean our storage
+
+    // let's prove that ETH is still inside dao treasury
+    const daoETHBalanceNow = await ethers.provider.getBalance(habitatDiamond.address);
+    expect(daoETHBalanceNow).to.eq(daoETHBalance);
+
+  });
+
+  it('ModuleManager/Signers: should be able to execute addNewModuleWithFacets proposal', async function () {
+    const {habitatDiamond, deciderSigners, deciderVotingPower, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our ModuleManager functionality (Decision type: Signers)
+    // addNewModuleWithFacets method
+    // this method is able to add new module with facets, e.i.
+    // only adding new module and pure functionality that does not need any new storage
+    // Current implementation requires careful usage with strict algorithm:
+    // the decision type has to be set as Signers (can any be set, but it's mistake
+    // because e.g. Voting Power requires to write values to dao storage, which better
+    // could be done with ModuleManager method addNewModuleWithFacetsAndStateUpdate)
+    // if planning to use different decision type - better to use method
+    // addNewModuleWithFacetsAndStateUpdate or after adding with Signers decisions
+    // type, Governance module has to be used to set the specific decision data
+    // for this type (if required, e.i. the case for Voting Power) and only after that
+    // switchModuleDecider can be called. If not using strictly algorithm above and
+    // set Voting Power as a decision type as an input to this method,
+    // it will have no values and anyone can make any decisions.
+    // Also, the facets must be reviewed first - their implementation must include
+    // LibDecisionProcess.sol same way as current modules.
+
+    // testing case:
+    //   idea is to add new module named PieceTokenDistributor (Signers), which has
+    //   functionality to distribute Peace erc20 tokens by minting (does not require
+    //   any dao storage, only pure functionality). Peace ERC20 totalSupply is 0,
+    //   only HabitatDAO can mint. Core module method is peaceDistribution, which
+    //   takes arrays of receivers and respective amounts and if proposal is
+    //   executed than mints new Peace tokens using proposal distribution rule.
+
+    // preparation work: deploy Peace token and PeaceTokenDistributorFacet
+    const PeaceTest = await ethers.getContractFactory('PeaceTest');
+    // put or dao address as the only minter
+    const peaceToken = await PeaceTest.deploy("PeaceToken", "Peace", habitatDiamond.address);
+    await peaceToken.deployed();
+
+    const PeaceTokenDistributorFacetTest = await ethers.getContractFactory('PeaceTokenDistributorFacetTest');
+    const peaceDistributorFacet = await PeaceTokenDistributorFacetTest.deploy(peaceToken.address);
+    await peaceDistributorFacet.deployed();
+    const signatures = Object.keys(peaceDistributorFacet.interface.functions)
+    const peaceDistributorFacetSelectors = signatures.reduce((acc, val) => {
+      acc.push(peaceDistributorFacet.interface.getSighash(val))
+      return acc
+    }, []);
+
+    // let's simulate the gnosis offchain decision process by executing from
+    // gnosis safe address
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+    await helpers.impersonateAccount(gnosisSafe);
+    const impersonatedGnosisSafe = await ethers.getSigner(gnosisSafe);
+    const habitatDAOGnosisSigner = habitatDiamond.connect(impersonatedGnosisSafe);
+
+    // let's get our management system and check that we have 5 modules now
+    let managementSystem = await habitatDiamond.getManagementSystemsHumanReadable();
+    expect(managementSystem.length).eq(5);
+    // let's prove that we don't have our new module
+    let moduleNames = await habitatDiamond.getModuleNames();
+    expect(moduleNames).to.not.include("PeaceTokenDistributor");
+
+    // first let's try to add module which has name > 31bytes
+    const newModuleParams = [
+      "verylongmodulenamethatisoutofhabitatbounds",
+      3,
+      deciderSigners.address,
+      [peaceDistributorFacet.address],
+      [peaceDistributorFacetSelectors]
+    ];
+    const longNameProposalId = await habitatDAOGnosisSigner.callStatic.addNewModuleWithFacetsInitProposal(
+      ...newModuleParams
+    );
+    // let's try to add very long name module
+    await expect(habitatDAOGnosisSigner.addNewModuleWithFacetsBatchedExecution(...newModuleParams))
+      .to.emit(habitatDiamond, "ProposalExecutedWithRevert")
+      .withArgs('moduleManager', longNameProposalId);
+    // the proposal with long name was reverted, let's prove that new facet is not here
+    const daoWithNewFacet = peaceDistributorFacet.attach(habitatDiamond.address).connect(impersonatedGnosisSafe);
+    await expect(daoWithNewFacet.peaceDistributionBatchedExecution(addresses, Array(addresses.length).fill(1000000)))
+      .to.be.revertedWith("Diamond: Function does not exist");
+
+    // let's finally add new module and facet
+    newModuleParams[0] = "PeaceTokenDistributor";
+    const proposalId = await habitatDAOGnosisSigner.callStatic.addNewModuleWithFacetsInitProposal(
+      ...newModuleParams
+    );
+    await expect(habitatDAOGnosisSigner.addNewModuleWithFacetsBatchedExecution(...newModuleParams))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('moduleManager', proposalId);
+
+    // at this point we have new module
+    // let's get our management system and check that we have 6 modules now
+    managementSystem = await habitatDiamond.getManagementSystemsHumanReadable();
+    expect(managementSystem.length).eq(6);
+    // let's prove that we have our new module
+    moduleNames = await habitatDiamond.getModuleNames();
+    expect(moduleNames).to.include("PeaceTokenDistributor");
+    const peaceTokenDecider = await habitatDiamond.getModuleDecider("PeaceTokenDistributor");
+    expect(peaceTokenDecider).to.eq(deciderSigners.address);
+
+    // CHECK EFFECTS
+    // as now we have new functionality let's execute Peace distribution
+    let peaceBalance3 = await peaceToken.balanceOf(addresses[3]);
+    expect(peaceBalance3).to.eq(0);
+    const distributionProposalId = await daoWithNewFacet.callStatic.createPeaceDistributionProposal(addresses, Array(addresses.length).fill(1000000));
+
+    await expect(daoWithNewFacet.peaceDistributionBatchedExecution(addresses, Array(addresses.length).fill(1000000)))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs("PeaceTokenDistributor", distributionProposalId);
+
+    peaceBalance3 = await peaceToken.balanceOf(addresses[3]);
+    expect(peaceBalance3).to.eq(1000000);
+  });
+
+  it('ModuleManager/Signers: should be able to execute addNewModuleWithFacetsAndStateUpdate proposal', async function () {
+    const {habitatDiamond, deciderSigners, deciderVotingPower, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our ModuleManager functionality (Decision type: Signers)
+    // addNewModuleWithFacetsAndStateUpdate method
+    // this method is able to add new module with facets + storage, e.i.
+    // adding new module and functionality and also writting data to dao storage
+    // The facets must be reviewed first - their implementation must include
+    // LibDecisionProcess.sol same way as current modules.
+
+    // testing case:
+    //   idea is to add new module named PeaceTokenDistributor (Voting Power), which has
+    //   functionality to distribute Peace erc20 tokens by minting (does not require
+    //   any dao storage, only pure functionality). Peace ERC20 totalSupply is 0,
+    //   only HabitatDAO can mint. Core module method is peaceDistribution, which
+    //   takes arrays of receivers and respective amounts and if proposal is
+    //   executed than mints new Peace tokens using proposal distribution rule.
+    //   Our new module does not require any specific state inside the dao, but
+    //   as decision type for PeaceTokenDistributor module will be Voting Power,
+    //   which requires config written to dao storage, we use SpecificDataInit to
+    //   initialize neccessary state.
+
+    // preparation work: deploy Peace token and PeaceTokenDistributorFacet
+    const PeaceTest = await ethers.getContractFactory('PeaceTest');
+    // put or dao address as the only minter
+    const peaceToken = await PeaceTest.deploy("PeaceToken", "Peace", habitatDiamond.address);
+    await peaceToken.deployed();
+
+    const PeaceTokenDistributorFacetTest = await ethers.getContractFactory('PeaceTokenDistributorFacetTest');
+    const peaceDistributorFacet = await PeaceTokenDistributorFacetTest.deploy(peaceToken.address);
+    await peaceDistributorFacet.deployed();
+    const signatures = Object.keys(peaceDistributorFacet.interface.functions)
+    const peaceDistributorFacetSelectors = signatures.reduce((acc, val) => {
+      acc.push(peaceDistributorFacet.interface.getSighash(val))
+      return acc
+    }, []);
+
+    // let's simulate the gnosis offchain decision process by executing from
+    // gnosis safe address
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+    await helpers.impersonateAccount(gnosisSafe);
+    const impersonatedGnosisSafe = await ethers.getSigner(gnosisSafe);
+    const habitatDAOGnosisSigner = habitatDiamond.connect(impersonatedGnosisSafe);
+
+    // let's get our management system and check that we have 5 modules now
+    let managementSystem = await habitatDiamond.getManagementSystemsHumanReadable();
+    expect(managementSystem.length).eq(5);
+    // let's prove that we don't have our new module
+    let moduleNames = await habitatDiamond.getModuleNames();
+    expect(moduleNames).to.not.include("PeaceTokenDistributor");
+
+    // first let's collect all params
+    const specificDataInit = await addressesProvider.getSpecificDataInit();
+    const iface = new ethers.utils.Interface(["function initVotingPowerSpecificData(string[],uint256[],uint256[],uint256[],uint256[])"]);
+    const initCallData = iface.encodeFunctionData(
+      'initVotingPowerSpecificData',
+      [
+        ["PeaceTokenDistributor"],
+        [10],
+        [100],
+        [3600],
+        [3600]
+      ]
+    );
+    const newModuleParams = [
+      "PeaceTokenDistributor",
+      2,
+      deciderVotingPower.address,
+      [peaceDistributorFacet.address],
+      [peaceDistributorFacetSelectors],
+      specificDataInit,
+      initCallData
+    ];
+    const proposalId = await habitatDAOGnosisSigner.callStatic.addNewModuleWithFacetsAndStateUpdateInitProposal(
+      ...newModuleParams
+    );
+
+    // let's add new module with facet and state update
+    await expect(habitatDAOGnosisSigner.addNewModuleWithFacetsAndStateUpdateBatchedExecution(...newModuleParams))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('moduleManager', proposalId);
+
+    // at this point we have new module
+    // let's get our management system and check that we have 6 modules now
+    managementSystem = await habitatDiamond.getManagementSystemsHumanReadable();
+    expect(managementSystem.length).eq(6);
+    // let's prove that we have our new module
+    moduleNames = await habitatDiamond.getModuleNames();
+    expect(moduleNames).to.include("PeaceTokenDistributor");
+    const peaceTokenDecider = await habitatDiamond.getModuleDecider("PeaceTokenDistributor");
+    expect(peaceTokenDecider).to.eq(deciderVotingPower.address);
+
+    // CHECK EFFECTS
+    // as now we have new functionality let's execute Peace distribution
+    const daoWithNewFacet = peaceDistributorFacet.attach(habitatDiamond.address).connect(accounts[0]);
+    let peaceBalance3 = await peaceToken.balanceOf(addresses[3]);
+    expect(peaceBalance3).to.eq(0);
+    const distributionProposalId = await daoWithNewFacet.callStatic.createPeaceDistributionProposal(addresses, Array(addresses.length).fill(1000000));
+
+    // let's create proposal to distribute peace
+    await expect(daoWithNewFacet.createPeaceDistributionProposal(addresses, Array(addresses.length).fill(1000000)))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs("PeaceTokenDistributor", distributionProposalId);
+    // as our signer has enough voting to accept proposal, let's move in future
+    const votingDeadline = await deciderVotingPower.getProposalVotingDeadlineTimestamp(
+      'PeaceTokenDistributor',
+      distributionProposalId
+    );
+    await helpers.time.increaseTo(votingDeadline);
+    // let's accept
+    const validCallData = peaceToken.interface.encodeFunctionData(
+      'mintPeaceMax500',
+      [
+        addresses,
+        Array(addresses.length).fill(1000000)
+      ]
+    )
+    await expect(daoWithNewFacet.acceptOrRejectPeaceDistributionProposal(distributionProposalId))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('PeaceTokenDistributor', distributionProposalId, peaceToken.address, 0, validCallData);
+    // let's move to timestamp when we can execute distribution proposal
+    const distributionProposal = await habitatDiamond.getModuleProposal(
+      'PeaceTokenDistributor',
+      distributionProposalId
+    );
+    await helpers.time.increaseTo(distributionProposal.executionTimestamp);
+
+    await expect(daoWithNewFacet.executePeaceDistributionProposal(distributionProposalId))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('PeaceTokenDistributor', distributionProposalId);
+
+    peaceBalance3 = await peaceToken.balanceOf(addresses[3]);
+    expect(peaceBalance3).to.eq(1000000);
+  });
+
+  it('ModuleManager/Signers: should be able to execute removeModule proposal', async function () {
+    const {habitatDiamond, deciderSigners, deciderVotingPower, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our ModuleManager functionality (Decision type: Signers)
+    // removeModule method
+    // this method is able to remove any existing module.
+
+    // testing case:
+    //   remove Treasury module
+    // notice:
+    //   facets are still here (not working), but not removed
+    //   make sense to implement module facets as part of module
+
+    // let's simulate the gnosis offchain decision process by executing from
+    // gnosis safe address
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+    await helpers.impersonateAccount(gnosisSafe);
+    const impersonatedGnosisSafe = await ethers.getSigner(gnosisSafe);
+    const habitatDAOGnosisSigner = habitatDiamond.connect(impersonatedGnosisSafe);
+
+    // let's remove Treasury module
+    const removeTreasuryProposalId = await habitatDAOGnosisSigner.callStatic.removeModuleInitProposal("treasury");
+
+    await expect(habitatDAOGnosisSigner.removeModuleBatchedExecution("treasury"))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('moduleManager', removeTreasuryProposalId);
+
+    // let's prove that Treasury module is removed
+    await expect(habitatDiamond.getModuleDecider("treasury"))
+      .to.be.revertedWith("Management system does not exist within DAO.");
+    // let's try to make treasury proposal
+    await expect(habitatDiamond.createTreasuryProposal(addresses[0], ethers.constants.WeiPerEther, '0x'))
+      .to.be.revertedWith("Management system does not exist within DAO.");
+  });
+
+  it('ModuleManager/Signers: should be able to execute changeAddressesProvider proposal', async function () {
+    const {habitatDiamond, deciderSigners, deciderVotingPower, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our ModuleManager functionality (Decision type: Signers)
+    // changeAddressesProvider method
+    // this method is able to change addresses provider
+    // AddressesProvider is a trusted source of facets and init contracts that dao
+    // uses on deploying stage and facets upgrades
+
+    // testing case:
+    //   change AddressesProvider to random address
+    //   go through Signers onchain decision process
+
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+
+    // first impersonate gnosis signers accounts
+    const iface = new ethers.utils.Interface(["function getOwners() view returns(address[])", "function getThreshold() view returns(uint256)"]);
+    const gnosisInstance = new ethers.Contract(gnosisSafe, iface, signer);
+    const signers = await gnosisInstance.getOwners();
+    const threshold = await gnosisInstance.getThreshold();
+
+    const impersonatedSigners = [];
+    for (let i = 0; i < threshold; i++) {
+      await helpers.impersonateAccount(signers[i]);
+      const signer = await ethers.getSigner(signers[i]);
+      impersonatedSigners.push(signer);
+    }
+
+    const newAddressesProvider = ethers.Wallet.createRandom().address;
+    // let's initiate proposal to change addresses provider
+    const nextMMProposal = (await habitatDiamond.getModuleProposalsCount("moduleManager")).add(1);
+    await expect(habitatDiamond.connect(impersonatedSigners[0]).changeAddressesProviderInitProposal(newAddressesProvider))
+      .to.emit(habitatDiamond, "ProposalCreated")
+      .withArgs('moduleManager', nextMMProposal);
+    // now we have to decide on the proposal (each signer has to send his "decide" tx)
+    for (let i = 1; i < threshold; i++) {
+      await expect(habitatDiamond.connect(impersonatedSigners[i]).decideOnModuleManagerProposal(nextMMProposal, true))
+        .to.emit(deciderSigners, "Decided")
+        .withArgs(impersonatedSigners[i].address, "moduleManager", nextMMProposal, true)
+    }
+    // after everyone decided, let's accept proposal
+    const moduleManagerMethods = await habitatDiamond.getModuleManagerMethods();
+    const ifaceM = new ethers.utils.Interface(["function changeAddressesProvider(address)"]);
+    const callData = ifaceM.encodeFunctionData(
+      'changeAddressesProvider',
+      [
+        newAddressesProvider
+      ]
+    );
+    await expect(habitatDiamond.acceptOrRejectModuleManagerProposal(nextMMProposal))
+      .to.emit(habitatDiamond, "ProposalAccepted")
+      .withArgs('moduleManager', nextMMProposal, moduleManagerMethods, 0, callData);
+
+    // let's execute proposal
+    await expect(habitatDiamond.executeModuleManagerProposal(nextMMProposal))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('moduleManager', nextMMProposal);
+    // let's prove that we have new addresses provider
+    const currentAddressesProvider = await habitatDiamond.getAddressesProvider();
+    expect(currentAddressesProvider).to.eq(newAddressesProvider);
+  });
+
+
+  it('ModuleManager/Signers: should be able to execute diamondCut proposal', async function () {
+    const {habitatDiamond, deciderSigners, deciderVotingPower, addressesProvider, accounts, addresses} = await helpers.loadFixture(deployDAOAndDistributeAndVPEnoughForGovernanceFixture);
+    // testing our ModuleManager functionality (Decision type: Signers)
+    // diamondCut method
+    // this method is general from EIP2535, allows to make diamond cut, e.i.
+    // add/remove/replace facets and initialize/rewrite storage values
+
+    // testing case:
+    //   let's remove daoViewerFacet using diamondCut without removing storage
+
+    // let's simulate the gnosis offchain decision process by executing from
+    // gnosis safe address
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+    await helpers.impersonateAccount(gnosisSafe);
+    const impersonatedGnosisSafe = await ethers.getSigner(gnosisSafe);
+    const habitatDAOGnosisSigner = habitatDiamond.connect(impersonatedGnosisSafe);
+
+    // dao viewer facet
+    const daoViewerFacet = await addressesProvider.getDAOViewerFacet();
+
+    // let's prove that dao viewer facet is part of dao at this stage
+    const daoName = await habitatDiamond.getDAOName();
+    expect(daoName).to.eq("HabitatDAO");
+
+    // let's prepare params for diamondCut proposal to remove dao viewer facet
+    const diamondCut = [
+      {
+        facetAddress: "0x0000000000000000000000000000000000000000",
+        action: 2,
+        functionSelectors: daoViewerFacet.functionSelectors
+      }
+    ];
+
+    const proposalId = await habitatDAOGnosisSigner.callStatic.diamondCutInitProposal(
+      diamondCut,
+      "0x0000000000000000000000000000000000000000",
+      "0x"
+    );
+
+    // let's make a diamondCut
+    await expect(habitatDAOGnosisSigner.diamondCutBatchedExecution(diamondCut,"0x0000000000000000000000000000000000000000","0x"))
+      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .withArgs('moduleManager', proposalId);
+
+    // let's prove that our dao does not have dao viewer facet anymore
+    await expect(habitatDiamond.getDAOName())
+      .to.be.revertedWith("Diamond: Function does not exist");
+  });
+
 });
