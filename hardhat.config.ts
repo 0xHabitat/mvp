@@ -1,7 +1,7 @@
 import { task, HardhatUserConfig } from 'hardhat/config';
 import '@nomiclabs/hardhat-waffle';
 // {"alchemyToken": "tokenItself"}
-import {alchemyToken} from './alchemyToken.json';
+import { alchemyToken } from './alchemyToken.json';
 
 // This adds support for typescript paths mappings
 import 'tsconfig-paths/register';
@@ -20,8 +20,8 @@ task('accounts', 'Prints the list of accounts', async (args, hre) => {
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
-const goerli = "https://eth-goerli.g.alchemy.com/v2/";
-const optimism = "https://opt-mainnet.g.alchemy.com/v2/";
+const goerli = 'https://eth-goerli.g.alchemy.com/v2/';
+const optimism = 'https://opt-mainnet.g.alchemy.com/v2/';
 const config = {
   defaultNetwork: 'localhost',
   networks: {
@@ -32,7 +32,7 @@ const config = {
       forking: {
         url: optimism + alchemyToken,
       },
-      timeout: 100000
+      timeout: 100000,
     },
   },
   solidity: '0.8.9',
