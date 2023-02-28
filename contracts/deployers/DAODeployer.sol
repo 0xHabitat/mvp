@@ -12,12 +12,11 @@ interface IOwnership {
 }
 
 contract DAODeployer {
-
   function deployDAO(
     address addressesProvider,
     IDAO.DAOMeta memory daoMetaData,
     bytes memory msCallData
-  ) external returns(address) {
+  ) external returns (address) {
     HabitatDiamond dao = new HabitatDiamond(addressesProvider, daoMetaData, msCallData);
 
     IOwnership(address(dao)).transferOwnership(msg.sender);

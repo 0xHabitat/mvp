@@ -10,7 +10,7 @@ contract VotingPowerManagerDeployer {
     address _nfPositionManager,
     address _governanceToken,
     address[] memory _legalPairTokens
-  ) external returns(address) {
+  ) external returns (address) {
     StakeContractERC20UniV3 stakeContract = new StakeContractERC20UniV3(
       _nfPositionManager,
       _governanceToken,
@@ -19,5 +19,4 @@ contract VotingPowerManagerDeployer {
     emit VotingPowerManagerERC20UniV3Deployed(address(stakeContract));
     return address(stakeContract);
   }
-
 }

@@ -27,15 +27,15 @@ contract DAOViewerFacetTest is DAOViewerFacet {
     return "new dao socials";
   }
 
-  function newDAOViewerFunction1() external view returns(uint256) {
+  function newDAOViewerFunction1() external view returns (uint256) {
     return 256;
   }
 
-  function newDAOViewerFunction2() external view returns(string memory) {
+  function newDAOViewerFunction2() external view returns (string memory) {
     return "some another new string";
   }
 
-  function readNewDAOState() external view returns(string memory) {
+  function readNewDAOState() external view returns (string memory) {
     DAOStorage storage ds = daoStorage();
     return ds.newString;
   }

@@ -5,7 +5,6 @@ import {IDAO} from "../../interfaces/dao/IDAO.sol";
 import {LibDAOStorage} from "../../libraries/dao/LibDAOStorage.sol";
 
 contract DAOViewerFacet {
-
   function getDAOName() external view returns (string memory) {
     return LibDAOStorage._getDAOName();
   }
@@ -22,19 +21,13 @@ contract DAOViewerFacet {
     return LibDAOStorage._getDAOSocials();
   }
 
-  function getDAOAddressesProvider() external view returns(address) {
+  function getDAOAddressesProvider() external view returns (address) {
     return LibDAOStorage._getDAOAddressesProvider();
   }
 
-  function hasSubDAOs() external view returns (bool) {
+  function hasSubDAOs() external view returns (bool) {}
 
-  }
+  function getCreatedSubDAOs() external view returns (address[] memory) {}
 
-  function getCreatedSubDAOs() external view returns (address[] memory) {
-
-  }
-
-  function isMainDAOFor(address _subDAO) external view returns (bool) {
-
-  }
+  function isMainDAOFor(address _subDAO) external view returns (bool) {}
 }

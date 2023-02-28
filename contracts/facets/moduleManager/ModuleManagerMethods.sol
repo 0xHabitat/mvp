@@ -53,5 +53,4 @@ contract ModuleManagerMethods {
   ) external {
     LibHabitatDiamond.diamondCut(_diamondCut, _init, _calldata);
   }
-
 }

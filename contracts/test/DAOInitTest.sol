@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import {DAOInit} from "../upgradeInitializers/DAOInit.sol";
 
-
 contract DAOInitTest is DAOInit {
   bytes32 constant DAO_STORAGE_POSITION = keccak256("habitat.diamond.standard.dao.storage");
 
@@ -24,11 +23,8 @@ contract DAOInitTest is DAOInit {
     }
   }
 
-  function initNewStringInDAOStorage(
-    string memory _newString
-  ) external {
+  function initNewStringInDAOStorage(string memory _newString) external {
     DAOStorage storage daoStruct = daoStorage();
     daoStruct.newString = _newString;
   }
-
 }

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 interface IDecider {
-
   enum DecisionType {
     None,
     OnlyOwner,
@@ -12,22 +11,22 @@ interface IDecider {
     //BountyCreation - gardener, worker, reviewer - 3 signers
   }
 
-  function isSetupComplete() external returns(bool);
+  function isSetupComplete() external returns (bool);
 
-  function deciderType() external returns(DecisionType);
+  function deciderType() external returns (DecisionType);
 
-  function directCaller() external returns(address);
+  function directCaller() external returns (address);
 
   function isCallerAllowedToCreateProposal(
     address caller,
     bytes memory specificData
-  ) external returns(bool allowed, string memory reason);
+  ) external returns (bool allowed, string memory reason);
 
   function initiateDecisionProcess(
     string memory msName,
     uint256 proposalId,
     bytes memory specificData
-  ) external returns(uint256 executionTimestamp);
+  ) external returns (uint256 executionTimestamp);
 
   function decideOnProposal(
     string memory msName,
@@ -36,19 +35,19 @@ interface IDecider {
     bool decision
   ) external;
 
-  function isDirectCallerSetup() external returns(bool);
+  function isDirectCallerSetup() external returns (bool);
 
-  function directCallerExecutionTimestamp(bytes memory specificData) external returns(uint256);
+  function directCallerExecutionTimestamp(bytes memory specificData) external returns (uint256);
 
   function acceptOrRejectProposal(
     string memory msName,
     uint256 proposalId,
     bytes memory specificData
-  ) external returns(bool);
+  ) external returns (bool);
 
   function executeProposal(
     string memory msName,
     uint256 proposalId,
     bytes4 funcSelector
-  ) external returns(bool);
+  ) external returns (bool);
 }

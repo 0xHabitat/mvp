@@ -22,7 +22,7 @@ contract ModuleManagerFacet {
     moduleManagerMethods = _moduleManagerMethods;
   }
 
-  function getModuleManagerMethods() external view returns(address) {
+  function getModuleManagerMethods() external view returns (address) {
     return moduleManagerMethods;
   }
 
@@ -32,7 +32,7 @@ contract ModuleManagerFacet {
   ) public returns (uint256 proposalId) {
     bytes memory validCallData;
     if (moduleManagerAction == ModuleManagerAction.SwitchModuleDecider) {
-      (string memory msName, address newDecider) = abi.decode(callData, (string,address));
+      (string memory msName, address newDecider) = abi.decode(callData, (string, address));
       bytes4 switchModuleDecider = bytes4(keccak256(bytes("switchModuleDecider(string,address)")));
       validCallData = abi.encodeWithSelector(switchModuleDecider, msName, newDecider);
     } else if (moduleManagerAction == ModuleManagerAction.AddNewModule) {
@@ -42,8 +42,10 @@ contract ModuleManagerFacet {
         address deciderAddress,
         address[] memory facetAddresses,
         bytes4[][] memory facetSelectors
-      ) = abi.decode(callData, (string,uint8,address,address[],bytes4[][]));
-      bytes4 addNewModuleWithFacets = bytes4(keccak256(bytes("addNewModuleWithFacets(string,uint8,address,address[],bytes4[][])")));
+      ) = abi.decode(callData, (string, uint8, address, address[], bytes4[][]));
+      bytes4 addNewModuleWithFacets = bytes4(
+        keccak256(bytes("addNewModuleWithFacets(string,uint8,address,address[],bytes4[][])"))
+      );
       validCallData = abi.encodeWithSelector(
         addNewModuleWithFacets,
         msName,
@@ -61,8 +63,14 @@ contract ModuleManagerFacet {
         bytes4[][] memory facetSelectors,
         address initAddress,
         bytes memory _callData
-      ) = abi.decode(callData, (string,uint8,address,address[],bytes4[][],address,bytes));
-      bytes4 addNewModuleWithFacetsAndStateUpdate = bytes4(keccak256(bytes("addNewModuleWithFacetsAndStateUpdate(string,uint8,address,address[],bytes4[][],address,bytes)")));
+      ) = abi.decode(callData, (string, uint8, address, address[], bytes4[][], address, bytes));
+      bytes4 addNewModuleWithFacetsAndStateUpdate = bytes4(
+        keccak256(
+          bytes(
+            "addNewModuleWithFacetsAndStateUpdate(string,uint8,address,address[],bytes4[][],address,bytes)"
+          )
+        )
+      );
       validCallData = abi.encodeWithSelector(
         addNewModuleWithFacetsAndStateUpdate,
         msName,
@@ -74,43 +82,46 @@ contract ModuleManagerFacet {
         _callData
       );
     } else if (moduleManagerAction == ModuleManagerAction.RemoveModule) {
-      (string memory msName) = abi.decode(callData, (string));
+      string memory msName = abi.decode(callData, (string));
       bytes4 removeModule = bytes4(keccak256(bytes("removeModule(string)")));
       validCallData = abi.encodeWithSelector(removeModule, msName);
     } else if (moduleManagerAction == ModuleManagerAction.ChangeAddressesProvider) {
-      (address newAddressesProvider) = abi.decode(callData, (address));
+      address newAddressesProvider = abi.decode(callData, (address));
       bytes4 changeAddressesProvider = bytes4(keccak256(bytes("changeAddressesProvider(address)")));
       validCallData = abi.encodeWithSelector(changeAddressesProvider, newAddressesProvider);
     } else if (moduleManagerAction == ModuleManagerAction.DiamondCut) {
-      (
-        IDiamondCut.FacetCut[] memory _diamondCut,
-        address _init,
-        bytes memory _calldata
-      ) = abi.decode(callData, (IDiamondCut.FacetCut[],address,bytes));
-      bytes4 diamondCut = bytes4(keccak256(bytes("diamondCut((address,uint8,bytes4[])[],address,bytes)")));
-      validCallData = abi.encodeWithSelector(
-        diamondCut,
-        _diamondCut,
-        _init,
-        _calldata
+      (IDiamondCut.FacetCut[] memory _diamondCut, address _init, bytes memory _calldata) = abi
+        .decode(callData, (IDiamondCut.FacetCut[], address, bytes));
+      bytes4 diamondCut = bytes4(
+        keccak256(bytes("diamondCut((address,uint8,bytes4[])[],address,bytes)"))
       );
+      validCallData = abi.encodeWithSelector(diamondCut, _diamondCut, _init, _calldata);
     } else {
       revert("No valid ModuleManager action was requested.");
     }
-    proposalId = LibDecisionProcess.createProposal("moduleManager", moduleManagerMethods, 0, validCallData);
+    proposalId = LibDecisionProcess.createProposal(
+      "moduleManager",
+      moduleManagerMethods,
+      0,
+      validCallData
+    );
   }
 
-  function decideOnModuleManagerProposal(uint256 proposalId, bool decision) public  {
+  function decideOnModuleManagerProposal(uint256 proposalId, bool decision) public {
     LibDecisionProcess.decideOnProposal("moduleManager", proposalId, decision);
   }
 
-  function acceptOrRejectModuleManagerProposal(uint256 proposalId) public  {
+  function acceptOrRejectModuleManagerProposal(uint256 proposalId) public {
     LibDecisionProcess.acceptOrRejectProposal("moduleManager", proposalId);
   }
 
-  function executeModuleManagerProposal(uint256 proposalId) public  returns (bool result) {
+  function executeModuleManagerProposal(uint256 proposalId) public returns (bool result) {
     bytes4 thisSelector = bytes4(keccak256(bytes("executeModuleManagerProposal(uint256)")));
-    result = LibDecisionProcess.executeProposalDelegateCall("moduleManager", proposalId, thisSelector);
+    result = LibDecisionProcess.executeProposalDelegateCall(
+      "moduleManager",
+      proposalId,
+      thisSelector
+    );
   }
 
   // few wrappers
@@ -118,7 +129,7 @@ contract ModuleManagerFacet {
   function switchModuleDeciderInitProposal(
     string memory msName,
     address newDecider
-  ) public returns(uint256 proposalId) {
+  ) public returns (uint256 proposalId) {
     bytes memory callData = abi.encode(msName, newDecider);
     proposalId = createModuleManagerProposal(ModuleManagerAction.SwitchModuleDecider, callData);
   }
@@ -129,7 +140,7 @@ contract ModuleManagerFacet {
     address deciderAddress,
     address[] memory facetAddresses,
     bytes4[][] memory facetSelectors
-  ) public returns(uint256 proposalId) {
+  ) public returns (uint256 proposalId) {
     bytes memory callData = abi.encode(
       msName,
       decisionType,
@@ -148,7 +159,7 @@ contract ModuleManagerFacet {
     bytes4[][] memory facetSelectors,
     address initAddress,
     bytes memory _callData
-  ) public returns(uint256 proposalId) {
+  ) public returns (uint256 proposalId) {
     bytes memory callData = abi.encode(
       msName,
       decisionType,
@@ -158,15 +169,20 @@ contract ModuleManagerFacet {
       initAddress,
       _callData
     );
-    proposalId = createModuleManagerProposal(ModuleManagerAction.AddNewModuleAndStateUpdate, callData);
+    proposalId = createModuleManagerProposal(
+      ModuleManagerAction.AddNewModuleAndStateUpdate,
+      callData
+    );
   }
 
-  function removeModuleInitProposal(string memory msName) public returns(uint256 proposalId) {
+  function removeModuleInitProposal(string memory msName) public returns (uint256 proposalId) {
     bytes memory callData = abi.encode(msName);
     proposalId = createModuleManagerProposal(ModuleManagerAction.RemoveModule, callData);
   }
 
-  function changeAddressesProviderInitProposal(address newAddressesProvider) public returns(uint256 proposalId) {
+  function changeAddressesProviderInitProposal(
+    address newAddressesProvider
+  ) public returns (uint256 proposalId) {
     bytes memory callData = abi.encode(newAddressesProvider);
     proposalId = createModuleManagerProposal(ModuleManagerAction.ChangeAddressesProvider, callData);
   }
@@ -175,12 +191,8 @@ contract ModuleManagerFacet {
     IDiamondCut.FacetCut[] memory _diamondCut,
     address _init,
     bytes memory _calldata
-  ) public returns(uint256 proposalId) {
-    bytes memory callData = abi.encode(
-      _diamondCut,
-      _init,
-      _calldata
-    );
+  ) public returns (uint256 proposalId) {
+    bytes memory callData = abi.encode(_diamondCut, _init, _calldata);
     proposalId = createModuleManagerProposal(ModuleManagerAction.DiamondCut, callData);
   }
 
@@ -188,7 +200,7 @@ contract ModuleManagerFacet {
   function batchedModuleManagerProposalExecution(
     ModuleManagerAction moduleManagerAction,
     bytes memory callData
-  ) public returns(bool result) {
+  ) public returns (bool result) {
     uint256 proposalId = createModuleManagerProposal(moduleManagerAction, callData);
     acceptOrRejectModuleManagerProposal(proposalId);
     result = executeModuleManagerProposal(proposalId);
@@ -197,7 +209,7 @@ contract ModuleManagerFacet {
   function switchModuleDeciderBatchedExecution(
     string memory msName,
     address newDecider
-  ) public returns(bool result) {
+  ) public returns (bool result) {
     uint256 proposalId = switchModuleDeciderInitProposal(msName, newDecider);
     acceptOrRejectModuleManagerProposal(proposalId);
     result = executeModuleManagerProposal(proposalId);
@@ -209,7 +221,7 @@ contract ModuleManagerFacet {
     address deciderAddress,
     address[] memory facetAddresses,
     bytes4[][] memory facetSelectors
-  ) public returns(bool result) {
+  ) public returns (bool result) {
     uint256 proposalId = addNewModuleWithFacetsInitProposal(
       msName,
       decisionType,
@@ -229,7 +241,7 @@ contract ModuleManagerFacet {
     bytes4[][] memory facetSelectors,
     address initAddress,
     bytes memory _callData
-  ) public returns(bool result) {
+  ) public returns (bool result) {
     uint256 proposalId = addNewModuleWithFacetsAndStateUpdateInitProposal(
       msName,
       decisionType,
@@ -243,13 +255,15 @@ contract ModuleManagerFacet {
     result = executeModuleManagerProposal(proposalId);
   }
 
-  function removeModuleBatchedExecution(string memory msName) public returns(bool result) {
+  function removeModuleBatchedExecution(string memory msName) public returns (bool result) {
     uint256 proposalId = removeModuleInitProposal(msName);
     acceptOrRejectModuleManagerProposal(proposalId);
     result = executeModuleManagerProposal(proposalId);
   }
 
-  function changeAddressesProviderBatchedExecution(address newAddressesProvider) public returns(bool result) {
+  function changeAddressesProviderBatchedExecution(
+    address newAddressesProvider
+  ) public returns (bool result) {
     uint256 proposalId = changeAddressesProviderInitProposal(newAddressesProvider);
     acceptOrRejectModuleManagerProposal(proposalId);
     result = executeModuleManagerProposal(proposalId);
@@ -259,12 +273,12 @@ contract ModuleManagerFacet {
     IDiamondCut.FacetCut[] memory _diamondCut,
     address _init,
     bytes memory _calldata
-  ) public  returns(bool result) {
+  ) public returns (bool result) {
     uint256 proposalId = diamondCutInitProposal(_diamondCut, _init, _calldata);
     acceptOrRejectModuleManagerProposal(proposalId);
     result = executeModuleManagerProposal(proposalId);
   }
-/*
+  /*
   // MULTI PROPOSALS
   function createSeveralModuleManagerProposals(
     ModuleManagerAction[] calldata moduleManagerActions,

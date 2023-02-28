@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 interface IVotingPower {
-
   // increasing voting power
   function increaseVotingPower(address voter, uint256 amount) external;
 
@@ -24,13 +23,13 @@ interface IVotingPower {
 
   function getMaxAmountOfVotingPower() external view returns (uint256);
 
-  function getTimestampToUnstake(address staker) external view returns(uint256);
+  function getTimestampToUnstake(address staker) external view returns (uint256);
 
-  function getDelegatee(address delegator) external view returns(address);
+  function getDelegatee(address delegator) external view returns (address);
 
-  function getAmountOfDelegatedVotingPower(address delegator) external view returns(uint256);
+  function getAmountOfDelegatedVotingPower(address delegator) external view returns (uint256);
 
-  function getFreezeAmountOfVotingPower(address delegator) external view returns(uint256);
+  function getFreezeAmountOfVotingPower(address delegator) external view returns (uint256);
 
-  function getUnfreezeTimestamp(address delegator) external view returns(uint256);
+  function getUnfreezeTimestamp(address delegator) external view returns (uint256);
 }

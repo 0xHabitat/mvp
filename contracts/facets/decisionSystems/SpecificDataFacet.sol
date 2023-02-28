@@ -5,7 +5,6 @@ import {LibDecisionSystemSpecificData} from "../../libraries/decisionSystem/LibD
 import {VotingPowerSpecificData, SignerSpecificData} from "../../interfaces/decisionSystem/SpecificDataStructs.sol";
 
 contract SpecificDataFacet {
-
   function thresholdForProposalNumerator(string memory msName) external view returns (uint256) {
     return LibDecisionSystemSpecificData._getThresholdForProposalNumerator(msName);
   }
@@ -14,23 +13,31 @@ contract SpecificDataFacet {
     return LibDecisionSystemSpecificData._getThresholdForInitiatorNumerator(msName);
   }
 
-  function getSecondsProposalVotingPeriod(string memory msName) external view returns(uint256) {
+  function getSecondsProposalVotingPeriod(string memory msName) external view returns (uint256) {
     return LibDecisionSystemSpecificData._getSecondsProposalVotingPeriod(msName);
   }
 
-  function getSecondsProposalExecutionDelayPeriodVP(string memory msName) external view returns(uint256) {
+  function getSecondsProposalExecutionDelayPeriodVP(
+    string memory msName
+  ) external view returns (uint256) {
     return LibDecisionSystemSpecificData._getSecondsProposalExecutionDelayPeriodVP(msName);
   }
 
-  function getSecondsProposalExecutionDelayPeriodSigners(string memory msName) external view returns(uint256) {
+  function getSecondsProposalExecutionDelayPeriodSigners(
+    string memory msName
+  ) external view returns (uint256) {
     return LibDecisionSystemSpecificData._getSecondsProposalExecutionDelayPeriodSigners(msName);
   }
 
-  function getMSVotingPowerSpecificData(string memory msName) external view returns(VotingPowerSpecificData memory vpsd) {
+  function getMSVotingPowerSpecificData(
+    string memory msName
+  ) external view returns (VotingPowerSpecificData memory vpsd) {
     return LibDecisionSystemSpecificData._getMSVotingPowerSpecificData(msName);
   }
 
-  function getMSSignersSpecificData(string memory msName) external view returns(SignerSpecificData memory ssd) {
+  function getMSSignersSpecificData(
+    string memory msName
+  ) external view returns (SignerSpecificData memory ssd) {
     return LibDecisionSystemSpecificData._getMSSignersSpecificData(msName);
   }
 }

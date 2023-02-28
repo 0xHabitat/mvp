@@ -5,7 +5,6 @@ import {IDecider} from "../interfaces/decisionSystem/IDecider.sol";
 import {DeciderVotingPower} from "../external/deciders/DeciderVotingPower.sol";
 
 contract DeciderVotingPowerDeployer {
-
   event DeciderVotingPowerDeployed(address indexed deciderVotingPower);
 
   function deployDeciderVotingPower(
@@ -13,7 +12,7 @@ contract DeciderVotingPowerDeployer {
     address _daoSetter,
     address _stakeContract,
     uint256 _precision
-  ) external returns(address) {
+  ) external returns (address) {
     DeciderVotingPower deciderVotingPower = new DeciderVotingPower(
       _dao,
       _daoSetter,

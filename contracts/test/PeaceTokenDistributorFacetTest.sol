@@ -3,8 +3,7 @@ pragma solidity ^0.8.9;
 
 import {LibDecisionProcess} from "../libraries/decisionSystem/LibDecisionProcess.sol";
 
-contract PeaceTokenDistributorFacetTest  {
-
+contract PeaceTokenDistributorFacetTest {
   address immutable peace;
 
   constructor(address _peace) {
@@ -30,13 +29,17 @@ contract PeaceTokenDistributorFacetTest  {
 
   function executePeaceDistributionProposal(uint256 proposalId) public returns (bool result) {
     bytes4 thisSelector = bytes4(keccak256(bytes("executePeaceDistributionProposal(uint256)")));
-    result = LibDecisionProcess.executeProposalCall("PeaceTokenDistributor", proposalId, thisSelector);
+    result = LibDecisionProcess.executeProposalCall(
+      "PeaceTokenDistributor",
+      proposalId,
+      thisSelector
+    );
   }
 
   function peaceDistributionBatchedExecution(
     address[] memory receivers,
     uint256[] memory amounts
-  ) external returns(bool result) {
+  ) external returns (bool result) {
     uint256 proposalId = createPeaceDistributionProposal(receivers, amounts);
     acceptOrRejectPeaceDistributionProposal(proposalId);
     result = executePeaceDistributionProposal(proposalId);

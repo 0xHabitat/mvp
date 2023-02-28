@@ -28,7 +28,7 @@ interface ISubDAO {
   function isSubDAOOf(address _mainDAO) external view returns (bool);
 
   function isMainDAOFor(address _subDAO) external view returns (bool);
-/*
+  /*
   function getGovernanceVotingSystem() external view returns (IManagementSystem.VotingSystem);
 
   function getTreasuryVotingSystem() external view returns (IManagementSystem.VotingSystem);

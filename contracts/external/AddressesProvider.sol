@@ -3,28 +3,30 @@ pragma solidity ^0.8.9;
 
 import {IAddressesProvider} from "../interfaces/IAddressesProvider.sol";
 
-contract AddressesProvider is IAddressesProvider { // Registry - rename
+contract AddressesProvider is
+  IAddressesProvider // Registry - rename
+{
   address owner; // replace later with openzeppelin
 
   // Init identifiers
-  bytes32 private constant DIAMOND_INIT = 'DIAMOND_INIT';
-  bytes32 private constant DAO_INIT = 'DAO_INIT';
-  bytes32 private constant MANAGEMENT_SYSTEMS_INIT = 'MANAGEMENT_SYSTEMS_INIT';
-  bytes32 private constant SPECIFIC_DATA_INIT = 'SPECIFIC_DATA_INIT';
-  bytes32 private constant TEMPORARY_INIT = 'TEMPORARY_INIT';
+  bytes32 private constant DIAMOND_INIT = "DIAMOND_INIT";
+  bytes32 private constant DAO_INIT = "DAO_INIT";
+  bytes32 private constant MANAGEMENT_SYSTEMS_INIT = "MANAGEMENT_SYSTEMS_INIT";
+  bytes32 private constant SPECIFIC_DATA_INIT = "SPECIFIC_DATA_INIT";
+  bytes32 private constant TEMPORARY_INIT = "TEMPORARY_INIT";
 
   // later add facets
-  bytes32 private constant DIAMOND_CUT_FACET = 'DIAMOND_CUT_FACET';
-  bytes32 private constant OWNERSHIP_FACET = 'OWNERSHIP_FACET';
-  bytes32 private constant DIAMOND_LOUPE_FACET = 'DIAMOND_LOUPE_FACET';
-  bytes32 private constant DAO_VIEWER_FACET = 'DAO_VIEWER_FACET';
-  bytes32 private constant MODULE_VIEWER_FACET = 'MODULE_VIEWER_FACET';
-  bytes32 private constant MANAGEMENT_SYSTEM_FACET = 'MANAGEMENT_SYSTEM_FACET';
-  bytes32 private constant MODULE_MANAGER_FACET = 'MODULE_MANAGER_FACET';
-  bytes32 private constant GOVERNANCE_FACET = 'GOVERNANCE_FACET';
-  bytes32 private constant TREASURY_ACTIONS_FACET = 'TREASURY_ACTIONS_FACET';
-  bytes32 private constant TREASURY_DEFAULT_CALLBACK_FACET = 'TREASURY_DEFAULT_CALLBACK_FACET';
-  bytes32 private constant SPECIFIC_DATA_FACET = 'SPECIFIC_DATA_FACET';
+  bytes32 private constant DIAMOND_CUT_FACET = "DIAMOND_CUT_FACET";
+  bytes32 private constant OWNERSHIP_FACET = "OWNERSHIP_FACET";
+  bytes32 private constant DIAMOND_LOUPE_FACET = "DIAMOND_LOUPE_FACET";
+  bytes32 private constant DAO_VIEWER_FACET = "DAO_VIEWER_FACET";
+  bytes32 private constant MODULE_VIEWER_FACET = "MODULE_VIEWER_FACET";
+  bytes32 private constant MANAGEMENT_SYSTEM_FACET = "MANAGEMENT_SYSTEM_FACET";
+  bytes32 private constant MODULE_MANAGER_FACET = "MODULE_MANAGER_FACET";
+  bytes32 private constant GOVERNANCE_FACET = "GOVERNANCE_FACET";
+  bytes32 private constant TREASURY_ACTIONS_FACET = "TREASURY_ACTIONS_FACET";
+  bytes32 private constant TREASURY_DEFAULT_CALLBACK_FACET = "TREASURY_DEFAULT_CALLBACK_FACET";
+  bytes32 private constant SPECIFIC_DATA_FACET = "SPECIFIC_DATA_FACET";
 
   // Map of registered addresses (identifier => registeredAddress)
   mapping(bytes32 => address) private _addresses;
@@ -49,193 +51,179 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function facetAddressExist(address facet) public view override returns(bool) {
+  function facetAddressExist(address facet) public view override returns (bool) {
     bytes4[] memory selectors = getSelectors(facet);
     return selectors.length > 0;
   }
 
   /// @inheritdoc IAddressesProvider
-  function getInitForFacet(address facet) public view override returns(address) {
+  function getInitForFacet(address facet) public view override returns (address) {
     return _facetToInit[facet];
   }
 
   /// @inheritdoc IAddressesProvider
-  function getRemoveDiamondCutInit() external view override returns(address) {
+  function getRemoveDiamondCutInit() external view override returns (address) {
     return getAddress(TEMPORARY_INIT);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getDiamondInit() external view override returns(address) {
+  function getDiamondInit() external view override returns (address) {
     return getAddress(DIAMOND_INIT);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getDAOInit() external view override returns(address) {
+  function getDAOInit() external view override returns (address) {
     return getAddress(DAO_INIT);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getManagementSystemsInit() external view override returns(address) {
+  function getManagementSystemsInit() external view override returns (address) {
     return getAddress(MANAGEMENT_SYSTEMS_INIT);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getSpecificDataInit() external view override returns(address) {
+  function getSpecificDataInit() external view override returns (address) {
     return getAddress(SPECIFIC_DATA_INIT);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getDiamondCutFacetAddress() external view override returns(address) {
+  function getDiamondCutFacetAddress() external view override returns (address) {
     return getAddress(DIAMOND_CUT_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getDiamondCutFacet() external view override returns(Facet memory) {
+  function getDiamondCutFacet() external view override returns (Facet memory) {
     address diamondCutFacet = getAddress(DIAMOND_CUT_FACET);
-    return Facet({
-      facetAddress: diamondCutFacet,
-      functionSelectors: getSelectors(diamondCutFacet)
-    });
+    return Facet({facetAddress: diamondCutFacet, functionSelectors: getSelectors(diamondCutFacet)});
   }
 
   /// @inheritdoc IAddressesProvider
-  function getOwnershipFacetAddress() external view override returns(address) {
+  function getOwnershipFacetAddress() external view override returns (address) {
     return getAddress(OWNERSHIP_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getOwnershipFacet() external view override returns(Facet memory) {
+  function getOwnershipFacet() external view override returns (Facet memory) {
     address ownershipFacet = getAddress(OWNERSHIP_FACET);
-    return Facet({
-      facetAddress: ownershipFacet,
-      functionSelectors: getSelectors(ownershipFacet)
-    });
+    return Facet({facetAddress: ownershipFacet, functionSelectors: getSelectors(ownershipFacet)});
   }
 
   /// @inheritdoc IAddressesProvider
-  function getDiamondLoupeFacetAddress() external view override returns(address) {
+  function getDiamondLoupeFacetAddress() external view override returns (address) {
     return getAddress(DIAMOND_LOUPE_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getDiamondLoupeFacet() external view override returns(Facet memory) {
+  function getDiamondLoupeFacet() external view override returns (Facet memory) {
     address diamondLoupeFacet = getAddress(DIAMOND_LOUPE_FACET);
-    return Facet({
-      facetAddress: diamondLoupeFacet,
-      functionSelectors: getSelectors(diamondLoupeFacet)
-    });
+    return
+      Facet({facetAddress: diamondLoupeFacet, functionSelectors: getSelectors(diamondLoupeFacet)});
   }
 
   /// @inheritdoc IAddressesProvider
-  function getDAOViewerFacetAddress() external view returns(address) {
+  function getDAOViewerFacetAddress() external view returns (address) {
     return getAddress(DAO_VIEWER_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getDAOViewerFacet() external view override returns(Facet memory) {
+  function getDAOViewerFacet() external view override returns (Facet memory) {
     address daoViewerFacet = getAddress(DAO_VIEWER_FACET);
-    return Facet({
-      facetAddress: daoViewerFacet,
-      functionSelectors: getSelectors(daoViewerFacet)
-    });
+    return Facet({facetAddress: daoViewerFacet, functionSelectors: getSelectors(daoViewerFacet)});
   }
 
   /// @inheritdoc IAddressesProvider
-  function getModuleViewerFacetAddress() external view returns(address) {
+  function getModuleViewerFacetAddress() external view returns (address) {
     return getAddress(MODULE_VIEWER_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getModuleViewerFacet() external view override returns(Facet memory) {
+  function getModuleViewerFacet() external view override returns (Facet memory) {
     address moduleViewerFacet = getAddress(MODULE_VIEWER_FACET);
-    return Facet({
-      facetAddress: moduleViewerFacet,
-      functionSelectors: getSelectors(moduleViewerFacet)
-    });
+    return
+      Facet({facetAddress: moduleViewerFacet, functionSelectors: getSelectors(moduleViewerFacet)});
   }
 
   /// @inheritdoc IAddressesProvider
-  function getManagementSystemFacetAddress() external view returns(address) {
+  function getManagementSystemFacetAddress() external view returns (address) {
     return getAddress(MANAGEMENT_SYSTEM_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getManagementSystemFacet() external view override returns(Facet memory) {
+  function getManagementSystemFacet() external view override returns (Facet memory) {
     address managementSystemFacet = getAddress(MANAGEMENT_SYSTEM_FACET);
-    return Facet({
-      facetAddress: managementSystemFacet,
-      functionSelectors: getSelectors(managementSystemFacet)
-    });
+    return
+      Facet({
+        facetAddress: managementSystemFacet,
+        functionSelectors: getSelectors(managementSystemFacet)
+      });
   }
 
   /// @inheritdoc IAddressesProvider
-  function getModuleManagerFacetAddress() external view returns(address) {
+  function getModuleManagerFacetAddress() external view returns (address) {
     return getAddress(MODULE_MANAGER_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getModuleManagerFacet() external view override returns(Facet memory) {
+  function getModuleManagerFacet() external view override returns (Facet memory) {
     address moduleManagerFacet = getAddress(MODULE_MANAGER_FACET);
-    return Facet({
-      facetAddress: moduleManagerFacet,
-      functionSelectors: getSelectors(moduleManagerFacet)
-    });
+    return
+      Facet({
+        facetAddress: moduleManagerFacet,
+        functionSelectors: getSelectors(moduleManagerFacet)
+      });
   }
 
   /// @inheritdoc IAddressesProvider
-  function getGovernanceFacetAddress() external view returns(address) {
+  function getGovernanceFacetAddress() external view returns (address) {
     return getAddress(GOVERNANCE_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getGovernanceFacet() external view override returns(Facet memory) {
+  function getGovernanceFacet() external view override returns (Facet memory) {
     address governanceFacet = getAddress(GOVERNANCE_FACET);
-    return Facet({
-      facetAddress: governanceFacet,
-      functionSelectors: getSelectors(governanceFacet)
-    });
+    return Facet({facetAddress: governanceFacet, functionSelectors: getSelectors(governanceFacet)});
   }
 
   /// @inheritdoc IAddressesProvider
-  function getTreasuryActionsFacetAddress() external view returns(address) {
+  function getTreasuryActionsFacetAddress() external view returns (address) {
     return getAddress(TREASURY_ACTIONS_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getTreasuryActionsFacet() external view override returns(Facet memory) {
+  function getTreasuryActionsFacet() external view override returns (Facet memory) {
     address treasuryActionsFacet = getAddress(TREASURY_ACTIONS_FACET);
-    return Facet({
-      facetAddress: treasuryActionsFacet,
-      functionSelectors: getSelectors(treasuryActionsFacet)
-    });
+    return
+      Facet({
+        facetAddress: treasuryActionsFacet,
+        functionSelectors: getSelectors(treasuryActionsFacet)
+      });
   }
 
   /// @inheritdoc IAddressesProvider
-  function getTreasuryDefaultCallbackHandlerFacetAddress() external view returns(address) {
+  function getTreasuryDefaultCallbackHandlerFacetAddress() external view returns (address) {
     return getAddress(TREASURY_DEFAULT_CALLBACK_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getTreasuryDefaultCallbackHandlerFacet() external view override returns(Facet memory) {
+  function getTreasuryDefaultCallbackHandlerFacet() external view override returns (Facet memory) {
     address treasuryDefaultCallbackHandlerFacet = getAddress(TREASURY_DEFAULT_CALLBACK_FACET);
-    return Facet({
-      facetAddress: treasuryDefaultCallbackHandlerFacet,
-      functionSelectors: getSelectors(treasuryDefaultCallbackHandlerFacet)
-    });
+    return
+      Facet({
+        facetAddress: treasuryDefaultCallbackHandlerFacet,
+        functionSelectors: getSelectors(treasuryDefaultCallbackHandlerFacet)
+      });
   }
 
   /// @inheritdoc IAddressesProvider
-  function getSpecificDataFacetAddress() external view returns(address) {
+  function getSpecificDataFacetAddress() external view returns (address) {
     return getAddress(SPECIFIC_DATA_FACET);
   }
 
   /// @inheritdoc IAddressesProvider
-  function getSpecificDataFacet() external view override returns(Facet memory) {
+  function getSpecificDataFacet() external view override returns (Facet memory) {
     address specificDataFacet = getAddress(SPECIFIC_DATA_FACET);
-    return Facet({
-      facetAddress: specificDataFacet,
-      functionSelectors: getSelectors(specificDataFacet)
-    });
+    return
+      Facet({facetAddress: specificDataFacet, functionSelectors: getSelectors(specificDataFacet)});
   }
 
   /// @inheritdoc IAddressesProvider
@@ -285,7 +273,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setDiamondCutFacet(address newDiamondCutFacet, bytes4[] memory selectors) external override {
+  function setDiamondCutFacet(
+    address newDiamondCutFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldDiamondCutFacet = _addresses[DIAMOND_CUT_FACET];
     _addresses[DIAMOND_CUT_FACET] = newDiamondCutFacet;
@@ -295,7 +286,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setOwnershipFacet(address newOwnershipFacet, bytes4[] memory selectors) external override {
+  function setOwnershipFacet(
+    address newOwnershipFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldOwnershipFacet = _addresses[OWNERSHIP_FACET];
     _addresses[OWNERSHIP_FACET] = newOwnershipFacet;
@@ -305,7 +299,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setDiamondLoupeFacet(address newDiamondLoupeFacet, bytes4[] memory selectors) external override {
+  function setDiamondLoupeFacet(
+    address newDiamondLoupeFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldDiamondLoupeFacet = _addresses[DIAMOND_LOUPE_FACET];
     _addresses[DIAMOND_LOUPE_FACET] = newDiamondLoupeFacet;
@@ -315,7 +312,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setDAOViewerFacet(address newDAOViewerFacet, bytes4[] memory selectors) external override {
+  function setDAOViewerFacet(
+    address newDAOViewerFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldDAOViewerFacet = _addresses[DAO_VIEWER_FACET];
     _addresses[DAO_VIEWER_FACET] = newDAOViewerFacet;
@@ -325,7 +325,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setModuleViewerFacet(address newModuleViewerFacet, bytes4[] memory selectors) external override {
+  function setModuleViewerFacet(
+    address newModuleViewerFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldModuleViewerFacet = _addresses[MODULE_VIEWER_FACET];
     _addresses[MODULE_VIEWER_FACET] = newModuleViewerFacet;
@@ -335,7 +338,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setManagementSystemFacet(address newManagementSystemFacet, bytes4[] memory selectors) external override {
+  function setManagementSystemFacet(
+    address newManagementSystemFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldManagementSystemFacet = _addresses[MANAGEMENT_SYSTEM_FACET];
     _addresses[MANAGEMENT_SYSTEM_FACET] = newManagementSystemFacet;
@@ -345,7 +351,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setModuleManagerFacet(address newModuleManagerFacet, bytes4[] memory selectors) external override {
+  function setModuleManagerFacet(
+    address newModuleManagerFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldModuleManagerFacet = _addresses[MODULE_MANAGER_FACET];
     _addresses[MODULE_MANAGER_FACET] = newModuleManagerFacet;
@@ -355,7 +364,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setGovernanceFacet(address newGovernanceFacet, bytes4[] memory selectors) external override {
+  function setGovernanceFacet(
+    address newGovernanceFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldGovernanceFacet = _addresses[GOVERNANCE_FACET];
     _addresses[GOVERNANCE_FACET] = newGovernanceFacet;
@@ -365,7 +377,10 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setTreasuryActionsFacet(address newTreasuryActionsFacet, bytes4[] memory selectors) external override {
+  function setTreasuryActionsFacet(
+    address newTreasuryActionsFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldTreasuryActionsFacet = _addresses[TREASURY_ACTIONS_FACET];
     _addresses[TREASURY_ACTIONS_FACET] = newTreasuryActionsFacet;
@@ -374,16 +389,25 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
   }
 
   /// @inheritdoc IAddressesProvider
-  function setTreasuryDefaultCallbackHandlerFacet(address newTreasuryDefaultCallbackHandlerFacet, bytes4[] memory selectors) external override {
+  function setTreasuryDefaultCallbackHandlerFacet(
+    address newTreasuryDefaultCallbackHandlerFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldTreasuryDefaultCallbackHandlerFacet = _addresses[TREASURY_DEFAULT_CALLBACK_FACET];
     _addresses[TREASURY_DEFAULT_CALLBACK_FACET] = newTreasuryDefaultCallbackHandlerFacet;
     _selectors[newTreasuryDefaultCallbackHandlerFacet] = selectors;
-    emit TreasuryDefaultCallbackHandlerFacetUpdated(oldTreasuryDefaultCallbackHandlerFacet, newTreasuryDefaultCallbackHandlerFacet);
+    emit TreasuryDefaultCallbackHandlerFacetUpdated(
+      oldTreasuryDefaultCallbackHandlerFacet,
+      newTreasuryDefaultCallbackHandlerFacet
+    );
   }
 
   /// @inheritdoc IAddressesProvider
-  function setSpecificDataFacet(address newSpecificDataFacet, bytes4[] memory selectors) external override {
+  function setSpecificDataFacet(
+    address newSpecificDataFacet,
+    bytes4[] memory selectors
+  ) external override {
     require(msg.sender == owner, "Only owner can call.");
     address oldSpecificDataFacet = _addresses[SPECIFIC_DATA_FACET];
     _addresses[SPECIFIC_DATA_FACET] = newSpecificDataFacet;
@@ -396,8 +420,8 @@ contract AddressesProvider is IAddressesProvider { // Registry - rename
     require(msg.sender == owner, "Only owner can call.");
     owner = newOwner;
   }
-  function getAddressAndFunctionToCall(bytes32 nameOrType) external view returns (address,bytes4) {
+
+  function getAddressAndFunctionToCall(bytes32 nameOrType) external view returns (address, bytes4) {
     revert("not implemented");
   }
-
 }

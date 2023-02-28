@@ -2,12 +2,11 @@ import { expect, assert } from 'chai';
 import { ethers } from 'hardhat';
 import * as helpers from '@nomicfoundation/hardhat-network-helpers';
 import habitatABI from '../habitatDiamondABI.json';
-const { deployDAO } = require('../scripts/deployDAO.js');
+import { deployDAO } from '../scripts/deployDAO';
 import { getContractsForUniV3, getWETH } from './helpers/getContractsForUniV3';
 
 describe('HabitatDiamond', function () {
   async function deployDAOFixture() {
-
     const accounts = await ethers.getSigners();
     const signer = accounts[0];
     const [daoAddress, initialDistributorAddress] = await deployDAO();

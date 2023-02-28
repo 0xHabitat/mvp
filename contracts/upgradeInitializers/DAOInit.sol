@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import {LibDAOStorage} from "../libraries/dao/LibDAOStorage.sol";
 import {IDAO} from "../interfaces/dao/IDAO.sol";
 
-
 contract DAOInit {
   // default type
   function initDAO(

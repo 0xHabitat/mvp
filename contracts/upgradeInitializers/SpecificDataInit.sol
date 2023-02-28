@@ -3,19 +3,19 @@ pragma solidity ^0.8.9;
 
 import {LibManagementSystem} from "../libraries/dao/LibManagementSystem.sol";
 import {IManagementSystem} from "../interfaces/dao/IManagementSystem.sol";
+
 // RENAME everywhere else
 // initSignersSpecificData(msName[], data[])
 // initVotingPowerSpecificData(msName[], data[])
 
 contract SpecificDataInit {
-
   function initSpecificDataForDecisionType(
     IManagementSystem.DecisionType decisionType,
     string[] memory msNames,
     bytes[] memory specificDatas
   ) public {
     require(msNames.length == specificDatas.length, "Wrong input: different array length.");
-    for (uint i = 0; i < msNames.length; i++) {
+    for (uint256 i = 0; i < msNames.length; i++) {
       LibManagementSystem._setMSSpecificDataForDecisionType(
         msNames[i],
         decisionType,
@@ -23,6 +23,7 @@ contract SpecificDataInit {
       );
     }
   }
+
   // voting power
   function initVotingPowerSpecificData(
     string[] memory msNames,
@@ -31,16 +32,16 @@ contract SpecificDataInit {
     uint256[] memory secondsProposalVotingPeriod,
     uint256[] memory secondsProposalExecutionDelayPeriod
   ) public {
-    uint msNumber = msNames.length;
+    uint256 msNumber = msNames.length;
     require(
       msNumber == thresholdForInitiator.length &&
-      msNumber == thresholdForProposal.length &&
-      msNumber == secondsProposalVotingPeriod.length &&
-      msNumber == secondsProposalExecutionDelayPeriod.length,
+        msNumber == thresholdForProposal.length &&
+        msNumber == secondsProposalVotingPeriod.length &&
+        msNumber == secondsProposalExecutionDelayPeriod.length,
       "Wrong input: different array length."
     );
     bytes[] memory specificDatas = new bytes[](msNumber);
-    for (uint i = 0; i < msNumber; i++) {
+    for (uint256 i = 0; i < msNumber; i++) {
       bytes memory specificDataVotingPower = abi.encode(
         thresholdForInitiator[i],
         thresholdForProposal[i],
@@ -49,11 +50,7 @@ contract SpecificDataInit {
       );
       specificDatas[i] = specificDataVotingPower;
     }
-    initSpecificDataForDecisionType(
-      IManagementSystem.DecisionType(2),
-      msNames,
-      specificDatas
-    );
+    initSpecificDataForDecisionType(IManagementSystem.DecisionType(2), msNames, specificDatas);
   }
 
   // signers
@@ -61,17 +58,16 @@ contract SpecificDataInit {
     string[] memory msNames,
     uint256[] memory secondsProposalExecutionDelayPeriod
   ) public {
-    require(msNames.length == secondsProposalExecutionDelayPeriod.length, "Wrong input: different array length.");
+    require(
+      msNames.length == secondsProposalExecutionDelayPeriod.length,
+      "Wrong input: different array length."
+    );
     bytes[] memory specificDatas = new bytes[](msNames.length);
-    for (uint i = 0; i < msNames.length; i++) {
+    for (uint256 i = 0; i < msNames.length; i++) {
       bytes memory specificDataSigners = abi.encode(secondsProposalExecutionDelayPeriod);
       specificDatas[i] = specificDataSigners;
     }
-    initSpecificDataForDecisionType(
-      IManagementSystem.DecisionType(3),
-      msNames,
-      specificDatas
-    );
+    initSpecificDataForDecisionType(IManagementSystem.DecisionType(3), msNames, specificDatas);
   }
 
   function initVotingPowerAndSignersSpecificData(
@@ -81,7 +77,7 @@ contract SpecificDataInit {
   ) external {
     require(
       msNames.length == votingPowerSpecificDatas.length &&
-      msNames.length == signersSpecificDatas.length,
+        msNames.length == signersSpecificDatas.length,
       "Wrong input: different array length."
     );
 
@@ -115,5 +111,4 @@ contract SpecificDataInit {
     );
     initSignersSpecificData(msNames, secondsProposalExecutionDelayPeriodSigners);
   }
-
 }

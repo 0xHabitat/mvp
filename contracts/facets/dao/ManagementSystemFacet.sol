@@ -11,20 +11,23 @@ contract ManagementSystemFacet {
     return LibManagementSystem._getManagementSystemsPosition();
   }
 
-  function getManagementSystemsHumanReadable() external view returns(IManagementSystem.ManagementSystem[] memory) {
+  function getManagementSystemsHumanReadable()
+    external
+    view
+    returns (IManagementSystem.ManagementSystem[] memory)
+  {
     return LibManagementSystem._getManagementSystemsHR();
   }
 
-  function getModuleNames() external view returns(string[] memory moduleNames) {
+  function getModuleNames() external view returns (string[] memory moduleNames) {
     return LibManagementSystem._getModuleNames();
   }
 
-  function getModuleDecider(string memory msName) external view returns(address) {
+  function getModuleDecider(string memory msName) external view returns (address) {
     return LibManagementSystem._getDecider(msName);
   }
 
-  function getAddressesProvider() external view returns(address) {
+  function getAddressesProvider() external view returns (address) {
     return LibHabitatDiamond.getAddressesProvider();
   }
-
 }

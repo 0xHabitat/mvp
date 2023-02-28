@@ -6,15 +6,14 @@ import {IVotingPower} from "../../interfaces/decisionSystem/IVotingPower.sol";
 import {VotingPowerSpecificData} from "../../interfaces/decisionSystem/SpecificDataStructs.sol";
 
 interface IERC20 {
-  function totalSupply() external view returns(uint256);
+  function totalSupply() external view returns (uint256);
 }
 
 interface IVotingPowerManager {
-  function governanceToken() external view returns(address);
+  function governanceToken() external view returns (address);
 }
 
 contract DeciderVotingPower is BaseDecider, IVotingPower {
-
   struct Delegation {
     address delegatee;
     uint256 delegatedVotingPower;
@@ -24,30 +23,22 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
 
   struct ProposalVoting {
     bool votingStarted;
-    mapping(address => uint) votedAmount; // rethink
-    uint votingEndTimestamp;
-    uint unstakeTimestamp;
-    uint votesYes;
-    uint votesNo;
+    mapping(address => uint256) votedAmount; // rethink
+    uint256 votingEndTimestamp;
+    uint256 unstakeTimestamp;
+    uint256 votesYes;
+    uint256 votesNo;
   }
 
-  event NewVoting(
-    bytes32 indexed proposalKey,
-    uint256 votingEndTimestamp
-  );
+  event NewVoting(bytes32 indexed proposalKey, uint256 votingEndTimestamp);
 
-  event Voted(
-    address indexed voter,
-    string indexed msName,
-    uint256 indexed proposalId,
-    bool vote
-  );
+  event Voted(address indexed voter, string indexed msName, uint256 indexed proposalId, bool vote);
 
   event FinalVotes(
     string indexed msName,
-    uint indexed proposalId,
-    uint votesYes,
-    uint votesNo
+    uint256 indexed proposalId,
+    uint256 votesYes,
+    uint256 votesNo
   );
 
   // decider specific state
@@ -78,27 +69,32 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
 
   // DAO INTERACTION FUNCTIONS
 
-  function isSetupComplete() override external onlyDAO returns(bool) {
+  function isSetupComplete() external override onlyDAO returns (bool) {
     // maybe here we need more complex logic?
-    return votingPowerManager != address(0) && dao != address(0) && maxAmountOfVotingPower != uint256(0);
+    return
+      votingPowerManager != address(0) && dao != address(0) && maxAmountOfVotingPower != uint256(0);
   }
 
-  function directCaller() override external onlyDAO returns(address) {
+  function directCaller() external override onlyDAO returns (address) {
     return address(0);
   }
 
-  function isDirectCallerSetup() override onlyDAO external returns(bool) {
+  function isDirectCallerSetup() external override onlyDAO returns (bool) {
     return false;
   }
 
-  function directCallerExecutionTimestamp(bytes memory specificData) external override onlyDAO returns(uint256) {
-    revert("direct caller is not a part of voting power decision system, how do you call from address(0)?");
+  function directCallerExecutionTimestamp(
+    bytes memory specificData
+  ) external override onlyDAO returns (uint256) {
+    revert(
+      "direct caller is not a part of voting power decision system, how do you call from address(0)?"
+    );
   }
 
   function isCallerAllowedToCreateProposal(
     address caller,
     bytes memory specificData
-  ) external override onlyDAO returns(bool, string memory) {
+  ) external override onlyDAO returns (bool, string memory) {
     VotingPowerSpecificData memory vpsd = abi.decode(specificData, (VotingPowerSpecificData));
     bool allowed = _calculateIsEnoughVotingPower(caller, vpsd.thresholdForInitiator);
     return allowed ? (allowed, "") : (allowed, "Not enough voting power to create proposal.");
@@ -108,8 +104,8 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     string memory msName,
     uint256 proposalId,
     bytes memory specificData
-  ) external override onlyDAO returns(uint256 executionTimestamp) {
-    bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
+  ) external override onlyDAO returns (uint256 executionTimestamp) {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
 
     VotingPowerSpecificData memory vpsd = abi.decode(specificData, (VotingPowerSpecificData));
@@ -117,7 +113,9 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     proposalVoting.votingStarted = true;
 
     proposalVoting.votingEndTimestamp = vpsd.secondsProposalVotingPeriod + block.timestamp;
-    executionTimestamp = vpsd.secondsProposalExecutionDelayPeriod + proposalVoting.votingEndTimestamp;
+    executionTimestamp =
+      vpsd.secondsProposalExecutionDelayPeriod +
+      proposalVoting.votingEndTimestamp;
 
     proposalVoting.unstakeTimestamp = executionTimestamp;
     emit NewDecisionProcess(proposalKey, msName, proposalId);
@@ -130,14 +128,14 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     address decider,
     bool decision
   ) external override onlyDAO {
-    bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     require(proposalVoting.votingStarted, "No voting rn.");
     require(proposalVoting.votingEndTimestamp >= block.timestamp, "Voting period is ended.");
-    uint deciderVotingPower = getVoterVotingPower(decider);
+    uint256 deciderVotingPower = getVoterVotingPower(decider);
     require(proposalVoting.votedAmount[decider] < deciderVotingPower, "Already voted.");
     _setTimestampToUnstake(decider, proposalVoting.unstakeTimestamp);
-    uint difference = deciderVotingPower - proposalVoting.votedAmount[decider];
+    uint256 difference = deciderVotingPower - proposalVoting.votedAmount[decider];
 
     proposalVoting.votedAmount[decider] = deciderVotingPower; // rething this
     if (decision) {
@@ -147,6 +145,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     }
     emit Voted(decider, msName, proposalId, decision);
   }
+
   // Must be called right after the proposal voting period deadline is expired
   // Otherwise can be manipulated (e.g. governance effects proposal threshold)
   // Best to have service that will call immediately
@@ -154,19 +153,28 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     string memory msName,
     uint256 proposalId,
     bytes memory specificData
-  ) external override onlyDAO returns(bool) {
-    bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
+  ) external override onlyDAO returns (bool) {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     require(proposalVoting.votingStarted, "No voting.");
-    require(proposalVoting.votingEndTimestamp <= block.timestamp, "Voting period is not ended yet.");
+    require(
+      proposalVoting.votingEndTimestamp <= block.timestamp,
+      "Voting period is not ended yet."
+    );
     VotingPowerSpecificData memory vpsd = abi.decode(specificData, (VotingPowerSpecificData));
 
-    uint votesYes = proposalVoting.votesYes;
-    uint votesNo = proposalVoting.votesNo;
+    uint256 votesYes = proposalVoting.votesYes;
+    uint256 votesNo = proposalVoting.votesNo;
     _removeProposalVoting(proposalKey);
     uint256 thresholdForProposal = vpsd.thresholdForProposal;
-    bool proposalThresholdReachedYes = _calculateIsProposalThresholdReached(votesYes, thresholdForProposal);
-    bool proposalThresholdReachedNo = _calculateIsProposalThresholdReached(votesNo, thresholdForProposal);
+    bool proposalThresholdReachedYes = _calculateIsProposalThresholdReached(
+      votesYes,
+      thresholdForProposal
+    );
+    bool proposalThresholdReachedNo = _calculateIsProposalThresholdReached(
+      votesNo,
+      thresholdForProposal
+    );
     emit FinalVotes(msName, proposalId, votesYes, votesNo);
     if (proposalThresholdReachedYes && proposalThresholdReachedNo) {
       if (votesYes > votesNo) {
@@ -174,7 +182,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
         canBeExecuted[proposalKey] = true;
         return true;
       }
-    } else if(proposalThresholdReachedYes) {
+    } else if (proposalThresholdReachedYes) {
       // accept proposal
       canBeExecuted[proposalKey] = true;
       return true;
@@ -187,14 +195,14 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     string memory msName,
     uint256 proposalId,
     bytes4 funcSelector
-  ) external override onlyDAO returns(bool) {
-    bytes32 proposalKey = keccak256(abi.encodePacked(msName,proposalId));
+  ) external override onlyDAO returns (bool) {
+    bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     require(canBeExecuted[proposalKey], "Decider: Proposal cannot be executed.");
     canBeExecuted[proposalKey] = false;
     bytes memory daoCallData = abi.encodeWithSelector(funcSelector, proposalId);
     (bool success, bytes memory returnedData) = dao.call(daoCallData);
     require(success);
-    (bool returnedResult) = abi.decode(returnedData, (bool));
+    bool returnedResult = abi.decode(returnedData, (bool));
     return returnedResult;
   }
 
@@ -212,10 +220,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
   // decreasing voting power
   function decreaseVotingPower(address voter, uint256 amount) external {
     require(msg.sender == votingPowerManager);
-    require(
-      timeStampToUnstake[voter] <= block.timestamp,
-      "Cannot unstake now."
-    );
+    require(timeStampToUnstake[voter] <= block.timestamp, "Cannot unstake now.");
     // decrease totalVotingPower
     totalAmountOfVotingPower -= amount;
     // decrease voter voting power
@@ -229,7 +234,10 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
 
     Delegation storage delegation = delegations[msg.sender];
 
-    require(delegation.delegatee == delegatee || delegation.delegatee == address(0), "Undelegate before delegate to another delegatee.");
+    require(
+      delegation.delegatee == delegatee || delegation.delegatee == address(0),
+      "Undelegate before delegate to another delegatee."
+    );
     // set delegatee of delegator
     delegation.delegatee = delegatee;
     // set to zero delegator voting power
@@ -248,7 +256,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     address delegatee = delegation.delegatee;
     delegation.delegatee = address(0);
     // set timeStampToUnstake at least same as delegatee has
-    uint delegateeTimeStampToUnstake = timeStampToUnstake[delegatee];
+    uint256 delegateeTimeStampToUnstake = timeStampToUnstake[delegatee];
     if (timeStampToUnstake[msg.sender] < delegateeTimeStampToUnstake) {
       timeStampToUnstake[msg.sender] = delegateeTimeStampToUnstake;
     }
@@ -272,7 +280,7 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     Delegation storage delegation = delegations[msg.sender];
 
     require(delegation.unfreezeTimestamp < block.timestamp, "Wait timestamp to unfreeze");
-    uint amountOfVotingPower = delegation.freezedAmount;
+    uint256 amountOfVotingPower = delegation.freezedAmount;
     delegation.freezedAmount = 0;
     votingPower[msg.sender] += amountOfVotingPower;
   }
@@ -284,9 +292,12 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     }
   }
 
-  function _getProposalVoting(bytes32 proposalKey) internal view returns(ProposalVoting storage pV) {
+  function _getProposalVoting(
+    bytes32 proposalKey
+  ) internal view returns (ProposalVoting storage pV) {
     pV = proposalsVoting[proposalKey];
   }
+
   // rethink if remove as well
   // Now i think that we will not remove voting,
   // because we want the source of results as we don't use a server and parsing
@@ -302,31 +313,32 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     // rethink votedAmount
   }
 
-  function _calculateIsEnoughVotingPower(address holder, uint256 thresholdForInitiator) internal view returns (bool) {
+  function _calculateIsEnoughVotingPower(
+    address holder,
+    uint256 thresholdForInitiator
+  ) internal view returns (bool) {
     if (totalAmountOfVotingPower < maxAmountOfVotingPower) {
-      return
-        votingPower[holder] >=
-        ((thresholdForInitiator * maxAmountOfVotingPower) / precision);
+      return votingPower[holder] >= ((thresholdForInitiator * maxAmountOfVotingPower) / precision);
     } else {
       return
-        votingPower[holder] >=
-        ((thresholdForInitiator * totalAmountOfVotingPower) / precision);
+        votingPower[holder] >= ((thresholdForInitiator * totalAmountOfVotingPower) / precision);
     }
   }
 
-  function _calculateIsProposalThresholdReached(uint256 amountOfVotes, uint256 thresholdForProposal) internal view returns (bool) {
+  function _calculateIsProposalThresholdReached(
+    uint256 amountOfVotes,
+    uint256 thresholdForProposal
+  ) internal view returns (bool) {
     if (totalAmountOfVotingPower < maxAmountOfVotingPower) {
-      return
-        amountOfVotes >=
-        ((thresholdForProposal * maxAmountOfVotingPower) / precision);
+      return amountOfVotes >= ((thresholdForProposal * maxAmountOfVotingPower) / precision);
     } else {
-      return
-        amountOfVotes >=
-        ((thresholdForProposal * totalAmountOfVotingPower) / precision);
+      return amountOfVotes >= ((thresholdForProposal * totalAmountOfVotingPower) / precision);
     }
   }
 
-  function _calculateAbsoluteThresholdValue(uint256 thresholdNumerator) internal view returns (uint256) {
+  function _calculateAbsoluteThresholdValue(
+    uint256 thresholdNumerator
+  ) internal view returns (uint256) {
     if (totalAmountOfVotingPower < maxAmountOfVotingPower) {
       return ((thresholdNumerator * maxAmountOfVotingPower) / precision);
     } else {
@@ -355,98 +367,110 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return precision;
   }
 
-  function getTimestampToUnstake(address staker) external view returns(uint256) {
+  function getTimestampToUnstake(address staker) external view returns (uint256) {
     return timeStampToUnstake[staker];
   }
 
-  function _getDelegation(address delegator) public view returns(Delegation memory delegation) {
+  function _getDelegation(address delegator) public view returns (Delegation memory delegation) {
     delegation = delegations[delegator];
   }
 
-  function getDelegatee(address delegator) external view returns(address) {
+  function getDelegatee(address delegator) external view returns (address) {
     Delegation memory delegation = _getDelegation(delegator);
     return delegation.delegatee;
   }
 
-  function getAmountOfDelegatedVotingPower(address delegator) external view returns(uint256) {
+  function getAmountOfDelegatedVotingPower(address delegator) external view returns (uint256) {
     Delegation memory delegation = _getDelegation(delegator);
     return delegation.delegatedVotingPower;
   }
 
-  function getFreezeAmountOfVotingPower(address delegator) external view returns(uint256) {
+  function getFreezeAmountOfVotingPower(address delegator) external view returns (uint256) {
     Delegation memory delegation = _getDelegation(delegator);
     return delegation.freezedAmount;
   }
 
-  function getUnfreezeTimestamp(address delegator) external view returns(uint256) {
+  function getUnfreezeTimestamp(address delegator) external view returns (uint256) {
     Delegation memory delegation = _getDelegation(delegator);
     return delegation.unfreezeTimestamp;
   }
 
   // return ProposalVoting struct
-  function getProposalVotingVotesYes(string memory msName, uint256 proposalId)
-    external
-    view
-    returns (uint256)
-  {
+  function getProposalVotingVotesYes(
+    string memory msName,
+    uint256 proposalId
+  ) external view returns (uint256) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     return proposalVoting.votesYes;
   }
 
-  function getProposalVotingVotesNo(string memory msName, uint256 proposalId)
-    external
-    view
-    returns (uint256)
-  {
+  function getProposalVotingVotesNo(
+    string memory msName,
+    uint256 proposalId
+  ) external view returns (uint256) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     return proposalVoting.votesNo;
   }
 
-  function getProposalVotingDeadlineTimestamp(string memory msName, uint256 proposalId)
-    external
-    view
-    returns (uint256)
-  {
+  function getProposalVotingDeadlineTimestamp(
+    string memory msName,
+    uint256 proposalId
+  ) external view returns (uint256) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     return proposalVoting.votingEndTimestamp;
   }
 
-  function isHolderVotedForProposal(string memory msName, uint256 proposalId, address holder)
-    external
-    view
-    returns (bool)
-  {
+  function isHolderVotedForProposal(
+    string memory msName,
+    uint256 proposalId,
+    address holder
+  ) external view returns (bool) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     return proposalVoting.votedAmount[holder] > 0;
   }
 
-  function isVotingForProposalStarted(string memory msName, uint256 proposalId) external view returns (bool) {
+  function isVotingForProposalStarted(
+    string memory msName,
+    uint256 proposalId
+  ) external view returns (bool) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     return proposalVoting.votingStarted;
   }
 
-  function isVotingForProposalEnded(string memory msName, uint256 proposalId) external view returns(bool) {
+  function isVotingForProposalEnded(
+    string memory msName,
+    uint256 proposalId
+  ) external view returns (bool) {
     bytes32 proposalKey = keccak256(abi.encodePacked(msName, proposalId));
     ProposalVoting storage proposalVoting = _getProposalVoting(proposalKey);
     return proposalVoting.votingEndTimestamp <= block.timestamp;
   }
+
   // View function that args are taken from dao storage
   // Now i decide to get value from the back, but maybe i change my mind and
   // make call to dao inside functions
-  function getAbsoluteThresholdByNumerator(uint256 thresholdNumerator) external view returns (uint256) {
+  function getAbsoluteThresholdByNumerator(
+    uint256 thresholdNumerator
+  ) external view returns (uint256) {
     return _calculateAbsoluteThresholdValue(thresholdNumerator);
   }
 
-  function isEnoughVotingPower(address holder, uint256 thresholdForInitiatorNumerator) external view returns (bool) {
+  function isEnoughVotingPower(
+    address holder,
+    uint256 thresholdForInitiatorNumerator
+  ) external view returns (bool) {
     return _calculateIsEnoughVotingPower(holder, thresholdForInitiatorNumerator);
   }
 
-  function isProposalThresholdReached(uint256 amountOfVotes, uint256 thresholdForProposal) external view returns (bool) {
+  function isProposalThresholdReached(
+    uint256 amountOfVotes,
+    uint256 thresholdForProposal
+  ) external view returns (bool) {
     return _calculateIsProposalThresholdReached(amountOfVotes, thresholdForProposal);
   }
 }

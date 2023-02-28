@@ -69,7 +69,7 @@ struct DAOStorage {
     return false;
   }
 
-/*
+  /*
   function _getGovernanceVotingSystem() internal view returns (IManagementSystem.VotingSystem gvs) {
     IDAO.DAOStorage storage ds = daoStorage();
     gvs = LibManagementSystem._getGovernanceVotingSystem(ds.managementSystemPosition);

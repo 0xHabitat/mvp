@@ -33,7 +33,7 @@ interface IDAO {
   function getCreatedSubDAOs() external view returns (address[] memory);
 
   function isMainDAOFor(address _subDAO) external view returns (bool);
-/*
+  /*
   function getVotingPowerManager() external view returns (address);
 
   function getGovernanceSigners() external view returns (address[] memory);

@@ -7,7 +7,7 @@ contract HBT is ERC20 {
   constructor(
     string memory name,
     string memory symbol,
-    uint totalSupply,
+    uint256 totalSupply,
     address distributor
   ) ERC20(name, symbol) {
     _mint(distributor, totalSupply);

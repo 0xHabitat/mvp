@@ -5,14 +5,13 @@ import {IDecider} from "../interfaces/decisionSystem/IDecider.sol";
 import {DeciderSigners} from "../external/deciders/DeciderSigners.sol";
 
 contract DeciderSignersDeployer {
-
   event DeciderSignersDeployed(address deciderSigners, address gnosisSafe);
 
   function deployDeciderSigners(
     address _dao,
     address _daoSetter,
     address _gnosisSafe
-  ) external returns(address) {
+  ) external returns (address) {
     DeciderSigners deciderSigners = new DeciderSigners(
       _dao,
       _daoSetter,

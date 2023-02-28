@@ -59,11 +59,10 @@ contract StakeContractERC20UniV2 {
     IERC20(_governanceToken).safeTransfer(msg.sender, _amount);
   }
 
-  function getStakedBalanceOfGovernanceToken(address holder, address _governanceToken)
-    external
-    view
-    returns (uint256 balance)
-  {
+  function getStakedBalanceOfGovernanceToken(
+    address holder,
+    address _governanceToken
+  ) external view returns (uint256 balance) {
     balance = stakedHoldings[holder][_governanceToken];
   }
 

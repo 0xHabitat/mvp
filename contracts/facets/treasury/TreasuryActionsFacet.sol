@@ -36,7 +36,7 @@ contract TreasuryActionsFacet is ITreasuryActions {
     address token,
     address receiver,
     uint256 amount
-  ) public override returns(uint256 proposalId) {
+  ) public override returns (uint256 proposalId) {
     require(IERC20(token).balanceOf(address(this)) >= amount, "Not enough tokens in treasury.");
     bytes memory callData = abi.encodeWithSelector(IERC20.transfer.selector, receiver, amount);
     proposalId = createTreasuryProposal(token, uint256(0), callData);
@@ -45,7 +45,7 @@ contract TreasuryActionsFacet is ITreasuryActions {
   function sendETHFromTreasuryInitProposal(
     address receiver,
     uint256 value
-  ) public override returns(uint256 proposalId) {
+  ) public override returns (uint256 proposalId) {
     require(address(this).balance >= value, "Not enoug ether in treasury");
     bytes memory callData;
     proposalId = createTreasuryProposal(receiver, value, callData);
@@ -55,9 +55,14 @@ contract TreasuryActionsFacet is ITreasuryActions {
     address token,
     address receiver,
     uint256 tokenId
-  ) public override returns(uint256 proposalId) {
+  ) public override returns (uint256 proposalId) {
     require(IERC721(token).ownerOf(tokenId) == address(this), "Token does not belong to treasury.");
-    bytes memory callData = abi.encodeWithSelector(IERC721.safeTransferFrom.selector, address(this), receiver, tokenId);
+    bytes memory callData = abi.encodeWithSelector(
+      IERC721.safeTransferFrom.selector,
+      address(this),
+      receiver,
+      tokenId
+    );
     proposalId = createTreasuryProposal(token, uint256(0), callData);
   }
 
@@ -66,7 +71,7 @@ contract TreasuryActionsFacet is ITreasuryActions {
     address destination,
     uint256 value,
     bytes memory callData
-  ) public override returns(bool result) {
+  ) public override returns (bool result) {
     uint256 proposalId = createTreasuryProposal(destination, value, callData);
     acceptOrRejectTreasuryProposal(proposalId);
     result = executeTreasuryProposal(proposalId);
@@ -76,7 +81,7 @@ contract TreasuryActionsFacet is ITreasuryActions {
     address token,
     address receiver,
     uint256 amount
-  ) public override returns(bool result) {
+  ) public override returns (bool result) {
     uint256 proposalId = sendERC20FromTreasuryInitProposal(token, receiver, amount);
     acceptOrRejectTreasuryProposal(proposalId);
     result = executeTreasuryProposal(proposalId);
@@ -85,7 +90,7 @@ contract TreasuryActionsFacet is ITreasuryActions {
   function sendETHFromTreasuryBatchedExecution(
     address receiver,
     uint256 value
-  ) public override returns(bool result) {
+  ) public override returns (bool result) {
     uint256 proposalId = sendETHFromTreasuryInitProposal(receiver, value);
     acceptOrRejectTreasuryProposal(proposalId);
     result = executeTreasuryProposal(proposalId);
@@ -95,7 +100,7 @@ contract TreasuryActionsFacet is ITreasuryActions {
     address token,
     address receiver,
     uint256 tokenId
-  ) public override returns(bool result) {
+  ) public override returns (bool result) {
     uint256 proposalId = sendERC721FromTreasuryInitProposal(token, receiver, tokenId);
     acceptOrRejectTreasuryProposal(proposalId);
     result = executeTreasuryProposal(proposalId);
@@ -109,43 +114,40 @@ contract TreasuryActionsFacet is ITreasuryActions {
   ) external override returns (uint256[] memory) {
     uint256 numberOfProposals = destinations.length;
     require(
-      values.length == numberOfProposals &&
-        callDatas.length == numberOfProposals,
+      values.length == numberOfProposals && callDatas.length == numberOfProposals,
       "Different array length"
     );
     uint256[] memory proposalIds = new uint256[](numberOfProposals);
     for (uint256 i = 0; i < proposalIds.length; i++) {
-      proposalIds[i] = createTreasuryProposal(
-        destinations[i],
-        values[i],
-        callDatas[i]
-      );
+      proposalIds[i] = createTreasuryProposal(destinations[i], values[i], callDatas[i]);
     }
     return proposalIds;
   }
 
-  function decideOnSeveralTreasuryProposals(uint256[] calldata proposalsIds, bool[] calldata decisions)
-    external
-    override
-  {
+  function decideOnSeveralTreasuryProposals(
+    uint256[] calldata proposalsIds,
+    bool[] calldata decisions
+  ) external override {
     require(proposalsIds.length == decisions.length, "Different array length");
     for (uint256 i = 0; i < proposalsIds.length; i++) {
       decideOnTreasuryProposal(proposalsIds[i], decisions[i]);
     }
   }
 
-  function acceptOrRejectSeveralTreasuryProposals(uint256[] calldata proposalIds) external override {
+  function acceptOrRejectSeveralTreasuryProposals(
+    uint256[] calldata proposalIds
+  ) external override {
     for (uint256 i = 0; i < proposalIds.length; i++) {
       acceptOrRejectTreasuryProposal(proposalIds[i]);
     }
   }
 
-  function executeSeveralTreasuryProposals(uint256[] memory proposalIds) external override returns (bool[] memory results) {
+  function executeSeveralTreasuryProposals(
+    uint256[] memory proposalIds
+  ) external override returns (bool[] memory results) {
     results = new bool[](proposalIds.length);
     for (uint256 i = 0; i < proposalIds.length; i++) {
-      results[i] = executeTreasuryProposal(
-        proposalIds[i]
-      );
+      results[i] = executeTreasuryProposal(proposalIds[i]);
     }
   }
 
@@ -153,20 +155,15 @@ contract TreasuryActionsFacet is ITreasuryActions {
     address[] calldata destinations,
     uint256[] calldata values,
     bytes[] calldata callDatas
-  ) public override returns(bool[] memory results) {
+  ) public override returns (bool[] memory results) {
     uint256 numberOfProposals = destinations.length;
     require(
-      values.length == numberOfProposals &&
-        callDatas.length == numberOfProposals,
+      values.length == numberOfProposals && callDatas.length == numberOfProposals,
       "Different array length"
     );
     results = new bool[](numberOfProposals);
     for (uint256 i = 0; i < numberOfProposals; i++) {
-      results[i] = batchedTreasuryProposalExecution(
-        destinations[i],
-        values[i],
-        callDatas[i]
-      );
+      results[i] = batchedTreasuryProposalExecution(destinations[i], values[i], callDatas[i]);
     }
   }
 }

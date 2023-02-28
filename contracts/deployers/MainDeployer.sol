@@ -5,7 +5,7 @@ import {IDiamondCut} from "../interfaces/IDiamondCut.sol";
 import {IAddressesProvider} from "../interfaces/IAddressesProvider.sol";
 
 interface IDAOViewer {
-  function getDAOAddressesProvider() external view returns(address);
+  function getDAOAddressesProvider() external view returns (address);
 }
 
 interface ISetVotingPowerHolder {
@@ -19,12 +19,9 @@ interface IERC20Deployer {
     uint256 totalSupply,
     uint160[2] memory _sqrtPricesX96,
     address initialDistributorOwner
-  ) external returns(address, address);
+  ) external returns (address, address);
 
-  function deployLastPool(
-    address hbt,
-    uint160[2] memory _sqrtPricesX96
-  ) external;
+  function deployLastPool(address hbt, uint160[2] memory _sqrtPricesX96) external;
 
   function deployThreePools(
     address hbt,
@@ -39,7 +36,7 @@ interface IDeciderVotingPowerDeployer {
     address _daoSetter,
     address _stakeContract,
     uint256 _precision
-  ) external returns(address);
+  ) external returns (address);
 }
 
 interface IDeciderSignersDeployer {
@@ -47,7 +44,7 @@ interface IDeciderSignersDeployer {
     address _dao,
     address _daoSetter,
     address _gnosisSafe
-  ) external returns(address);
+  ) external returns (address);
 }
 
 interface IVotingPowerManagerDeployer {
@@ -55,7 +52,7 @@ interface IVotingPowerManagerDeployer {
     address _nfPositionManager,
     address _governanceToken,
     address[] memory _legalPairTokens
-  ) external returns(address);
+  ) external returns (address);
 }
 
 interface IDAODeploer {
@@ -79,7 +76,7 @@ interface IDAODeploer {
     address addressesProvider,
     DAOMeta memory daoMetaData,
     bytes memory msCallData
-  ) external returns(address);
+  ) external returns (address);
 }
 
 interface IOwnership {
@@ -87,7 +84,6 @@ interface IOwnership {
 }
 
 contract MainDeployer {
-
   event VotingPowerManagerDecider(
     address indexed votingPowerManager,
     address indexed votingPowerDecider
@@ -118,7 +114,7 @@ contract MainDeployer {
     string memory tokenSymbol,
     uint256 totalSupply,
     uint160[2] memory _sqrtPricesX96
-  ) external returns(address, address) {
+  ) external returns (address, address) {
     (address govToken, address distributor) = erc20Deployer.deployERC20InitialDistributorMainPools(
       tokenName,
       tokenSymbol,
@@ -129,10 +125,7 @@ contract MainDeployer {
     return (govToken, distributor);
   }
 
-  function deployLastMainPool(
-    address hbt,
-    uint160[2] memory _sqrtPricesX96
-  ) external {
+  function deployLastMainPool(address hbt, uint160[2] memory _sqrtPricesX96) external {
     erc20Deployer.deployLastPool(hbt, _sqrtPricesX96);
   }
 
@@ -152,13 +145,8 @@ contract MainDeployer {
     address _dao,
     address _daoSetter,
     address _gnosisSafe
-  ) external returns(address deciderSigners, address deciderVotingPower, address stakeContract) {
-
-    deciderSigners = deciderSignersDeployer.deployDeciderSigners(
-      _dao,
-      _daoSetter,
-      _gnosisSafe
-    );
+  ) external returns (address deciderSigners, address deciderVotingPower, address stakeContract) {
+    deciderSigners = deciderSignersDeployer.deployDeciderSigners(_dao, _daoSetter, _gnosisSafe);
 
     stakeContract = votingPowerManagerDeployer.deployVotingPowerManagerERC20UniV3(
       _nfPositionManager,
@@ -186,8 +174,7 @@ contract MainDeployer {
     address[] memory deciders,
     bytes[] memory votingPowerSpecificDatas,
     bytes[] memory signersSpecificDatas
-  ) external returns(address) {
-
+  ) external returns (address) {
     bytes memory msCallData = abi.encodeWithSignature(
       "initManagementSystems(string[],uint8[],address[])",
       msNames,
@@ -195,47 +182,31 @@ contract MainDeployer {
       deciders
     );
 
-    address dao = daoDeployer.deployDAO(
-      addressesProvider,
-      daoMetaData,
-      msCallData
-    );
+    address dao = daoDeployer.deployDAO(addressesProvider, daoMetaData, msCallData);
 
-    makeModuleViewerCut(
-      dao
-    );
+    makeModuleViewerCut(dao);
 
-    makeSpecificDataCut(
-      dao,
-      msNames,
-      votingPowerSpecificDatas,
-      signersSpecificDatas
-    );
+    makeSpecificDataCut(dao, msNames, votingPowerSpecificDatas, signersSpecificDatas);
 
     makeModuleManagerCut(dao);
 
     makeGovernanceCut(dao);
 
-    makeTreasuryCut(
-      dao
-    );
+    makeTreasuryCut(dao);
 
-    removeOwnershipAndDiamondCut(
-      dao
-    );
+    removeOwnershipAndDiamondCut(dao);
 
     return dao;
   }
 
   // temporary make external, but probably has to be in ms initialization
-  function makeModuleViewerCut(
-    address dao
-  ) internal {
+  function makeModuleViewerCut(address dao) internal {
     // make module viewer cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
     IDiamondCut.FacetCut[] memory moduleViewerCut = new IDiamondCut.FacetCut[](1);
     // Add module viewer facet
-    IAddressesProvider.Facet memory moduleViewerFacet = IAddressesProvider(addressesProvider).getModuleViewerFacet();
+    IAddressesProvider.Facet memory moduleViewerFacet = IAddressesProvider(addressesProvider)
+      .getModuleViewerFacet();
 
     moduleViewerCut[0] = IDiamondCut.FacetCut({
       facetAddress: moduleViewerFacet.facetAddress,
@@ -256,7 +227,8 @@ contract MainDeployer {
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
     IDiamondCut.FacetCut[] memory specificDataCut = new IDiamondCut.FacetCut[](1);
     // Add specific data facet
-    IAddressesProvider.Facet memory specificDataFacet = IAddressesProvider(addressesProvider).getSpecificDataFacet();
+    IAddressesProvider.Facet memory specificDataFacet = IAddressesProvider(addressesProvider)
+      .getSpecificDataFacet();
 
     specificDataCut[0] = IDiamondCut.FacetCut({
       facetAddress: specificDataFacet.facetAddress,
@@ -275,14 +247,13 @@ contract MainDeployer {
     IDiamondCut(dao).diamondCut(specificDataCut, specificDataInit, specificDataCallData);
   }
 
-  function makeModuleManagerCut(
-    address dao
-  ) internal {
+  function makeModuleManagerCut(address dao) internal {
     // make treasury cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
     IDiamondCut.FacetCut[] memory moduleManagerCut = new IDiamondCut.FacetCut[](1);
     // Add module manager facet
-    IAddressesProvider.Facet memory moduleManagerFacet = IAddressesProvider(addressesProvider).getModuleManagerFacet();
+    IAddressesProvider.Facet memory moduleManagerFacet = IAddressesProvider(addressesProvider)
+      .getModuleManagerFacet();
 
     moduleManagerCut[0] = IDiamondCut.FacetCut({
       facetAddress: moduleManagerFacet.facetAddress,
@@ -293,14 +264,13 @@ contract MainDeployer {
     IDiamondCut(dao).diamondCut(moduleManagerCut, address(0), "");
   }
 
-  function makeGovernanceCut(
-    address dao
-  ) internal {
+  function makeGovernanceCut(address dao) internal {
     // make treasury cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
     IDiamondCut.FacetCut[] memory governanceCut = new IDiamondCut.FacetCut[](1);
     // Add module manager facet
-    IAddressesProvider.Facet memory governanceFacet = IAddressesProvider(addressesProvider).getGovernanceFacet();
+    IAddressesProvider.Facet memory governanceFacet = IAddressesProvider(addressesProvider)
+      .getGovernanceFacet();
 
     governanceCut[0] = IDiamondCut.FacetCut({
       facetAddress: governanceFacet.facetAddress,
@@ -311,14 +281,13 @@ contract MainDeployer {
     IDiamondCut(dao).diamondCut(governanceCut, address(0), "");
   }
 
-  function makeTreasuryCut(
-    address dao
-  ) internal {
+  function makeTreasuryCut(address dao) internal {
     // make treasury cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
     IDiamondCut.FacetCut[] memory treasuryCut = new IDiamondCut.FacetCut[](2);
     // Add treasury actions facet
-    IAddressesProvider.Facet memory treasuryActionsFacet = IAddressesProvider(addressesProvider).getTreasuryActionsFacet();
+    IAddressesProvider.Facet memory treasuryActionsFacet = IAddressesProvider(addressesProvider)
+      .getTreasuryActionsFacet();
 
     treasuryCut[0] = IDiamondCut.FacetCut({
       facetAddress: treasuryActionsFacet.facetAddress,
@@ -327,7 +296,9 @@ contract MainDeployer {
     });
 
     // Add the treasury default callback facet
-    IAddressesProvider.Facet memory treasuryDefaultCallbackFacet = IAddressesProvider(addressesProvider).getTreasuryDefaultCallbackHandlerFacet();
+    IAddressesProvider.Facet memory treasuryDefaultCallbackFacet = IAddressesProvider(
+      addressesProvider
+    ).getTreasuryDefaultCallbackHandlerFacet();
 
     treasuryCut[1] = IDiamondCut.FacetCut({
       facetAddress: treasuryDefaultCallbackFacet.facetAddress,
@@ -339,14 +310,13 @@ contract MainDeployer {
   }
 
   // temporary solution - later edit with better experience
-  function removeOwnershipAndDiamondCut(
-    address dao
-  ) internal {
+  function removeOwnershipAndDiamondCut(address dao) internal {
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
     // make a default cut
     IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](2);
     // Add the diamondCut external function from the diamondCutFacet
-    IAddressesProvider.Facet memory diamondCutFacet = IAddressesProvider(addressesProvider).getDiamondCutFacet();
+    IAddressesProvider.Facet memory diamondCutFacet = IAddressesProvider(addressesProvider)
+      .getDiamondCutFacet();
 
     cut[0] = IDiamondCut.FacetCut({
       facetAddress: address(0),
@@ -355,7 +325,8 @@ contract MainDeployer {
     });
 
     // Add the default diamondOwnershipFacet - remove after governance is set
-    IAddressesProvider.Facet memory diamondOwnershipFacet = IAddressesProvider(addressesProvider).getOwnershipFacet();
+    IAddressesProvider.Facet memory diamondOwnershipFacet = IAddressesProvider(addressesProvider)
+      .getOwnershipFacet();
 
     cut[1] = IDiamondCut.FacetCut({
       facetAddress: address(0),

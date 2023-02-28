@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import {IProposal} from "../IProposal.sol";
 
 interface IManagementSystem {
-
   enum DecisionType {
     None,
     OnlyOwner,

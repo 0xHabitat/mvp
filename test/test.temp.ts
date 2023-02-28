@@ -1,19 +1,18 @@
-import { expect, assert } from "chai";
-import { ethers } from "hardhat";
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-const { deployDAO } = require("../scripts/deployDAO.js");
+import { expect, assert } from 'chai';
+import { ethers } from 'hardhat';
+import * as helpers from '@nomicfoundation/hardhat-network-helpers';
+import { deployDAO } from '../scripts/deployDAO';
 import { getWETH } from './helpers/getContractsForUniV3';
 const habitatABI = require('../habitatDiamondABI.json');
 
 describe('HabitatDiamond', function () {
-
-  it("Signers/Treasury module: Cover treasury proposal process with decision type signers", async function () {
+  it('Signers/Treasury module: Cover treasury proposal process with decision type signers', async function () {
     this.timeout(0);
     const accounts = await ethers.getSigners();
     const signer = accounts[0];
     const beneficiarAddress = accounts[8].address;
     // first let's make treasury decision type signers
-    const [daoAddress, initialDistributorAddress] = await deployDAO([3,2,3,2,3]);
+    const [daoAddress, initialDistributorAddress] = await deployDAO([3, 2, 3, 2, 3]);
     const habitatDiamond = new ethers.Contract(daoAddress, habitatABI, signer);
     // first lets have DeciderSigners instance
     const deciderSignersAddress = await habitatDiamond.getModuleDecider('treasury');
@@ -24,14 +23,14 @@ describe('HabitatDiamond', function () {
     const ten = ethers.constants.WeiPerEther.mul(10);
     const sponsor = accounts[0];
     const weth = getWETH(sponsor);
-    let tx = await weth.deposit({value: ten});
+    let tx = await weth.deposit({ value: ten });
     await tx.wait();
     tx = await weth.transfer(habitatDiamond.address, ten);
     await tx.wait();
     const ethTranfer = {
       to: habitatDiamond.address,
-      value: ethers.utils.parseEther('10')
-    }
+      value: ethers.utils.parseEther('10'),
+    };
     tx = await sponsor.sendTransaction(ethTranfer);
     await tx.wait();
 
@@ -48,16 +47,12 @@ describe('HabitatDiamond', function () {
     // lets use wrapper treasury function to send weth to beneficiar
     const daoCallData = habitatDiamond.interface.encodeFunctionData(
       'sendERC20FromTreasuryBatchedExecution',
-      [
-        weth.address,
-        beneficiarAddress,
-        ten
-      ]
+      [weth.address, beneficiarAddress, ten]
     );
     const gnosisTx = {
       to: habitatDiamond.address,
-      data: daoCallData
-    }
+      data: daoCallData,
+    };
 
     const daoBalanceBefore = await weth.balanceOf(habitatDiamond.address);
     const beneficiarBalanceBefore = await weth.balanceOf(beneficiarAddress);
@@ -71,11 +66,10 @@ describe('HabitatDiamond', function () {
     expect(daoBalanceBefore.sub(ten)).eq(daoBalanceAfter);
     expect(beneficiarBalanceBefore.add(ten)).eq(beneficiarBalanceAfter);
 
-
     // second Onchain way:
 
     // first impersonate signers accounts
-    const iface = new ethers.utils.Interface(["function getOwners() view returns(address[])"]);
+    const iface = new ethers.utils.Interface(['function getOwners() view returns(address[])']);
     const gnosisInstance = new ethers.Contract(gnosisSafe, iface, signer);
     const signers = await gnosisInstance.getOwners();
 
@@ -87,59 +81,70 @@ describe('HabitatDiamond', function () {
     }
 
     // second lets create treasury proposal from one of the gnosis signers
-    const proposalID = (await habitatDiamond.getModuleProposalsCount("treasury")).add(1);
-    tx = await habitatDiamond.connect(impersonatedSigners[0]).createTreasuryProposal(beneficiarAddress, ten, '0x');
+    const proposalID = (await habitatDiamond.getModuleProposalsCount('treasury')).add(1);
+    tx = await habitatDiamond
+      .connect(impersonatedSigners[0])
+      .createTreasuryProposal(beneficiarAddress, ten, '0x');
     await tx.wait();
     // make sure that treasury decisionType is Signers
-    const decisionType = await habitatDiamond.getModuleDecisionType("treasury");
+    const decisionType = await habitatDiamond.getModuleDecisionType('treasury');
     expect(decisionType).to.eq(3);
     // lets find our proposalId in active voting
-    let activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds("treasury");
+    let activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds('treasury');
     expect(activeVotingProposalIds.some((id: any) => id.eq(proposalID))).to.be.true;
 
     const proposalKey = await deciderSigners.computeProposalKey('treasury', proposalID);
     // the initiator already decided
-    expect(await deciderSigners.isSignerDecided(proposalKey, impersonatedSigners[0].address))
-      .to.be.true;
+    expect(await deciderSigners.isSignerDecided(proposalKey, impersonatedSigners[0].address)).to.be
+      .true;
 
     // make sure decision process started
-    expect(await deciderSigners.isDecisionProcessStarted(proposalKey))
-      .to.be.true;
+    expect(await deciderSigners.isDecisionProcessStarted(proposalKey)).to.be.true;
 
     // lets decide
     // lets decide not a signer
-    await expect(habitatDiamond.decideOnTreasuryProposal('0x12', true))
-      .to.be.revertedWith("Only gnosis signers can decide.");
+    await expect(habitatDiamond.decideOnTreasuryProposal('0x12', true)).to.be.revertedWith(
+      'Only gnosis signers can decide.'
+    );
     // lets decide on non-exist proposal
-    await expect(habitatDiamond.connect(impersonatedSigners[0]).decideOnTreasuryProposal('0x12', true))
-      .to.be.revertedWith("Decision process is not started yet.");
+    await expect(
+      habitatDiamond.connect(impersonatedSigners[0]).decideOnTreasuryProposal('0x12', true)
+    ).to.be.revertedWith('Decision process is not started yet.');
     // lets decide second time
-    await expect(habitatDiamond.connect(impersonatedSigners[0]).decideOnTreasuryProposal(proposalID, true))
-      .to.be.revertedWith("Already decided.");
+    await expect(
+      habitatDiamond.connect(impersonatedSigners[0]).decideOnTreasuryProposal(proposalID, true)
+    ).to.be.revertedWith('Already decided.');
 
-    await expect(habitatDiamond.connect(impersonatedSigners[1]).decideOnTreasuryProposal(proposalID, true))
-      .to.emit(deciderSigners, "Decided")
+    await expect(
+      habitatDiamond.connect(impersonatedSigners[1]).decideOnTreasuryProposal(proposalID, true)
+    )
+      .to.emit(deciderSigners, 'Decided')
       .withArgs(impersonatedSigners[1].address, 'treasury', proposalID, true);
 
-    await expect(habitatDiamond.connect(impersonatedSigners[2]).decideOnTreasuryProposal(proposalID, false))
-      .to.emit(deciderSigners, "Decided")
+    await expect(
+      habitatDiamond.connect(impersonatedSigners[2]).decideOnTreasuryProposal(proposalID, false)
+    )
+      .to.emit(deciderSigners, 'Decided')
       .withArgs(impersonatedSigners[2].address, 'treasury', proposalID, false);
 
     // lets try to accept not waiting voting period
-    await expect(habitatDiamond.acceptOrRejectTreasuryProposal(proposalID))
-      .to.be.revertedWith("Threshold is not reached yet.");
+    await expect(habitatDiamond.acceptOrRejectTreasuryProposal(proposalID)).to.be.revertedWith(
+      'Threshold is not reached yet.'
+    );
 
-    await expect(habitatDiamond.connect(impersonatedSigners[3]).decideOnTreasuryProposal(proposalID, true))
-      .to.emit(deciderSigners, "Decided")
+    await expect(
+      habitatDiamond.connect(impersonatedSigners[3]).decideOnTreasuryProposal(proposalID, true)
+    )
+      .to.emit(deciderSigners, 'Decided')
       .withArgs(impersonatedSigners[3].address, 'treasury', proposalID, true);
 
     // accept proposal
     await expect(habitatDiamond.acceptOrRejectTreasuryProposal(proposalID))
-      .to.emit(habitatDiamond, "ProposalAccepted")
+      .to.emit(habitatDiamond, 'ProposalAccepted')
       .withArgs('treasury', proposalID, beneficiarAddress, ten, '0x');
 
     // confirm proposalId is removed from active
-    activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds("treasury");
+    activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds('treasury');
     expect(activeVotingProposalIds.some((id: any) => id.eq(proposalID))).to.be.false;
 
     // execute proposal
@@ -147,7 +152,7 @@ describe('HabitatDiamond', function () {
     const habitatDAOETHBalanceBefore = await ethers.provider.getBalance(habitatDiamond.address);
     // let execute
     await expect(habitatDiamond.executeTreasuryProposal(proposalID))
-      .to.emit(habitatDiamond, "ProposalExecutedSuccessfully")
+      .to.emit(habitatDiamond, 'ProposalExecutedSuccessfully')
       .withArgs('treasury', proposalID);
 
     // confirm receiving eth
@@ -155,6 +160,5 @@ describe('HabitatDiamond', function () {
     expect(beneficiarETHBalanceBefore.add(ten)).to.eq(beneficiarETHBalanceAfter);
     const habitatDAOETHBalanceAfter = await ethers.provider.getBalance(habitatDiamond.address);
     expect(habitatDAOETHBalanceBefore.sub(ten)).to.eq(habitatDAOETHBalanceAfter);
-
   });
 });

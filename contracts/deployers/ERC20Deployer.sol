@@ -10,11 +10,10 @@ interface INFPositionManagerPoolDeploy {
     address token1,
     uint24 fee,
     uint160 sqrtPriceX96
-  ) external payable returns(address pool);
+  ) external payable returns (address pool);
 }
 
 contract ERC20Deployer {
-
   address weth = 0x4200000000000000000000000000000000000006;
   address nfPositionManager = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
 
@@ -26,10 +25,10 @@ contract ERC20Deployer {
   function deployERC20InitialDistributorMainPools(
     string memory tokenName,
     string memory tokenSymbol,
-    uint totalSupply,
+    uint256 totalSupply,
     uint160[2] memory _sqrtPricesX96,
     address initialDistributorOwner
-  ) external returns(address, address) {
+  ) external returns (address, address) {
     InitialDistributorAbleToStake initialDistributor = new InitialDistributorAbleToStake(
       initialDistributorOwner,
       address(this)
@@ -43,32 +42,96 @@ contract ERC20Deployer {
 
     // deploy pools
     if (address(hbt) < weth) {
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(address(hbt), weth, uint24(3000), _sqrtPricesX96[0]);
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(address(hbt), weth, uint24(10000), _sqrtPricesX96[0]);
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        address(hbt),
+        weth,
+        uint24(3000),
+        _sqrtPricesX96[0]
+      );
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        address(hbt),
+        weth,
+        uint24(10000),
+        _sqrtPricesX96[0]
+      );
     } else {
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(weth, address(hbt), uint24(3000), _sqrtPricesX96[1]);
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(weth, address(hbt), uint24(10000), _sqrtPricesX96[1]);
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        weth,
+        address(hbt),
+        uint24(3000),
+        _sqrtPricesX96[1]
+      );
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        weth,
+        address(hbt),
+        uint24(10000),
+        _sqrtPricesX96[1]
+      );
     }
     return (address(hbt), address(initialDistributor));
   }
 
   function deployLastPool(address hbt, uint160[2] memory _sqrtPricesX96) external {
     if (hbt < weth) {
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(hbt, weth, uint24(500), _sqrtPricesX96[0]);
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        hbt,
+        weth,
+        uint24(500),
+        _sqrtPricesX96[0]
+      );
     } else {
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(weth, hbt, uint24(500), _sqrtPricesX96[1]);
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        weth,
+        hbt,
+        uint24(500),
+        _sqrtPricesX96[1]
+      );
     }
   }
 
-  function deployThreePools(address hbt, address pairAddress, uint160[2] memory _sqrtPricesX96) external {
+  function deployThreePools(
+    address hbt,
+    address pairAddress,
+    uint160[2] memory _sqrtPricesX96
+  ) external {
     if (hbt < pairAddress) {
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(hbt, pairAddress, uint24(3000), _sqrtPricesX96[0]);
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(hbt, pairAddress, uint24(10000), _sqrtPricesX96[0]);
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(hbt, pairAddress, uint24(500), _sqrtPricesX96[0]);
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        hbt,
+        pairAddress,
+        uint24(3000),
+        _sqrtPricesX96[0]
+      );
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        hbt,
+        pairAddress,
+        uint24(10000),
+        _sqrtPricesX96[0]
+      );
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        hbt,
+        pairAddress,
+        uint24(500),
+        _sqrtPricesX96[0]
+      );
     } else {
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(pairAddress, hbt, uint24(3000), _sqrtPricesX96[1]);
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(pairAddress, hbt, uint24(10000), _sqrtPricesX96[1]);
-      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(pairAddress, hbt, uint24(500), _sqrtPricesX96[1]);
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        pairAddress,
+        hbt,
+        uint24(3000),
+        _sqrtPricesX96[1]
+      );
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        pairAddress,
+        hbt,
+        uint24(10000),
+        _sqrtPricesX96[1]
+      );
+      INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
+        pairAddress,
+        hbt,
+        uint24(500),
+        _sqrtPricesX96[1]
+      );
     }
   }
 }

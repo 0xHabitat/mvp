@@ -17,35 +17,94 @@ contract GovernanceMethods {
     LibHabitatDiamond.updateFacetAndState(newFacetAddress, stateUpdate);
   }
 
-  function changeDecisionData(string memory msName, uint8 decisionType, bytes memory newDecisionData) external {
-    LibManagementSystem._setMSSpecificDataForDecisionType(msName, IManagementSystem.DecisionType(decisionType), newDecisionData);
+  function changeDecisionData(
+    string memory msName,
+    uint8 decisionType,
+    bytes memory newDecisionData
+  ) external {
+    LibManagementSystem._setMSSpecificDataForDecisionType(
+      msName,
+      IManagementSystem.DecisionType(decisionType),
+      newDecisionData
+    );
   }
 
-  function changeThresholdForInitiator(string memory msName, uint256 newThresholdForInitiator) external {
-    bytes memory newVPSD = LibDecisionSystemSpecificData._changedThresholdForInitiatorBytes(msName,newThresholdForInitiator);
-    LibManagementSystem._setMSSpecificDataForDecisionType(msName, IManagementSystem.DecisionType(2), newVPSD);
+  function changeThresholdForInitiator(
+    string memory msName,
+    uint256 newThresholdForInitiator
+  ) external {
+    bytes memory newVPSD = LibDecisionSystemSpecificData._changedThresholdForInitiatorBytes(
+      msName,
+      newThresholdForInitiator
+    );
+    LibManagementSystem._setMSSpecificDataForDecisionType(
+      msName,
+      IManagementSystem.DecisionType(2),
+      newVPSD
+    );
   }
 
-  function changeThresholdForProposal(string memory msName, uint256 newThresholdForProposal) external {
-    bytes memory newVPSD = LibDecisionSystemSpecificData._changedThresholdForProposalBytes(msName,newThresholdForProposal);
-    LibManagementSystem._setMSSpecificDataForDecisionType(msName, IManagementSystem.DecisionType(2), newVPSD);
+  function changeThresholdForProposal(
+    string memory msName,
+    uint256 newThresholdForProposal
+  ) external {
+    bytes memory newVPSD = LibDecisionSystemSpecificData._changedThresholdForProposalBytes(
+      msName,
+      newThresholdForProposal
+    );
+    LibManagementSystem._setMSSpecificDataForDecisionType(
+      msName,
+      IManagementSystem.DecisionType(2),
+      newVPSD
+    );
   }
 
-  function changeSecondsProposalVotingPeriod(string memory msName, uint256 newSecondsProposalVotingPeriod) external {
-    bytes memory newVPSD = LibDecisionSystemSpecificData._changedSecondsProposalVotingPeriodBytes(msName,newSecondsProposalVotingPeriod);
-    LibManagementSystem._setMSSpecificDataForDecisionType(msName, IManagementSystem.DecisionType(2), newVPSD);
+  function changeSecondsProposalVotingPeriod(
+    string memory msName,
+    uint256 newSecondsProposalVotingPeriod
+  ) external {
+    bytes memory newVPSD = LibDecisionSystemSpecificData._changedSecondsProposalVotingPeriodBytes(
+      msName,
+      newSecondsProposalVotingPeriod
+    );
+    LibManagementSystem._setMSSpecificDataForDecisionType(
+      msName,
+      IManagementSystem.DecisionType(2),
+      newVPSD
+    );
   }
 
-  function changeSecondsProposalExecutionDelayPeriodVP(string memory msName, uint256 newSecondsProposalExecutionDelayPeriodVP) external {
-    bytes memory newVPSD = LibDecisionSystemSpecificData._changedSecondsProposalExecutionDelayPeriodVPBytes(msName,newSecondsProposalExecutionDelayPeriodVP);
-    LibManagementSystem._setMSSpecificDataForDecisionType(msName, IManagementSystem.DecisionType(2), newVPSD);
+  function changeSecondsProposalExecutionDelayPeriodVP(
+    string memory msName,
+    uint256 newSecondsProposalExecutionDelayPeriodVP
+  ) external {
+    bytes memory newVPSD = LibDecisionSystemSpecificData
+      ._changedSecondsProposalExecutionDelayPeriodVPBytes(
+        msName,
+        newSecondsProposalExecutionDelayPeriodVP
+      );
+    LibManagementSystem._setMSSpecificDataForDecisionType(
+      msName,
+      IManagementSystem.DecisionType(2),
+      newVPSD
+    );
   }
 
-  function changeSecondsProposalExecutionDelayPeriodSigners(string memory msName, uint256 newSecondsProposalExecutionDelayPeriodSigners) external {
-    bytes memory newSSD = LibDecisionSystemSpecificData._changedSecondsProposalExecutionDelayPeriodSignersBytes(msName,newSecondsProposalExecutionDelayPeriodSigners);
-    LibManagementSystem._setMSSpecificDataForDecisionType(msName, IManagementSystem.DecisionType(3), newSSD);
+  function changeSecondsProposalExecutionDelayPeriodSigners(
+    string memory msName,
+    uint256 newSecondsProposalExecutionDelayPeriodSigners
+  ) external {
+    bytes memory newSSD = LibDecisionSystemSpecificData
+      ._changedSecondsProposalExecutionDelayPeriodSignersBytes(
+        msName,
+        newSecondsProposalExecutionDelayPeriodSigners
+      );
+    LibManagementSystem._setMSSpecificDataForDecisionType(
+      msName,
+      IManagementSystem.DecisionType(3),
+      newSSD
+    );
   }
 
   // TODO change dao meta data
-
 }
