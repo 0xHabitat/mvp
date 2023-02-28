@@ -1,30 +1,30 @@
-const { expect, assert } = require("chai");
-const { ethers } = require("hardhat");
+import { expect, assert } from "chai";
+import { ethers } from "hardhat";
 const nfPositionManagerABI = require('./abis/NonfungiblePositionManager.json');
 const uniswapV3PoolABI = require('./abis/UniswapV3Pool.json');
 const wETHABI = require('./abis/WETH.json');
 const nfPositionManagerAddress = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
 const wETHAddress = "0x4200000000000000000000000000000000000006";
 
-const tickSpacing = {
+const tickSpacing: { [key: string]: number } = {
   "500": 10,
   "3000": 60,
   "10000": 200
 }
 
 describe('Stake', function () {
-  let accounts;
-  let signer;
-  let tester1;
-  let tester2;
-  let hbtToken;
-  let weth;
-  let votingPowerHolder;
-  let stakeContractERC20UniV3;
-  let nfPositionManager;
-  let positionValueTest;
-  let isHBTToken0;
-  const pools = {
+  let accounts: any;
+  let signer: any;
+  let tester1: any;
+  let tester2: any;
+  let hbtToken: any;
+  let weth: any;
+  let votingPowerHolder: any;
+  let stakeContractERC20UniV3: any;
+  let nfPositionManager: any;
+  let positionValueTest: any;
+  let isHBTToken0: any;
+  const pools: { [key: string]: string } = {
     "500": "",
     "3000": "",
     "10000": ""
@@ -55,7 +55,7 @@ describe('Stake', function () {
     if (ethers.BigNumber.from(hbtToken.address).lt(ethers.BigNumber.from(wETHAddress))) {
       isHBTToken0 = true;
       const priceOneKHBTForETH = ethers.BigNumber.from("0x81853cdc3fe8b949c55450b");
-      for (fee in pools) {
+      for (let fee in pools) {
         const poolAddress = await nfPositionManager.callStatic.createAndInitializePoolIfNecessary(hbtToken.address, wETHAddress, ethers.BigNumber.from(fee), priceOneKHBTForETH);
         pools[fee] = poolAddress;
         await nfPositionManager.createAndInitializePoolIfNecessary(hbtToken.address, wETHAddress, ethers.BigNumber.from(fee), priceOneKHBTForETH);
@@ -63,7 +63,7 @@ describe('Stake', function () {
     } else {
       isHBTToken0 = false;
       const priceOneKHBTForETH = ethers.BigNumber.from("0x1f9f6d9a3bc5ab22441f2925e9");
-      for (fee in pools) {
+      for (let fee in pools) {
         const poolAddress = await nfPositionManager.callStatic.createAndInitializePoolIfNecessary(wETHAddress, hbtToken.address, ethers.BigNumber.from(fee), priceOneKHBTForETH);
         pools[fee] = poolAddress;
         await nfPositionManager.createAndInitializePoolIfNecessary(wETHAddress, hbtToken.address, ethers.BigNumber.from(fee), priceOneKHBTForETH);
@@ -73,9 +73,9 @@ describe('Stake', function () {
 
   it('positionValueTest should calculate correct', async function () {
     this.timeout(0);
-    for (fee in pools) {
+    for (let fee in pools) {
 
-      const block = await ethers.provider.getBlock();
+      const block = await ethers.provider.getBlock('latest');
 
       const pool = new ethers.Contract(pools[fee], uniswapV3PoolABI.abi, signer);
       await weth.deposit({value: ethers.BigNumber.from("1000000000000000000")});
@@ -175,7 +175,7 @@ describe('Stake', function () {
     }
   });
 
-  async function getNFTs(beneficiar) {
+  async function getNFTs(beneficiar: any) {
     await hbtToken.transfer(beneficiar.address, ethers.BigNumber.from("100000000000000000000000"));
 
     const hbtTokenNS = hbtToken.connect(beneficiar);
@@ -185,9 +185,9 @@ describe('Stake', function () {
 
     await wethNS.deposit({value: ethers.BigNumber.from("50000000000000000000")});
     await wethNS.approve(nfPositionManagerNS.address, ethers.BigNumber.from("50000000000000000000"));
-    const block = await ethers.provider.getBlock();
+    const block = await ethers.provider.getBlock('latest');
 
-    const mintParams = {
+    const mintParams: {[key: string]: any} = {
       token0: isHBTToken0 ? hbtToken.address : wethNS.address,
       token1: isHBTToken0 ? wethNS.address : hbtToken.address,
       amount0Min: 0,
@@ -198,12 +198,12 @@ describe('Stake', function () {
     const oneETH = ethers.BigNumber.from("1000000000000000000");
     const oneKHBT = ethers.BigNumber.from("1000000000000000000000");
 
-    const nfts = {
+    const nfts: {[key: string]: any[]} = {
       "inRange": [],
       "onlyToken0": [],
       "onlyToken1": []
     };
-    for (fee in pools) {
+    for (let fee in pools) {
       const pool = new ethers.Contract(pools[fee], uniswapV3PoolABI.abi, beneficiar);
       const slot0 = await pool.slot0();
       const tickLowerClosest = slot0.tick - (slot0.tick % tickSpacing[fee]);
@@ -238,7 +238,7 @@ describe('Stake', function () {
     return nfts;
   }
 
-  async function mintToken(nfPositionManager, mintParams, tickLower, tickUpper, tickSpacing) {
+  async function mintToken(nfPositionManager: any, mintParams: any, tickLower: any, tickUpper: any, tickSpacing: any) {
     mintParams.tickLower = tickLower;
     mintParams.tickUpper = tickUpper;
     const [tokenId, liquidity, amount0, amount1] = await nfPositionManager.callStatic.mint(mintParams);

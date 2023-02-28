@@ -8,7 +8,7 @@ const wETHAddressGoerli = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6";
 const POOL_BYTECODE_HASH = "0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54";
 const FACTORY_ADDRESS = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
 
-function getContractsForUniV3(habitatAddress, fee, signer) {
+export const getContractsForUniV3 = (habitatAddress: any, fee: any, signer: any) => {
   const weth = new ethers.Contract(wETHAddress, wETHABI.abi, signer);
   const nfPositionManager = new ethers.Contract(nfPositionManagerAddress, nfPositionManagerABI.abi, signer);
   const poolAddress = computePoolAddress([wETHAddress, habitatAddress], fee);
@@ -16,12 +16,12 @@ function getContractsForUniV3(habitatAddress, fee, signer) {
   return {weth, nfPositionManager, pool};
 }
 
-function getWETH(signer) {
+export const getWETH = (signer: any) => {
   const weth = new ethers.Contract(wETHAddress, wETHABI.abi, signer);
   return weth;
 }
 
-function computePoolAddress([tokenA, tokenB], fee) {
+function computePoolAddress([tokenA, tokenB]: any[], fee: any) {
   const [token0, token1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA]
   const constructorArgumentsEncoded = ethers.utils.defaultAbiCoder.encode(
     ['address', 'address', 'uint24'],
@@ -38,6 +38,3 @@ function computePoolAddress([tokenA, tokenB], fee) {
   const sanitizedInputs = `0x${create2Inputs.map((i) => i.slice(2)).join('')}`
   return ethers.utils.getAddress(`0x${ethers.utils.keccak256(sanitizedInputs).slice(-40)}`)
 }
-
-exports.getContractsForUniV3 = getContractsForUniV3;
-exports.getWETH = getWETH;

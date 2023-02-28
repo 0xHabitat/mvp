@@ -3,7 +3,7 @@ import { ethers } from 'hardhat';
 import * as helpers from '@nomicfoundation/hardhat-network-helpers';
 import habitatABI from '../habitatDiamondABI.json';
 const { deployDAO } = require('../scripts/deployDAO.js');
-const { getContractsForUniV3, getWETH } = require('./helpers/getContractsForUniV3.js');
+import { getContractsForUniV3, getWETH } from './helpers/getContractsForUniV3';
 
 describe('HabitatDiamond', function () {
   async function deployDAOFixture() {

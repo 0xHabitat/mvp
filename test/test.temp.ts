@@ -1,8 +1,8 @@
-const { expect, assert } = require("chai");
-const { ethers } = require("hardhat");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
+import { expect, assert } from "chai";
+import { ethers } from "hardhat";
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 const { deployDAO } = require("../scripts/deployDAO.js");
-const { getWETH } = require('./helpers/getContractsForUniV3.js');
+import { getWETH } from './helpers/getContractsForUniV3';
 const habitatABI = require('../habitatDiamondABI.json');
 
 describe('HabitatDiamond', function () {
@@ -10,7 +10,7 @@ describe('HabitatDiamond', function () {
   it("Signers/Treasury module: Cover treasury proposal process with decision type signers", async function () {
     this.timeout(0);
     const accounts = await ethers.getSigners();
-    signer = accounts[0];
+    const signer = accounts[0];
     const beneficiarAddress = accounts[8].address;
     // first let's make treasury decision type signers
     const [daoAddress, initialDistributorAddress] = await deployDAO([3,2,3,2,3]);
@@ -30,7 +30,7 @@ describe('HabitatDiamond', function () {
     await tx.wait();
     const ethTranfer = {
       to: habitatDiamond.address,
-      value: ethers.utils.parseEther('10', 'ether')
+      value: ethers.utils.parseEther('10')
     }
     tx = await sponsor.sendTransaction(ethTranfer);
     await tx.wait();
@@ -95,7 +95,7 @@ describe('HabitatDiamond', function () {
     expect(decisionType).to.eq(3);
     // lets find our proposalId in active voting
     let activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds("treasury");
-    expect(activeVotingProposalIds.some((id) => id.eq(proposalID))).to.be.true;
+    expect(activeVotingProposalIds.some((id: any) => id.eq(proposalID))).to.be.true;
 
     const proposalKey = await deciderSigners.computeProposalKey('treasury', proposalID);
     // the initiator already decided
@@ -140,7 +140,7 @@ describe('HabitatDiamond', function () {
 
     // confirm proposalId is removed from active
     activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds("treasury");
-    expect(activeVotingProposalIds.some((id) => id.eq(proposalID))).to.be.false;
+    expect(activeVotingProposalIds.some((id: any) => id.eq(proposalID))).to.be.false;
 
     // execute proposal
     const beneficiarETHBalanceBefore = await ethers.provider.getBalance(beneficiarAddress);
