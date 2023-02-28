@@ -102,14 +102,18 @@ contract StakeContractERC20UniV3 {
     votingPowerHolder = IVotingPower(_votingPowerHolder);
   }
 
-  // should give token approval before call
-  function stakeGovToken(uint256 _amount) public {
+  /**
+   * @notice Before call have to approve
+   * @return Returns amount of voting power staker gets for staked tokens.
+   */
+  function stakeGovToken(uint256 _amount) public returns(uint256) {
     // receive tokens from holder to stake contract
     IERC20(governanceToken).safeTransferFrom(msg.sender, address(this), _amount); // double check
     // account how much holders tokens are staked
     _stakedERC20GovToken[msg.sender] += _amount;
     // give voting power
     votingPowerHolder.increaseVotingPower(msg.sender, _amount);
+    return _amount;
   }
 
   // should give token approval before call
@@ -122,7 +126,10 @@ contract StakeContractERC20UniV3 {
     votingPowerHolder.increaseVotingPower(beneficiary, _amount);
   }
 
-  function unstakeGovToken(uint256 _amount) public {
+  /**
+   * @return Returns amount of voting power staker loses after unstaking tokens.
+   */
+  function unstakeGovToken(uint256 _amount) public returns(uint256) {
     require(
       _stakedERC20GovToken[msg.sender] >= _amount,
       "Trying to unstake more than have."
@@ -133,53 +140,19 @@ contract StakeContractERC20UniV3 {
     votingPowerHolder.decreaseVotingPower(msg.sender, _amount);
     // transfer tokens from stake contract to holder
     IERC20(governanceToken).safeTransfer(msg.sender, _amount);
+    return _amount;
   }
-  // first have to approve (make operator = address(this))
 
-  function stakeUniV3NFTPosition(uint256 tokenId) public {
+  /**
+   * @notice Before call have to approve (make operator = address(this))
+   * @return Returns amount of voting power staker gets for staked position.
+   */
+  function stakeUniV3NFTPosition(uint256 tokenId) public returns(uint256) {
     require(nfPositionManager.ownerOf(tokenId) == msg.sender, "Not an owner of NFT position.");
 
-    (bool suc, bytes memory data) = address(nfPositionManager).call(abi.encodeWithSelector(0x99fbab88, tokenId));
-    require(suc);
-    PositionData memory positionData = convertToPositionData(data);
+    (address operator, uint256 amountOfVotingPower) = _convertUNIV3PositionToVotingPower(tokenId);
+    require(operator == address(this), "No approval to stake.");
 
-    require(positionData.operator == address(this), "No approval to stake.");
-    require(positionData.token0 == governanceToken || positionData.token1 == governanceToken, "No governance token in underlying assets.");
-    address pairToken = positionData.token0 == governanceToken ? positionData.token1 : positionData.token0;
-    require(legalPairTokens.contains(pairToken), "No legal pair token in underlying assets.");
-    address pool = LibUniswapV3Math.computePoolAddress(uniV3Factory, positionData.token0, positionData.token1, positionData.fee);
-    Slot0 memory slot0 = IUniV3Pool(pool).slot0();
-
-    uint160 sqrtRatioAX96 = LibUniswapV3Math.getSqrtRatioAtTick(positionData.tickLower);
-    uint160 sqrtRatioBX96 = LibUniswapV3Math.getSqrtRatioAtTick(positionData.tickUpper);
-    uint256 amountOfVotingPower;
-    if (slot0.tick < positionData.tickLower) {
-      if (positionData.token0 == governanceToken) {
-        // here all position is HBT
-        // amount0
-        amountOfVotingPower = LibUniswapV3Math.getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, positionData.liquidity);
-      } else {
-        // now we don't accept only WETH (other pair token) positions
-        revert("Only pair token liquidity is not accepted yet.");
-      }
-    } else if (slot0.tick < positionData.tickUpper) {
-      // here in range
-      // we don't calcute the amount0 and amount1, instead we calculate amount if position would be out of range and contain only governanceToken
-      if (positionData.token0 == governanceToken) {
-        amountOfVotingPower = LibUniswapV3Math.getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, positionData.liquidity);
-      } else {
-        amountOfVotingPower = LibUniswapV3Math.getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, positionData.liquidity);
-      }
-    } else {
-      if (positionData.token0 == governanceToken) {
-        // now we don't accept only WETH (other pair token) positions
-        revert("Only pair token liquidity is not accepted yet.");
-      } else {
-        // here all position is HBT
-        // amount1
-        amountOfVotingPower = LibUniswapV3Math.getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, positionData.liquidity);
-      }
-    }
     // receive token from holder to stake contract
     nfPositionManager.safeTransferFrom(msg.sender, address(this), tokenId);
     // account ownership of the staked token
@@ -189,9 +162,14 @@ contract StakeContractERC20UniV3 {
 
     // give voting power
     votingPowerHolder.increaseVotingPower(msg.sender, amountOfVotingPower);
+
+    return amountOfVotingPower;
   }
 
-  function unstakeUniV3NFTPosition(uint256 tokenId) public {
+  /**
+   * @return Returns amount of voting power staker loses after unstaking position.
+   */
+  function unstakeUniV3NFTPosition(uint256 tokenId) public returns(uint256) {
     require(_stakerNFTPositions[msg.sender].contains(tokenId), "tokenId was not staked by msg.sender");
 
     // remove token from holdings
@@ -204,20 +182,31 @@ contract StakeContractERC20UniV3 {
 
     // transfer tokens from stake contract to holder
     nfPositionManager.safeTransferFrom(address(this), msg.sender, tokenId);
+    return amountOfVotingPowerForNFT;
   }
 
-  function stakeMultipleUniV3NFTPositions(uint256[] memory tokenIds) external {
+  /**
+   * @notice Before call have to approve all (make operator = address(this))
+   * @return Returns amount of voting power staker gets for staked positions.
+   */
+  function stakeMultipleUniV3NFTPositions(uint256[] memory tokenIds) external returns(uint256) {
     require(tokenIds.length < 100);
+    uint256 amountOfVotingPower;
     for (uint i = 0; i < tokenIds.length; i++) {
-      stakeUniV3NFTPosition(tokenIds[i]);
+      amountOfVotingPower += stakeUniV3NFTPosition(tokenIds[i]);
     }
+    return amountOfVotingPower;
   }
-
-  function unStakeMultipleUniV3NFTPositions(uint256[] memory tokenIds) external {
+  /**
+   * @return Returns amount of voting power staker loses after unstaking positions.
+   */
+  function unStakeMultipleUniV3NFTPositions(uint256[] memory tokenIds) external returns(uint256) {
     require(tokenIds.length < 100);
+    uint256 amountOfVotingPower;
     for (uint i = 0; i < tokenIds.length; i++) {
-      unstakeUniV3NFTPosition(tokenIds[i]);
+      amountOfVotingPower += unstakeUniV3NFTPosition(tokenIds[i]);
     }
+    return amountOfVotingPower;
   }
 
   function increaseVotingPowerByIncreasingLiquidityOfNFTPosition(uint256 tokenId) external {
@@ -267,6 +256,10 @@ contract StakeContractERC20UniV3 {
     return _stakerNFTPositions[holder].at(index);
   }
 
+  function getAllNFTPositionIdsOfHolder(address holder) public view returns(uint256[] memory) {
+    return _stakerNFTPositions[holder].values();
+ }
+
   function nftPositionIsStakedByHolder(address holder, uint256 tokenId) public view returns(bool) {
     return _stakerNFTPositions[holder].contains(tokenId);
   }
@@ -278,4 +271,66 @@ contract StakeContractERC20UniV3 {
   function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data) external pure returns (bytes4) {
     return 0x150b7a02;
   }
+
+  /**
+   * @notice View function for multicall contract.
+   * @dev Do not make tx calling the function
+   * @param tokenId The id of nonfungiblePositionManager token
+   * @return Returns position operator
+   * @return Returns amount of voting power staker gets for staked position
+   */
+  function isUniV3NFTValidView(uint256 tokenId) external returns(address, uint256) {
+    return _convertUNIV3PositionToVotingPower(tokenId);
+  }
+
+  function _convertUNIV3PositionToVotingPower(
+    uint256 tokenId
+  )
+    internal
+    returns(address operator, uint256 amountOfVotingPower)
+  {
+    (bool suc, bytes memory data) = address(nfPositionManager).call(abi.encodeWithSelector(0x99fbab88, tokenId));
+    require(suc);
+    PositionData memory positionData = convertToPositionData(data);
+
+    operator = positionData.operator;
+
+    require(positionData.token0 == governanceToken || positionData.token1 == governanceToken, "No governance token in underlying assets.");
+    address pairToken = positionData.token0 == governanceToken ? positionData.token1 : positionData.token0;
+    require(legalPairTokens.contains(pairToken), "No legal pair token in underlying assets.");
+    address pool = LibUniswapV3Math.computePoolAddress(uniV3Factory, positionData.token0, positionData.token1, positionData.fee);
+    Slot0 memory slot0 = IUniV3Pool(pool).slot0();
+
+    uint160 sqrtRatioAX96 = LibUniswapV3Math.getSqrtRatioAtTick(positionData.tickLower);
+    uint160 sqrtRatioBX96 = LibUniswapV3Math.getSqrtRatioAtTick(positionData.tickUpper);
+
+    if (slot0.tick < positionData.tickLower) {
+      if (positionData.token0 == governanceToken) {
+        // here all position is HBT
+        // amount0
+        amountOfVotingPower = LibUniswapV3Math.getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, positionData.liquidity);
+      } else {
+        // now we don't accept only WETH (other pair token) positions
+        revert("Only pair token liquidity is not accepted yet.");
+      }
+    } else if (slot0.tick < positionData.tickUpper) {
+      // here in range
+      // we don't calcute the amount0 and amount1, instead we calculate amount if position would be out of range and contain only governanceToken
+      if (positionData.token0 == governanceToken) {
+        amountOfVotingPower = LibUniswapV3Math.getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, positionData.liquidity);
+      } else {
+        amountOfVotingPower = LibUniswapV3Math.getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, positionData.liquidity);
+      }
+    } else {
+      if (positionData.token0 == governanceToken) {
+        // now we don't accept only WETH (other pair token) positions
+        revert("Only pair token liquidity is not accepted yet.");
+      } else {
+        // here all position is HBT
+        // amount1
+        amountOfVotingPower = LibUniswapV3Math.getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, positionData.liquidity);
+      }
+    }
+  }
+
 }
