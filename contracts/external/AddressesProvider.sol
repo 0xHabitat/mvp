@@ -3,8 +3,14 @@ pragma solidity ^0.8.9;
 
 import {IAddressesProvider} from "../interfaces/IAddressesProvider.sol";
 
+/**
+ * @title AddressesProvider - Trusted source of facets and init contract for DAO diamond.
+ *        Is used to receive addresses on deployment and upgrade stages.
+ * @dev Stores init contract addresses and facet addresses and their selectors.
+ * @author @roleengineer
+ */
 contract AddressesProvider is
-  IAddressesProvider // Registry - rename
+  IAddressesProvider
 {
   address owner; // replace later with openzeppelin
 

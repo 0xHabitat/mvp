@@ -6,7 +6,19 @@ import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
 import {IAddressesProvider} from "./interfaces/IAddressesProvider.sol";
 import {IDAO} from "./interfaces/dao/IDAO.sol";
 
+/**
+ * @title HabitatDiamond - DAO diamond contract (EIP 2535).
+ * @author @roleengineer
+ */
 contract HabitatDiamond {
+  /**
+   * @notice Constructor function makes default DAO diamond cuts.
+   * @param addressesProvider Address of the contract that is a trusted source of facets and init contract addresses.
+   * @param daoMetaData Metadata struct which contains strings: daoName, purpose, info and socials.
+   * @param msCallData Encoded data which will be used by the management system init contract to initialize state.
+   *                   Encoding depends on the respective init function of the init contract and includes selector.
+   *                   Management system init contract address is taken from addressesProvider contract.
+   */
   constructor(
     address addressesProvider,
     IDAO.DAOMeta memory daoMetaData,
@@ -92,8 +104,10 @@ contract HabitatDiamond {
     LibDiamond.diamondCut(msCut, managementSystemInit, msCallData);
   }
 
-  // Find facet for function that is called and execute the
-  // function if a facet is found and return any value.
+  /**
+   * @dev Find facet for function that is called and execute the
+   *      function if a facet is found and return any value.
+   */
   fallback() external payable {
     LibDiamond.DiamondStorage storage ds;
     bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;

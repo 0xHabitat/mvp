@@ -13,6 +13,30 @@ interface IVotingPowerManager {
   function governanceToken() external view returns (address);
 }
 
+/**
+ * @title DeciderVotingPower - Base part of Voting Power Decision System - onchain voting.
+ * @notice Inherits BaseDecider and implements its function by overridding in the conve of voting power decision system.
+ *         Contract relies on StakeContractERC20UniV3 (called VotingPowerManager) to define accounts voting power.
+ *         Contract has its own voting power delegation logic.
+ *         Contract accounts proposal votings on behalf of the DAO.
+ * @dev Interactions flow:
+ *      - Accounts, which have staked governance token and/or uniV3 positions to
+ *        StakeContractERC20UniV3 are getting voting power inside this contract.
+ *      - Accounts are interacting with the DAO contract. Creation proposals related
+ *        to DAO Modules, which current decision type is VotingPowerERC20, makes DAO
+ *        call this contract and ask if account is able to create proposal and if yes
+ *        ask to create voting and account to vote.
+ *      - Same applies for the whole decision process (proposal create,
+ *        decide on, accept or reject, execute): account interacts with a DAO,
+ *        DAO interacts with this contract, this contract based on its state and data
+ *        received from the DAO conducts the decision process by its own logic.
+ *      - Accounts interacts directly with this contract about delegation, getting
+ *        proposal votings state and other view functions.
+ *      - Accounts are able to unstake their tokens any time, if they have not voted.
+ *      - Account which has voted on the active proposal, has to wait unstakeTimestamp
+ *        until be able to unstake staked tokens.
+ * @author @roleengineer
+ */
 contract DeciderVotingPower is BaseDecider, IVotingPower {
   struct Delegation {
     address delegatee;
@@ -67,22 +91,40 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     maxAmountOfVotingPower = IERC20(governanceToken).totalSupply();
   }
 
-  // DAO INTERACTION FUNCTIONS
+  /*//////////////////////////////////////////////////////////////
+                    DAO INTERACTION FUNCTIONS
+  //////////////////////////////////////////////////////////////*/
 
+  /**
+   * @notice Returns true, if stake and dao contracts are set and govtoken totalSupply is not 0.
+   * @return True, if setup is completed.
+   */
   function isSetupComplete() external override onlyDAO returns (bool) {
     // maybe here we need more complex logic?
     return
       votingPowerManager != address(0) && dao != address(0) && maxAmountOfVotingPower != uint256(0);
   }
 
+  /**
+   * @notice DeciderVotingPower does not have a direct caller.
+   * @return Address 0x0.
+   */
   function directCaller() external override onlyDAO returns (address) {
     return address(0);
   }
 
+  /**
+   * @notice DeciderVotingPower does not have a direct caller.
+   * @return False.
+   */
   function isDirectCallerSetup() external override onlyDAO returns (bool) {
     return false;
   }
 
+  /**
+   * @notice DeciderVotingPower does not have a direct caller.
+   * @return Revert the call.
+   */
   function directCallerExecutionTimestamp(
     bytes memory specificData
   ) external override onlyDAO returns (uint256) {
@@ -91,6 +133,16 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     );
   }
 
+  /**
+   * @notice Method defines, if the `caller` is allowed to create proposal
+   *         by receiving thresholdForInitiator from the DAO and calculating, if
+   *         `caller` has enough voting power to reach the threshold.
+   *         Threshold for initiator is individual for each DAO Module.
+   * @param caller Address, which is initiating proposal creation.
+   * @param specificData Voting power specific data struct contains 4 uint256 (thresholdForInitiator, thresholdForProposal, secondsProposalVotingPeriod, secondsProposalExecutionDelayPeriod).
+   * @return True, if caller is allowed to create proposal.
+   * @return String, explaining the reason, if caller is not allowed.
+   */
   function isCallerAllowedToCreateProposal(
     address caller,
     bytes memory specificData
@@ -100,6 +152,18 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return allowed ? (allowed, "") : (allowed, "Not enough voting power to create proposal.");
   }
 
+  /**
+   * @notice Method initiates proposal voting, based on secondsProposalVotingPeriod and
+   *         secondsProposalExecutionDelayPeriod (individual for each DAO Module)
+   *         calculates votingEndTimestamp and executionTimestamp, sets unstakeTimestamp
+   *         for voters that will vote on this proposal.
+   * @dev Each proposal is unique, we store it in a mapping by the key, which is
+   *      calculating by keccak256 function taking module name and proposal id.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @param specificData Voting power specific data struct contains 4 uint256 (thresholdForInitiator, thresholdForProposal, secondsProposalVotingPeriod, secondsProposalExecutionDelayPeriod).
+   * @return executionTimestamp The timestamp, when proposal could be executed is returned to the DAO.
+   */
   function initiateDecisionProcess(
     string memory msName,
     uint256 proposalId,
@@ -122,6 +186,16 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     emit NewVoting(proposalKey, proposalVoting.votingEndTimestamp);
   }
 
+  /**
+   * @notice Method register the valid vote - add amount of `decider` voting power
+   *         to proposal voting yes or no depend on `decision`.
+   *         Valid means: voting on proposal is started and is not ended.
+   *         Also sets `decider` new unstakeTimestamp.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @param decider Address that is voting.
+   * @param decision True - for proposal, false - against proposal.
+   */
   function decideOnProposal(
     string memory msName,
     uint256 proposalId,
@@ -146,9 +220,19 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     emit Voted(decider, msName, proposalId, decision);
   }
 
-  // Must be called right after the proposal voting period deadline is expired
-  // Otherwise can be manipulated (e.g. governance effects proposal threshold)
-  // Best to have service that will call immediately
+  /**
+   * @notice Method accepts or rejects the proposal, after voting period is ended,
+   *         by analizing the voting results and thresholdForProposal (received from the DAO).
+   *         Proposal voting is loged in event and cleaned from the storage.
+   *         Sets true in canBeExecuted mapping for accepted proposal (additional security for the DAO contract).
+   * @dev Must be called right after the proposal voting period deadline is expired.
+   *      Otherwise can be manipulated (e.g. governance effects proposal threshold).
+   *      Best to have offchain service that will call immediately.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @param specificData Voting power specific data struct contains 4 uint256 (thresholdForInitiator, thresholdForProposal, secondsProposalVotingPeriod, secondsProposalExecutionDelayPeriod).
+   * @return True, if proposal is accepted is returned to the DAO contract.
+   */
   function acceptOrRejectProposal(
     string memory msName,
     uint256 proposalId,
@@ -191,6 +275,14 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return false;
   }
 
+  /**
+   * @notice Method executes accepted proposal as DAO accepts execution call
+   *         only from decider contracts. Checks if proposal canBeExecuted.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @param funcSelector DAO function selector, which has to be called by decider to execute proposal.
+   * @return The proposal execution result, false if during execution call revert poped up.
+   */
   function executeProposal(
     string memory msName,
     uint256 proposalId,
@@ -206,9 +298,16 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return returnedResult;
   }
 
-  // DECIDER FUNCTIONS
+  /*//////////////////////////////////////////////////////////////
+                      DECIDER FUNCTIONS
+  //////////////////////////////////////////////////////////////*/
 
-  // increasing voting power
+  /**
+   * @notice Method is called by StakeContractERC20UniV3 (when voter stakes tokens)
+   *         and increases voter amount of voting power.
+   * @param voter Address, which is beneficiary of staking tokens.
+   * @param amount voting power balance is increased.
+   */
   function increaseVotingPower(address voter, uint256 amount) external {
     require(msg.sender == votingPowerManager);
     // increase totalVotingPower
@@ -217,7 +316,12 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     votingPower[voter] += amount;
   }
 
-  // decreasing voting power
+  /**
+   * @notice Method is called by StakeContractERC20UniV3 (when voter unstakes tokens)
+   *         and decreases voter amount of voting power.
+   * @param voter Address, which is unstaking tokens.
+   * @param amount voting power balance is decreased.
+   */
   function decreaseVotingPower(address voter, uint256 amount) external {
     require(msg.sender == votingPowerManager);
     require(timeStampToUnstake[voter] <= block.timestamp, "Cannot unstake now.");
@@ -227,6 +331,12 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     votingPower[voter] -= amount;
   }
 
+  /**
+   * @notice Method moving all caller voting power to delegatee and accounts
+   *         this action.
+   * @dev Able to have only one delegatee, to change delegatee first have to undelegate.
+   * @param delegatee Address, which receives delegated voting power.
+   */
   function delegateVotingPower(address delegatee) external {
     require(timeStampToUnstake[msg.sender] < block.timestamp, "Wait timestamp to delegate");
     uint256 amountOfVotingPower = votingPower[msg.sender];
@@ -248,6 +358,12 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     votingPower[delegatee] += amountOfVotingPower;
   }
 
+  /**
+   * @notice Method moving back to caller delegated voting power and accounts
+   *         this action. If current timestamp is less then delegatee unstakeTimestamp,
+   *         then delegated voting power is freezed until unfreezeTimestamp.
+   * @dev Delegator gets same unstakeTimestamp as delegatee, if it is bigger.
+   */
   function undelegateVotingPower() external {
     Delegation storage delegation = delegations[msg.sender];
     require(delegation.delegatee != address(0), "Have not delegate yet.");
@@ -276,6 +392,9 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     }
   }
 
+  /**
+   * @notice Method unfreeze delegated voting power after unfreezeTimestamp.
+   */
   function unfreezeVotingPower() external {
     Delegation storage delegation = delegations[msg.sender];
 
@@ -285,24 +404,34 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     votingPower[msg.sender] += amountOfVotingPower;
   }
 
-  // INTERNAL FUNCTIONS
+  /*//////////////////////////////////////////////////////////////
+                      INTERNAL FUNCTIONS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @dev Internal method that sets new timestamp to unstake.
+   */
   function _setTimestampToUnstake(address staker, uint256 timestamp) internal {
     if (timeStampToUnstake[staker] < timestamp) {
       timeStampToUnstake[staker] = timestamp;
     }
   }
 
+  /**
+   * @dev Internal method that returns ProposalVoting struct by proposalKey.
+   */
   function _getProposalVoting(
     bytes32 proposalKey
   ) internal view returns (ProposalVoting storage pV) {
     pV = proposalsVoting[proposalKey];
   }
 
-  // rethink if remove as well
-  // Now i think that we will not remove voting,
-  // because we want the source of results as we don't use a server and parsing
-  // blockchain logs
-  // we just put votingStarted false (looks enough to protect doublespending)
+  /**
+   * @notice Removes proposal voting struct from storage.
+   * @dev Doubts. Rethink if remove as well. Now i think that we will not remove voting,
+   *      because we want the source of results as we don't use a server and parsing blockchain logs.
+   *      We just put votingStarted false (looks enough to protect doublespending).
+   */
   function _removeProposalVoting(bytes32 proposalKey) internal {
     ProposalVoting storage pV = _getProposalVoting(proposalKey);
     delete pV.votingStarted;
@@ -313,6 +442,9 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     // rethink votedAmount
   }
 
+  /**
+   * @dev Returns true, if `holder` has enough voting power to reach `thresholdForInitiator`.
+   */
   function _calculateIsEnoughVotingPower(
     address holder,
     uint256 thresholdForInitiator
@@ -325,6 +457,9 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     }
   }
 
+  /**
+   * @dev Returns true, if `amountOfVotes` is enough to reach `thresholdForProposal`.
+   */
   function _calculateIsProposalThresholdReached(
     uint256 amountOfVotes,
     uint256 thresholdForProposal
@@ -336,6 +471,9 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     }
   }
 
+  /**
+   * @dev Returns calculated absolute threshold value in voting power.
+   */
   function _calculateAbsoluteThresholdValue(
     uint256 thresholdNumerator
   ) internal view returns (uint256) {
@@ -346,56 +484,102 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     }
   }
 
-  // View functions
+  /*//////////////////////////////////////////////////////////////
+                        VIEW FUNCTIONS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Returns voting power manager (stake contract) address.
+   */
   function getVotingPowerManager() external view returns (address) {
     return votingPowerManager;
   }
 
+  /**
+   * @notice Returns `voter` amount of voting power.
+   */
   function getVoterVotingPower(address voter) public view returns (uint256) {
     return votingPower[voter];
   }
 
+  /**
+   * @notice Returns total amount of voting power (depends on staking activity).
+   */
   function getTotalAmountOfVotingPower() external view returns (uint256) {
     return totalAmountOfVotingPower;
   }
 
+  /**
+   * @notice Returns maximum amount of voting power, equals totalSupply of governance token.
+   * @dev totalAmountOfVotingPower could be biger than maximum, because of ability to stake uniV3 positions.
+   */
   function getMaxAmountOfVotingPower() external view returns (uint256) {
     return maxAmountOfVotingPower;
   }
 
+  /**
+   * @notice Returns precision value. Denominator for the threshold values. Multiplier for the threshold percentages.
+   */
   function getPrecision() external view returns (uint256) {
     return precision;
   }
 
+  /**
+   * @notice Returns timestamp, when `staker` is able to unstake tokens.
+   */
   function getTimestampToUnstake(address staker) external view returns (uint256) {
     return timeStampToUnstake[staker];
   }
 
+  /**
+   * @notice Returns Delegation struct filled with values related to `delegator`.
+   * @param delegator Address which has delegated voting power
+   * @return delegation struct containing delegatee address, amount of delegatedVotingPower,
+   *                    freezedAmount of voting power and unfreezeTimestamp.
+   */
   function _getDelegation(address delegator) public view returns (Delegation memory delegation) {
     delegation = delegations[delegator];
   }
 
+  /**
+   * @notice Returns `delegator` delegatee address.
+   */
   function getDelegatee(address delegator) external view returns (address) {
     Delegation memory delegation = _getDelegation(delegator);
     return delegation.delegatee;
   }
 
+  /**
+   * @notice Returns 'delegator' amount of delegated voting power.
+   */
   function getAmountOfDelegatedVotingPower(address delegator) external view returns (uint256) {
     Delegation memory delegation = _getDelegation(delegator);
     return delegation.delegatedVotingPower;
   }
 
+  /**
+   * @notice Returns 'delegator' amount of freezed voting power.
+   */
   function getFreezeAmountOfVotingPower(address delegator) external view returns (uint256) {
     Delegation memory delegation = _getDelegation(delegator);
     return delegation.freezedAmount;
   }
 
+  /**
+   * @notice Returns 'delegator' unfreeze timestamp.
+   */
   function getUnfreezeTimestamp(address delegator) external view returns (uint256) {
     Delegation memory delegation = _getDelegation(delegator);
     return delegation.unfreezeTimestamp;
   }
 
-  // return ProposalVoting struct
+  /**
+   * ProposalVoting struct
+   * @notice Returns amount of votes yes given to the proposal.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @return amount of votes yes given to the proposal.
+   */
   function getProposalVotingVotesYes(
     string memory msName,
     uint256 proposalId
@@ -405,6 +589,13 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return proposalVoting.votesYes;
   }
 
+  /**
+   * ProposalVoting struct
+   * @notice Returns amount of votes no given to the proposal.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @return amount of votes no given to the proposal.
+   */
   function getProposalVotingVotesNo(
     string memory msName,
     uint256 proposalId
@@ -414,6 +605,13 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return proposalVoting.votesNo;
   }
 
+  /**
+   * ProposalVoting struct
+   * @notice Returns proposal voting period deadline timestamp.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @return proposal voting period deadline timestamp.
+   */
   function getProposalVotingDeadlineTimestamp(
     string memory msName,
     uint256 proposalId
@@ -423,6 +621,14 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return proposalVoting.votingEndTimestamp;
   }
 
+  /**
+   * ProposalVoting struct
+   * @notice Returns true, if `holder` has voted for a proposal.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @param holder Address, which has voted for a proposal.
+   * @return true, if `holder` has voted for a `msName` proposal `proposalId`.
+   */
   function isHolderVotedForProposal(
     string memory msName,
     uint256 proposalId,
@@ -433,6 +639,13 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return proposalVoting.votedAmount[holder] > 0;
   }
 
+  /**
+   * ProposalVoting struct
+   * @notice Returns true, if proposal voting period is already started.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @return true, if voting period for a `msName` proposal `proposalId` is started.
+   */
   function isVotingForProposalStarted(
     string memory msName,
     uint256 proposalId
@@ -442,6 +655,13 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return proposalVoting.votingStarted;
   }
 
+  /**
+   * ProposalVoting struct
+   * @notice Returns true, if proposal voting period is already ended.
+   * @param msName DAO Module name, proposal is related to.
+   * @param proposalId The id of proposal, unique to each module. Starts with 1, next + 1.
+   * @return true, if voting period for a `msName` proposal `proposalId` is ended.
+   */
   function isVotingForProposalEnded(
     string memory msName,
     uint256 proposalId
@@ -451,15 +671,21 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return proposalVoting.votingEndTimestamp <= block.timestamp;
   }
 
-  // View function that args are taken from dao storage
-  // Now i decide to get value from the back, but maybe i change my mind and
-  // make call to dao inside functions
+  /**
+   * @notice Returns calculated absolute threshold value in voting power.
+   * @dev Doubts. View function that args are taken from dao storage.
+   *      Now i decide to get value from the back, but maybe i change my mind and
+   *      make call to dao inside functions.
+   */
   function getAbsoluteThresholdByNumerator(
     uint256 thresholdNumerator
   ) external view returns (uint256) {
     return _calculateAbsoluteThresholdValue(thresholdNumerator);
   }
 
+  /**
+   * @notice Returns true, if `holder` has enough voting power to reach `thresholdForInitiator`.
+   */
   function isEnoughVotingPower(
     address holder,
     uint256 thresholdForInitiatorNumerator
@@ -467,6 +693,9 @@ contract DeciderVotingPower is BaseDecider, IVotingPower {
     return _calculateIsEnoughVotingPower(holder, thresholdForInitiatorNumerator);
   }
 
+  /**
+   * @notice Returns true, if `amountOfVotes` is enough to reach `thresholdForProposal`.
+   */
   function isProposalThresholdReached(
     uint256 amountOfVotes,
     uint256 thresholdForProposal

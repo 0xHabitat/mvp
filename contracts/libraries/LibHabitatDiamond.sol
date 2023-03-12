@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import {IDiamondCut} from "../interfaces/IDiamondCut.sol";
 import {IAddressesProvider} from "../interfaces/IAddressesProvider.sol";
-
+// TODO for MS: add addresses and add active -> adjust diamondCut not to cut facets that are active ms through governance
 library LibHabitatDiamond {
   bytes32 constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
 

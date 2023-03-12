@@ -5,6 +5,11 @@ import habitatABI from '../habitatDiamondABI.json';
 import { deployDAO } from '../scripts/deployDAO';
 import { getContractsForUniV3, getWETH } from './helpers/getContractsForUniV3';
 
+/*
+initParams.json are hardcoded
+TODO automate
+*/
+
 describe('HabitatDiamond', function () {
   async function deployDAOFixture() {
     const accounts = await ethers.getSigners();
@@ -86,13 +91,13 @@ describe('HabitatDiamond', function () {
     // let's fund DAO treasury with some ETH and WETH
     const sponsor = accounts[0];
     const weth = getWETH(sponsor);
-    tx = await weth.deposit({ value: ethers.constants.WeiPerEther.mul(10) });
+    tx = await weth.deposit({ value: ethers.constants.WeiPerEther.mul(5) });
     await tx.wait();
-    tx = await weth.transfer(habitatDiamond.address, ethers.constants.WeiPerEther.mul(10));
+    tx = await weth.transfer(habitatDiamond.address, ethers.constants.WeiPerEther.mul(5));
     await tx.wait();
     const ethTranfer = {
       to: habitatDiamond.address,
-      value: ethers.utils.parseEther('10'),
+      value: ethers.utils.parseEther('5'),
     };
     tx = await sponsor.sendTransaction(ethTranfer);
     await tx.wait();
@@ -122,6 +127,16 @@ describe('HabitatDiamond', function () {
     // let's give addresses[0] enough voting power to create governance proposals
     // by delegating from addresses[9]
     const tx = await deciderVotingPower.connect(accounts[9]).delegateVotingPower(addresses[0]);
+    await tx.wait();
+
+    // let's fund gnosisSafe with some ETH
+    const gnosisSafe = await deciderSigners.gnosisSafe();
+    const sponsor = accounts[7];
+    const ethTranfer = {
+      to: gnosisSafe,
+      value: ethers.utils.parseEther('5'),
+    };
+    tx = await sponsor.sendTransaction(ethTranfer);
     await tx.wait();
 
     return {
@@ -296,9 +311,9 @@ describe('HabitatDiamond', function () {
       tickUpper,
       amount0Desired: isHBTToken0
         ? ethers.constants.WeiPerEther.mul(10000)
-        : ethers.constants.WeiPerEther.mul(10),
+        : ethers.constants.WeiPerEther.mul(5),
       amount1Desired: isHBTToken0
-        ? ethers.constants.WeiPerEther.mul(10)
+        ? ethers.constants.WeiPerEther.mul(5)
         : ethers.constants.WeiPerEther.mul(10000),
       amount0Min: 0,
       amount1Min: 0,
@@ -307,13 +322,13 @@ describe('HabitatDiamond', function () {
     };
 
     // convert ETH to WETH and give approvals for nfPositionManager
-    let tx = await weth.deposit({ value: ethers.constants.WeiPerEther.mul(10) });
+    let tx = await weth.deposit({ value: ethers.constants.WeiPerEther.mul(5) });
     await tx.wait();
     const wethBalance = await weth.balanceOf(newSigner.address);
-    //expect(wethBalance).to.eq(ethers.constants.WeiPerEther.mul(10));
+    //expect(wethBalance).to.eq(ethers.constants.WeiPerEther.mul(5));
     // above line is commented, because loadFixture doesn't do exactly what it declares to do (snapshot is not about the whole state)
     // you can uncomment, but have to rerun node everytime you run tests
-    tx = await weth.approve(nfPositionManager.address, ethers.constants.WeiPerEther.mul(10));
+    tx = await weth.approve(nfPositionManager.address, ethers.constants.WeiPerEther.mul(5));
     await tx.wait();
     const wethAllowedAmount = await weth.allowance(newSigner.address, nfPositionManager.address);
     //expect(wethAllowedAmount).to.eq(wethBalance);
@@ -449,7 +464,7 @@ describe('HabitatDiamond', function () {
       addresses,
       weth,
     } = await helpers.loadFixture(deployDAOAndDistributeFixture);
-    const ten = ethers.constants.WeiPerEther.mul(10);
+    const five = ethers.constants.WeiPerEther.mul(5);
     // first lets make voting power 0 and try to create treasury proposal
     const unstaker = accounts[1];
     const beneficiar = addresses[3];
@@ -472,7 +487,7 @@ describe('HabitatDiamond', function () {
       await deciderVotingPower.isEnoughVotingPower(unstaker.address, thresholdForInitiatorNumerator)
     ).to.be.false;
     await expect(
-      habitatDiamondUnstaker.createTreasuryProposal(unstaker.address, ten, '0x')
+      habitatDiamondUnstaker.createTreasuryProposal(unstaker.address, five, '0x')
     ).to.be.revertedWith('Not enough voting power to create proposal.');
 
     // second lets try to create a proposal that is calling diamond itself
@@ -481,7 +496,7 @@ describe('HabitatDiamond', function () {
     ).to.be.revertedWith('Not a treasury proposal.');
 
     // third lets try create a proposal to transfer HBT tokens from treasury
-    let callData = hbtToken.interface.encodeFunctionData('transfer', [beneficiar, ten.mul(1000)]);
+    let callData = hbtToken.interface.encodeFunctionData('transfer', [beneficiar, five.mul(1000)]);
     const proposalId = await habitatDiamond.callStatic.createTreasuryProposal(
       hbtToken.address,
       '0x0',
@@ -496,18 +511,18 @@ describe('HabitatDiamond', function () {
     const treasuryVotingPeriod = await habitatDiamond.getSecondsProposalVotingPeriod('treasury');
     const proposalIDToTransferETH = await habitatDiamond.callStatic.createTreasuryProposal(
       beneficiar,
-      ten,
+      five,
       '0x'
     );
     let currentBlock = await ethers.provider.getBlock('latest');
-    await expect(habitatDiamond.createTreasuryProposal(beneficiar, ten, '0x'))
+    await expect(habitatDiamond.createTreasuryProposal(beneficiar, five, '0x'))
       .to.emit(habitatDiamond, 'ProposalCreated')
       .withArgs('treasury', proposalIDToTransferETH);
 
     let proposal = await habitatDiamond.getModuleProposal('treasury', proposalIDToTransferETH);
     expect(proposal.proposalAccepted).to.be.false;
     expect(proposal.destinationAddress).to.eq(beneficiar);
-    expect(proposal.value).to.eq(ten);
+    expect(proposal.value).to.eq(five);
     expect(proposal.callData).to.eq('0x');
     expect(proposal.proposalExecuted).to.be.false;
     expect(proposal.executionTimestamp).to.be.closeTo(
@@ -516,7 +531,7 @@ describe('HabitatDiamond', function () {
     );
 
     // lets create proposal to transfer WETH
-    callData = weth.interface.encodeFunctionData('transfer', [beneficiar, ten]);
+    callData = weth.interface.encodeFunctionData('transfer', [beneficiar, five]);
     const proposalIDToTransferWETH = (await habitatDiamond.getModuleProposalsCount('treasury')).add(
       1
     );
@@ -546,11 +561,11 @@ describe('HabitatDiamond', function () {
       accounts,
       addresses,
     } = await helpers.loadFixture(deployDAOAndDistributeFixture);
-    const ten = ethers.constants.WeiPerEther.mul(10);
+    const five = ethers.constants.WeiPerEther.mul(5);
     const beneficiar = addresses[3];
     // first lets create treasury proposal
     const proposalID = (await habitatDiamond.getModuleProposalsCount('treasury')).add(1);
-    let tx = await habitatDiamond.createTreasuryProposal(beneficiar, ten, '0x');
+    let tx = await habitatDiamond.createTreasuryProposal(beneficiar, five, '0x');
     await tx.wait();
     // make sure that treasury decisionType is votingPowerERC20
     const decisionType = await habitatDiamond.getModuleDecisionType('treasury');
@@ -636,7 +651,7 @@ describe('HabitatDiamond', function () {
     await helpers.time.increaseTo(votingDeadline);
     await expect(habitatDiamond.acceptOrRejectTreasuryProposal(proposalID))
       .to.emit(habitatDiamond, 'ProposalAccepted')
-      .withArgs('treasury', proposalID, beneficiar, ten, '0x');
+      .withArgs('treasury', proposalID, beneficiar, five, '0x');
     // confirm proposalId is removed from active
     activeVotingProposalIds = await habitatDiamond.getModuleActiveProposalsIds('treasury');
     expect(activeVotingProposalIds.some((id: any) => id.eq(proposalID))).to.be.false;
@@ -664,9 +679,9 @@ describe('HabitatDiamond', function () {
 
     // confirm receiving eth
     const beneficiarETHBalanceAfter = await ethers.provider.getBalance(beneficiar);
-    expect(beneficiarETHBalanceBefore.add(ten)).to.eq(beneficiarETHBalanceAfter);
+    expect(beneficiarETHBalanceBefore.add(five)).to.eq(beneficiarETHBalanceAfter);
     const habitatDAOETHBalanceAfter = await ethers.provider.getBalance(habitatDiamond.address);
-    expect(habitatDAOETHBalanceBefore.sub(ten)).to.eq(habitatDAOETHBalanceAfter);
+    expect(habitatDAOETHBalanceBefore.sub(five)).to.eq(habitatDAOETHBalanceAfter);
     // TODO create proposal to transfer WETH and vote no to reject
   });
 
@@ -1848,7 +1863,7 @@ describe('HabitatDiamond', function () {
     expect(treasuryDeciderAddress).eq(deciderVotingPower.address);
 
     const daoETHBalance = await ethers.provider.getBalance(habitatDiamond.address);
-    expect(daoETHBalance).to.eq(ethers.constants.WeiPerEther.mul(10));
+    expect(daoETHBalance).to.eq(ethers.constants.WeiPerEther.mul(5));
 
     // bad actor initialize treasury proposal to send him all ETH
     const badProposalId = await habitatDiamond.callStatic.sendETHFromTreasuryInitProposal(

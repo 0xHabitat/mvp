@@ -63,6 +63,20 @@ struct PositionReturnedData {
   uint128 tokensOwed;
 }
 
+/**
+ * @title StakeContractERC20UniV3 - Contract is a part of Voting Power Decision System.
+ *        Voting Power Manager is a second name. Contract based on its own staking/unstaking
+ *        logic controls voting power balances inside DeciderVotingPower contract.
+ * @dev Contract stores erc20 contract address named governance token. Provides functions to stake/unstake it
+ *      and increases/decreases staker voting power (ratio 1:1) inside voting power decider.
+ *      Among with governance token staking, contract provides ability to stake the
+ *      derivatives - erc721 tokens minted by uniswap v3 nonfungiblePositionManager,
+ *      uniV3 position is valid, if it's underlying tokens are governance token and one from legalPairTokens array.
+ *      Voting power cost of position is calculated by modifying position into
+ *      a state, when it contains 100% governance and 0% pair tokens, the ratio
+ *      between amount of govtoken in such state and voting power is also 1:1.
+ * @author @roleengineer
+ */
 contract StakeContractERC20UniV3 {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
@@ -80,7 +94,15 @@ contract StakeContractERC20UniV3 {
   // nftPositionTokenID => votingPower
   mapping(uint256 => uint256) private _amountOfVotingPowerForNFTPosition;
 
-  // prerequisites - all uniV3 pools for each pair token and fee must be initialized
+  /**
+   * @notice Constructor function sets: nfPositionManager, uniV3Factory, governanceToken, legalPairTokens.
+   * @dev Prerequisites: all uniV3 pools for each pair token and fee must be initialized.
+   * @param _nfPositionManager UniV3 non-fungible position manager address.
+   * @param _governanceToken Address of erc20 token, which is an entry point to get voting power.
+   * @param _legalPairTokens Array of addresses (erc20 tokens), which are considered to be a valid pair for uniV3 pool.
+   *                         UniV3 positions (erc721 tokens), which has as underlying tokens _governanceToken and one of this array
+   *                         are considered to be valid for staking and getting voting power.
+   */
   constructor(
     address _nfPositionManager,
     address _governanceToken,
@@ -100,18 +122,27 @@ contract StakeContractERC20UniV3 {
     }
   }
 
+  /**
+   * @notice Sets DeciderVotingPower contract address one time.
+   * @dev DeciderVotingPower functions increaseVotingPower/decreaseVotingPower have
+   *      requirement to be called only by this contract.
+   * @param _votingPowerHolder The address of the DeciderVotingPower contract.
+   */
   function setVotingPowerHolder(address _votingPowerHolder) external {
     require(address(votingPowerHolder) == address(0), "VotingPowerHolder is set.");
     votingPowerHolder = IVotingPower(_votingPowerHolder);
   }
 
   /**
-   * @notice Before call have to approve
+   * @notice Before call account has to approve this contract to spend governance token.
+   *         Method transfers governance tokens to this contract and increases account
+   *         voting power balance inside DeciderVotingPower (ratio 1:1).
+   * @param _amount of governance tokens to be staked.
    * @return Returns amount of voting power staker gets for staked tokens.
    */
   function stakeGovToken(uint256 _amount) public returns (uint256) {
     // receive tokens from holder to stake contract
-    IERC20(governanceToken).safeTransferFrom(msg.sender, address(this), _amount); // double check
+    IERC20(governanceToken).safeTransferFrom(msg.sender, address(this), _amount);
     // account how much holders tokens are staked
     _stakedERC20GovToken[msg.sender] += _amount;
     // give voting power
@@ -119,10 +150,17 @@ contract StakeContractERC20UniV3 {
     return _amount;
   }
 
-  // should give token approval before call
+  /**
+   * @notice Before call account has to approve this contract to spend governance token.
+   *         Method transfers governance tokens to this contract and increases `beneficiary`
+   *         voting power balance inside DeciderVotingPower (ratio 1:1).
+   *         After call governance tokens belongs to `beneficiary`.
+   * @param beneficiary Address which amount of voting power will be increased.
+   * @param _amount of governance tokens to be staked.
+   */
   function stakeGovInFavorOf(address beneficiary, uint256 _amount) external {
     // receive tokens from holder to stake contract
-    IERC20(governanceToken).safeTransferFrom(msg.sender, address(this), _amount); // double check
+    IERC20(governanceToken).safeTransferFrom(msg.sender, address(this), _amount);
     // account how much holders tokens are staked
     _stakedERC20GovToken[beneficiary] += _amount;
     // give voting power
@@ -130,6 +168,9 @@ contract StakeContractERC20UniV3 {
   }
 
   /**
+   * @notice Method transfers `_amount` governance tokens to the caller
+   *         and decreases caller voting power balance inside DeciderVotingPower (ratio 1:1).
+   * @param _amount of governance tokens to be unstaked.
    * @return Returns amount of voting power staker loses after unstaking tokens.
    */
   function unstakeGovToken(uint256 _amount) public returns (uint256) {
@@ -144,7 +185,14 @@ contract StakeContractERC20UniV3 {
   }
 
   /**
-   * @notice Before call have to approve (make operator = address(this))
+   * @notice Before call account has to approve this contract to spend uniV3 NFT (make operator = address(this))
+   *         Method transfers uniV3 NFT to this contract and increases
+   *         voting power balance inside DeciderVotingPower.
+   * @dev See the function _convertUNIV3PositionToVotingPower description which
+   *      explains, how the voting power is calculated.
+   *      Function accounts ownership of erc721 token to be able to return it on request.
+   *      Function also accounts the voting power cost of the position to be able to take it back.
+   * @param tokenId the id of erc721 token uniV3 non-fungible position manager contract
    * @return Returns amount of voting power staker gets for staked position.
    */
   function stakeUniV3NFTPosition(uint256 tokenId) public returns (uint256) {
@@ -167,6 +215,9 @@ contract StakeContractERC20UniV3 {
   }
 
   /**
+   * @notice Method transfers uniV3 NFT back to the staker and decreases the voting
+   *         power balance inside DeciderVotingPower by the cost of position.
+   * @param tokenId the id of erc721 token uniV3 non-fungible position manager contract
    * @return Returns amount of voting power staker loses after unstaking position.
    */
   function unstakeUniV3NFTPosition(uint256 tokenId) public returns (uint256) {
@@ -189,7 +240,9 @@ contract StakeContractERC20UniV3 {
   }
 
   /**
-   * @notice Before call have to approve all (make operator = address(this))
+   * @notice Before call account has to approve this contract to spend all uniV3 NFT (make operator = address(this))
+   *         Function is doing the same as function stakeUniV3NFTPosition for an array of positions.
+   * @param tokenIds Array contains ids of erc721 tokens uniV3 non-fungible position manager contract
    * @return Returns amount of voting power staker gets for staked positions.
    */
   function stakeMultipleUniV3NFTPositions(uint256[] memory tokenIds) external returns (uint256) {
@@ -202,6 +255,8 @@ contract StakeContractERC20UniV3 {
   }
 
   /**
+   * @notice Function is doing the same as function unstakeUniV3NFTPosition for an array of positions.
+   * @param tokenIds Array contains ids of erc721 tokens uniV3 non-fungible position manager contract
    * @return Returns amount of voting power staker loses after unstaking positions.
    */
   function unStakeMultipleUniV3NFTPositions(uint256[] memory tokenIds) external returns (uint256) {
@@ -226,6 +281,16 @@ contract StakeContractERC20UniV3 {
   }
 
   // Internal functions
+
+  /**
+  * @notice Helper functions to receive uniV3 position data
+  * @dev Call function positions(uint256) of uniV3 non-fungible position manager
+  *      ends up into stack too deep error, because it returns too many values.
+  *      Workaround is to make a raw call.
+  *      This function helps to convert raw returned data into workable struct.
+  * @param data raw bytes returned by call nfPositionManager positions function
+  * @return Struct containing all neccessary data related to uniV3 position
+  */
   function convertToPositionData(bytes memory data) internal pure returns (PositionData memory) {
     PositionReturnedData memory prd = abi.decode(data, (PositionReturnedData));
 
@@ -241,63 +306,24 @@ contract StakeContractERC20UniV3 {
       });
   }
 
-  // View functions
-
-  function getStakedBalanceOfGovernanceToken(
-    address holder
-  ) external view returns (uint256 balance) {
-    balance = _stakedERC20GovToken[holder];
-  }
-
-  function getAmountOfStakedNFTPositions(address holder) public view returns (uint256) {
-    require(holder != address(0), "ERC721: balance query for the zero address");
-    return _stakerNFTPositions[holder].length();
-  }
-
-  function getNFTPositionIdOfHolderByIndex(
-    address holder,
-    uint256 index
-  ) public view returns (uint256) {
-    return _stakerNFTPositions[holder].at(index);
-  }
-
-  function getAllNFTPositionIdsOfHolder(address holder) public view returns (uint256[] memory) {
-    return _stakerNFTPositions[holder].values();
-  }
-
-  function nftPositionIsStakedByHolder(address holder, uint256 tokenId) public view returns (bool) {
-    return _stakerNFTPositions[holder].contains(tokenId);
-  }
-
-  function getAmountOfVotingPowerForNFTPosition(uint256 tokenId) external view returns (uint256) {
-    return _amountOfVotingPowerForNFTPosition[tokenId];
-  }
-
-  function onERC721Received(
-    address operator,
-    address from,
-    uint256 tokenId,
-    bytes calldata data
-  ) external pure returns (bytes4) {
-    return 0x150b7a02;
-  }
-
   /**
-   * @notice View function for multicall contract.
-   * @dev Do not make tx calling the function
-   * @param tokenId The id of nonfungiblePositionManager token
-   * @return Returns position operator
-   * @return Returns amount of voting power staker gets for staked position
+   * @notice Function makes the request to nonfungiblePositionManager to get the position data.
+   *         Analizing the data: checks the position underlying tokens (must be governance token and one of legalPairTokens).
+   *         Getting position pool and current pool tick. Analizing the current position state:
+   *         position considered to be valid, if it is in range or out of range containing governance token.
+   * @dev Voting power cost of position is calculated by modifying position into
+   *      a state, when it contains 100% governance and 0% pair tokens, the ratio
+   *      between amount of govtoken in such state and voting power is 1:1.
+   * @param tokenId The id of nonfungiblePositionManager erc721 token
+   * @return operator Address, which got approval for position
+   * @return amountOfVotingPower position current cost in voting power
    */
-  function isUniV3NFTValidView(uint256 tokenId) external returns (address, uint256) {
-    return _convertUNIV3PositionToVotingPower(tokenId);
-  }
-
   function _convertUNIV3PositionToVotingPower(
     uint256 tokenId
   ) internal returns (address operator, uint256 amountOfVotingPower) {
+    bytes4 positionsSelector = bytes4(keccak256(bytes("positions(uint256)")));
     (bool suc, bytes memory data) = address(nfPositionManager).call(
-      abi.encodeWithSelector(0x99fbab88, tokenId)
+      abi.encodeWithSelector(positionsSelector, tokenId)
     );
     require(suc);
     PositionData memory positionData = convertToPositionData(data);
@@ -366,5 +392,94 @@ contract StakeContractERC20UniV3 {
         );
       }
     }
+  }
+
+  // View functions
+
+  /**
+   * @notice Function returns the amount of governance tokens staked by `holder`.
+   * @param holder Address
+   * @return balance Amount of staked governance tokens
+   */
+  function getStakedBalanceOfGovernanceToken(
+    address holder
+  ) external view returns (uint256 balance) {
+    balance = _stakedERC20GovToken[holder];
+  }
+
+  /**
+   * @notice Function returns the amount of uniV3 erc721 tokens staked by `holder`.
+   * @param holder Address
+   * @return Amount of staked uniV3 erc721 tokens
+   */
+  function getAmountOfStakedNFTPositions(address holder) public view returns (uint256) {
+    require(holder != address(0), "ERC721: balance query for the zero address");
+    return _stakerNFTPositions[holder].length();
+  }
+
+  /**
+   * @notice Function returns an uniV3 erc721 token ID staked by `holder`
+   *         at a given `index` of its staked token list.
+   * @param holder Address
+   * @param index The index in staked token list.
+   * @return The id of uniV3 erc721 token.
+   */
+  function getNFTPositionIdOfHolderByIndex(
+    address holder,
+    uint256 index
+  ) public view returns (uint256) {
+    return _stakerNFTPositions[holder].at(index);
+  }
+
+  /**
+   * @notice Function returns an array of uniV3 erc721 token IDs staked by `holder`.
+   * @param holder Address
+   * @return An array containing uniV3 erc721 token IDs.
+   */
+  function getAllNFTPositionIdsOfHolder(address holder) public view returns (uint256[] memory) {
+    return _stakerNFTPositions[holder].values();
+  }
+
+  /**
+   * @notice Function Returns true if `holder` staked `tokenId`.
+   * @param holder Address
+   * @param tokenId The id of uniV3 erc721 token.
+   * @return True if `holder` staked `tokenId`.
+   */
+  function nftPositionIsStakedByHolder(address holder, uint256 tokenId) public view returns (bool) {
+    return _stakerNFTPositions[holder].contains(tokenId);
+  }
+
+  /**
+   * @notice Function Returns the staked position cost in voting power.
+   * @dev If erc721 token is not staked returns 0.
+   * @param tokenId The id of uniV3 erc721 token.
+   * @return The staked position cost in voting power.
+   */
+  function getAmountOfVotingPowerForNFTPosition(uint256 tokenId) external view returns (uint256) {
+    return _amountOfVotingPowerForNFTPosition[tokenId];
+  }
+
+  /**
+   * @dev Support safeTransfers from ERC721 asset contract (nonfungiblePositionManager).
+   */
+  function onERC721Received(
+    address operator,
+    address from,
+    uint256 tokenId,
+    bytes calldata data
+  ) external pure returns (bytes4) {
+    return 0x150b7a02;
+  }
+
+  /**
+   * @notice View function for multicall contract.
+   * @dev Do not make tx calling the function
+   * @param tokenId The id of nonfungiblePositionManager token
+   * @return Returns position operator
+   * @return Returns amount of voting power staker gets for staked position
+   */
+  function isUniV3NFTValidView(uint256 tokenId) external returns (address, uint256) {
+    return _convertUNIV3PositionToVotingPower(tokenId);
   }
 }

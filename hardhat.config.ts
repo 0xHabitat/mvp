@@ -1,12 +1,14 @@
 import { task, HardhatUserConfig } from 'hardhat/config';
 import '@nomiclabs/hardhat-waffle';
-// {"alchemyToken": "tokenItself"}
-import { alchemyToken } from './alchemyToken.json';
+import dotenv from 'dotenv';
 
 // This adds support for typescript paths mappings
 import 'tsconfig-paths/register';
 
 require('hardhat-gemcutter');
+
+dotenv.config()
+const { ALCHEMY_TOKEN } = process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -30,7 +32,7 @@ const config = {
     },
     hardhat: {
       forking: {
-        url: optimism + alchemyToken,
+        url: optimism + ALCHEMY_TOKEN,
       },
       timeout: 100000,
     },

@@ -83,6 +83,16 @@ interface IOwnership {
   function transferOwnership(address _newOwner) external;
 }
 
+/**
+ * @title MainDeployer - Contract which combines all deployers to provide ability to deploy the whole dao stack.
+ * @dev Standard dao deployment flow:
+ *      - deployGovernanceToken: deploy governance token, initial distributor and two main uniV3 pools.
+ *      - deployLastMainPool: deploy main pool (governance token/weth) with 0.05% fee.
+ *      - deployThreePools: deploy uniV3 pools for valid pair tokens (if supposed)
+ *      - deployVotingPowerAndSignersDeciders: deploy decider signers contract, voting power manager and decider contracts.
+ *      - deployDAO: finally deploy your dao, which will include all neccessary dependencies.
+ * @author @roleengineer
+ */
 contract MainDeployer {
   event VotingPowerManagerDecider(
     address indexed votingPowerManager,
@@ -95,6 +105,14 @@ contract MainDeployer {
   IVotingPowerManagerDeployer public votingPowerManagerDeployer;
   IDAODeploer public daoDeployer;
 
+  /**
+   * @notice Constructor function sets combination of deployer contracts.
+   * @param _erc20Deployer Address of erc20 deployer (deploys erc20 governance token, initial distributor, uniV3 pools).
+   * @param _deciderSignersDeployer Address of decider signers deployer.
+   * @param _deciderVotingPowerDeployer Address of decider voting power deployer.
+   * @param _votingPowerManagerDeployer Address of voting power manager (stake contract) deployer.
+   * @param _daoDeployer Address of dao deployer (deploys diamond and initialize facets and state).
+   */
   constructor(
     address _erc20Deployer,
     address _deciderSignersDeployer,
@@ -109,6 +127,15 @@ contract MainDeployer {
     daoDeployer = IDAODeploer(_daoDeployer);
   }
 
+  /**
+   * @notice Deploys a erc20 token, the initial distributor contract and main uniV3 pools for it on optimism.
+   * @param tokenName String represents erc20 token name.
+   * @param tokenSymbol String represents erc20 token symbol.
+   * @param totalSupply Sets fixed totalSupply (no minting after).
+   * @param _sqrtPricesX96 An array contains two initial prices for uniV3 pools (with weth as a pair). First price is used if new token is token0, second if new token is token1.
+   * @return Address of the new erc20 token contract.
+   *         Address of the new initial distributor contract (initial distributor owner is msg.sender).
+   */
   function deployGovernanceToken(
     string memory tokenName,
     string memory tokenSymbol,
@@ -125,10 +152,21 @@ contract MainDeployer {
     return (govToken, distributor);
   }
 
+  /**
+   * @notice Deploys the last main pool (which was not deployed, because of 15mln optimism gas limit).
+   * @param hbt Address of newly deployed erc20 token contract.
+   * @param _sqrtPricesX96 An array contains two initial prices for uniV3 pools (with weth as a pair). First price is used if hbt is token0, second if hbt is token1.
+   */
   function deployLastMainPool(address hbt, uint160[2] memory _sqrtPricesX96) external {
     erc20Deployer.deployLastPool(hbt, _sqrtPricesX96);
   }
 
+  /**
+   * @notice Deploys three uniV3 pools (fees: 1%, 0.3%, 0.05%).
+   * @param hbt Address of newly deployed erc20 token contract.
+   * @param pairAddress Address of erc20 token - new pair.
+   * @param _sqrtPricesX96 An array contains two initial prices for uniV3 pools. First price is used if hbt is token0, second if hbt is token1.
+   */
   function deployThreePools(
     address hbt,
     address pairAddress,
@@ -137,6 +175,28 @@ contract MainDeployer {
     erc20Deployer.deployThreePools(hbt, pairAddress, _sqrtPricesX96);
   }
 
+  /**
+   * @notice Deploys a voting power manager and decider, signers decider.
+   * @dev Params _nfPositionManager, _governanceToken, _legalPairTokens are used by a voting power manager.
+   *      Param _precision is used by a voting power decider.
+   *      Params _dao, _daoSetter are used by a voting power decider and signers decider.
+   *      Param _gnosisSafe is used by a signers decider.
+   * @param _nfPositionManager UniV3 non-fungible position manager address.
+   * @param _governanceToken Address of erc20 token, which is an entry point to get voting power.
+   * @param _legalPairTokens Array of addresses (erc20 tokens), which are considered to be a valid pair for uniV3 pool.
+   *                         UniV3 positions (erc721 tokens), which has as underlying tokens _governanceToken and one of this array
+   *                         are considered to be valid for staking and getting voting power.
+   * @param _precision Is used in calculations related to threshold. Threshold value
+   *                   which represents threshold percentage: 50% = 0.5 * _precision.
+   *                   Denominator for the threshold values. Multiplier for the threshold percentages.
+   * @param _dao Address of the dao diamond contract which will be using new decider contracts as one of it's deciders.
+   * @param _daoSetter Address that is allowed to set dao address one time, if it was not set at time of calling this function.
+
+   * @param _gnosisSafe Address of the gnosis safe proxy contract, which will be used by decider signers contract as a source of decision power.
+   * @return deciderSigners Address of the newly deployed decider signers contract.
+   * @return deciderVotingPower Address of the newly deployed decider voting power contract.
+   * @return stakeContract Address of the newly deployed voting power manager contract.
+   */
   function deployVotingPowerAndSignersDeciders(
     address _nfPositionManager,
     address _governanceToken,
@@ -166,6 +226,23 @@ contract MainDeployer {
     emit VotingPowerManagerDecider(stakeContract, deciderVotingPower);
   }
 
+  /**
+   * @notice Deploys a DAO using EIP2535.
+   * @dev See the EIP https://eips.ethereum.org/EIPS/eip-2535
+   *      All arrays must be the same length and elements at the same index have to
+   *      represent values related to one module.
+   * @param addressesProvider Address of the contract that is a trusted source of facets and init contract addresses.
+   * @param daoMetaData Metadata struct which contains 4 strings: daoName, purpose, info and socials.
+   * @param msNames Array of strings that are representing module names, which are included into dao management system.
+   * @param decisionTypes Array of uint8, which are representing module current decision system type.
+   *                   Implemented decision system types: 2 - Voting Power, 3 - Signers.
+   * @param deciders Array of contract addresses, which are representing module current decider.
+   * @param votingPowerSpecificDatas Array of bytes, which are encoded voting power specific data related to module.
+   *                                 Current voting power specific data is a struct that includes 4 uint256:
+   *                                 thresholdForInitiator, thresholdForProposal, secondsProposalVotingPeriod, secondsProposalExecutionDelayPeriod.
+   * @param signersSpecificDatas Array of bytes, which are encoded signers specific data related to module.
+   * @return Address of the newly deployed dao diamond contract.
+   */
   function deployDAO(
     address addressesProvider,
     IDAODeploer.DAOMeta memory daoMetaData,
@@ -199,7 +276,12 @@ contract MainDeployer {
     return dao;
   }
 
-  // temporary make external, but probably has to be in ms initialization
+  /**
+   * @notice Internal function that is doing diamond cut:
+   *         attaching module viewer facet to the dao diamond.
+   * @dev Temporary solution, probably has to/will be in ms initialization,
+   * @param dao The address of the DAO diamond contract.
+   */
   function makeModuleViewerCut(address dao) internal {
     // make module viewer cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
@@ -217,6 +299,16 @@ contract MainDeployer {
     IDiamondCut(dao).diamondCut(moduleViewerCut, address(0), "");
   }
 
+  /**
+   * @notice Internal function that is doing diamond cut:
+   *         initializing specific data for modules.
+   * @param dao The address of the DAO diamond contract.
+   * @param msNames Array of strings that are representing module names.
+   * @param votingPowerSpecificDatas Array of bytes, which are encoded voting power specific data related to module.
+   *                                 Current voting power specific data is a struct that includes 4 uint256:
+   *                                 thresholdForInitiator, thresholdForProposal, secondsProposalVotingPeriod, secondsProposalExecutionDelayPeriod.
+   * @param signersSpecificDatas Array of bytes, which are encoded signers specific data related to module.
+   */
   function makeSpecificDataCut(
     address dao,
     string[] memory msNames,
@@ -247,6 +339,12 @@ contract MainDeployer {
     IDiamondCut(dao).diamondCut(specificDataCut, specificDataInit, specificDataCallData);
   }
 
+  /**
+   * @notice Internal function that is doing diamond cut:
+   *         attaching module manager facet to the dao diamond.
+   *         Enable moduleManager.
+   * @param dao The address of the DAO diamond contract.
+   */
   function makeModuleManagerCut(address dao) internal {
     // make treasury cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
@@ -264,6 +362,12 @@ contract MainDeployer {
     IDiamondCut(dao).diamondCut(moduleManagerCut, address(0), "");
   }
 
+  /**
+   * @notice Internal function that is doing diamond cut:
+   *         attaching governance facet to the dao diamond.
+   *         Enable governance module.
+   * @param dao The address of the DAO diamond contract.
+   */
   function makeGovernanceCut(address dao) internal {
     // make treasury cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
@@ -281,6 +385,12 @@ contract MainDeployer {
     IDiamondCut(dao).diamondCut(governanceCut, address(0), "");
   }
 
+  /**
+   * @notice Internal function that is doing diamond cut:
+   *         attaching treasury actions and callback facets to the dao diamond.
+   *         Enable treasury module.
+   * @param dao The address of the DAO diamond contract.
+   */
   function makeTreasuryCut(address dao) internal {
     // make treasury cut
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
@@ -309,7 +419,12 @@ contract MainDeployer {
     IDiamondCut(dao).diamondCut(treasuryCut, address(0), "");
   }
 
-  // temporary solution - later edit with better experience
+  /**
+   * @notice Internal function that is doing diamond cut:
+   *         removing diamondCut and ownership facets from the dao diamond.
+   * @dev Temporary solution, later edit with better experience (not having them from the beginning).
+   * @param dao The address of the DAO diamond contract.
+   */
   function removeOwnershipAndDiamondCut(address dao) internal {
     address addressesProvider = IDAOViewer(dao).getDAOAddressesProvider();
     // make a default cut

@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2022 Uniswap. All rights reserved.
 pragma solidity ^0.8.9;
 
 library LibUniswapV3Math {

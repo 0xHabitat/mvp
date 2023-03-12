@@ -5,7 +5,7 @@ import { deployDAO } from '../scripts/deployDAO';
 import { getWETH } from './helpers/getContractsForUniV3';
 const habitatABI = require('../habitatDiamondABI.json');
 
-describe('HabitatDiamond', function () {
+describe('DeciderSigner', function () {
   it('Signers/Treasury module: Cover treasury proposal process with decision type signers', async function () {
     this.timeout(0);
     const accounts = await ethers.getSigners();

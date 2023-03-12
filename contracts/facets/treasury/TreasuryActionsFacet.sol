@@ -6,8 +6,22 @@ import {LibDecisionProcess} from "../../libraries/decisionSystem/LibDecisionProc
 import {IERC20} from "../../libraries/openzeppelin/IERC20.sol";
 import {IERC721} from "../../libraries/openzeppelin/IERC721.sol";
 
+/**
+ * @title TreasuryActionsFacet - Facet provides functions that handles interactions
+ *                         with the DAO treasury module.
+ * @notice Treasury module allows to make arbitrary calls (only call opcode)
+ *         from the DAO diamond contract.
+ * @author @roleengineer
+ */
 contract TreasuryActionsFacet is ITreasuryActions {
-  // TODO for MS: add addresses and add active -> adjust diamondCut not to cut facets that are active ms through governance
+
+  /**
+   * @notice Method creates treasury proposal.
+   * @param destination Address to call from the DAO diamond.
+   * @param value The amount of ETH is being sent.
+   * @param callData Data payload (with selector) for a function from `destination` contract.
+   * @return proposalId Newly created treasury proposal id.
+   */
   function createTreasuryProposal(
     address destination,
     uint256 value,
@@ -17,21 +31,46 @@ contract TreasuryActionsFacet is ITreasuryActions {
     proposalId = LibDecisionProcess.createProposal("treasury", destination, value, callData);
   }
 
+  /**
+   * @notice Allows to decide on treasury proposal.
+   * @param proposalId The id of treasury proposal to decide on.
+   * @param decision True - for proposal, false - against proposal.
+   */
   function decideOnTreasuryProposal(uint256 proposalId, bool decision) public override {
     LibDecisionProcess.decideOnProposal("treasury", proposalId, decision);
   }
 
+  /**
+   * @notice Allows to accept/reject treasury proposal. Should be called when
+   *         decision considered to be done based on rules of treasury current decision type.
+   * @param proposalId The id of treasury proposal to accept/reject.
+   */
   function acceptOrRejectTreasuryProposal(uint256 proposalId) public override {
     LibDecisionProcess.acceptOrRejectProposal("treasury", proposalId);
   }
 
+  /**
+   * @notice Allows to execute treasury accepted proposal. Should be called at/after
+   *         proposal execution timestamp.
+   * @param proposalId The id of treasury proposal to execute.
+   * @return result The proposal execution result, false if during execution call revert poped up.
+   */
   function executeTreasuryProposal(uint256 proposalId) public override returns (bool result) {
     bytes4 thisSelector = bytes4(keccak256(bytes("executeTreasuryProposal(uint256)")));
     result = LibDecisionProcess.executeProposalCall("treasury", proposalId, thisSelector);
   }
 
-  // few wrappers
+  /*//////////////////////////////////////////////////////////////
+                    WRAPPER FUNCTIONS
+  //////////////////////////////////////////////////////////////*/
 
+  /**
+   * @notice Allows to init treasury proposal to send erc20 tokens from DAO diamond contract.
+   * @param token Address of erc20 token contract, which should be sent.
+   * @param receiver Address, which should receive tokens.
+   * @param amount Amount of tokens, which should be sent.
+   * @return proposalId Newly created treasury proposal id.
+   */
   function sendERC20FromTreasuryInitProposal(
     address token,
     address receiver,
@@ -42,6 +81,12 @@ contract TreasuryActionsFacet is ITreasuryActions {
     proposalId = createTreasuryProposal(token, uint256(0), callData);
   }
 
+  /**
+   * @notice Allows to init treasury proposal to send ETH from DAO diamond contract.
+   * @param receiver Address, which should receive ETH.
+   * @param value Amount of ETH, which should be sent.
+   * @return proposalId Newly created treasury proposal id.
+   */
   function sendETHFromTreasuryInitProposal(
     address receiver,
     uint256 value
@@ -51,6 +96,13 @@ contract TreasuryActionsFacet is ITreasuryActions {
     proposalId = createTreasuryProposal(receiver, value, callData);
   }
 
+  /**
+   * @notice Allows to init treasury proposal to send erc721 tokens from DAO diamond contract.
+   * @param token Address of erc721 token contract, which should be sent.
+   * @param receiver Address, which should receive token.
+   * @param tokenId The id of erc721 token, which should be sent.
+   * @return proposalId Newly created treasury proposal id.
+   */
   function sendERC721FromTreasuryInitProposal(
     address token,
     address receiver,
@@ -66,7 +118,17 @@ contract TreasuryActionsFacet is ITreasuryActions {
     proposalId = createTreasuryProposal(token, uint256(0), callData);
   }
 
-  // batch for direct caller
+  /*//////////////////////////////////////////////////////////////
+                BATCHED FUNCTIONS FOR DIRECT CALLER
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Allows direct caller to create/accept/execute treasury proposal in one call.
+   * @param destination Address to call from the DAO diamond.
+   * @param value The amount of ETH is being sent.
+   * @param callData Data payload (with selector) for a function from `destination` contract.
+   * @return result The proposal execution result, false if during execution call revert poped up.
+   */
   function batchedTreasuryProposalExecution(
     address destination,
     uint256 value,
@@ -77,6 +139,14 @@ contract TreasuryActionsFacet is ITreasuryActions {
     result = executeTreasuryProposal(proposalId);
   }
 
+  /**
+   * @notice Allows direct caller to create/accept/execute treasury proposal
+   *         to send ERC20 tokens from DAO diamond contract in one call.
+   * @param token Address of erc20 token contract, which should be sent.
+   * @param receiver Address, which should receive tokens.
+   * @param amount Amount of tokens, which should be sent.
+   * @return result The proposal execution result, false if during execution call revert poped up.
+   */
   function sendERC20FromTreasuryBatchedExecution(
     address token,
     address receiver,
@@ -87,6 +157,13 @@ contract TreasuryActionsFacet is ITreasuryActions {
     result = executeTreasuryProposal(proposalId);
   }
 
+  /**
+   * @notice Allows direct caller to create/accept/execute treasury proposal
+   *         to send ETH from DAO diamond contract in one call.
+   * @param receiver Address, which should receive ETH.
+   * @param value Amount of ETH, which should be sent.
+   * @return result The proposal execution result, false if during execution call revert poped up.
+   */
   function sendETHFromTreasuryBatchedExecution(
     address receiver,
     uint256 value
@@ -96,6 +173,14 @@ contract TreasuryActionsFacet is ITreasuryActions {
     result = executeTreasuryProposal(proposalId);
   }
 
+  /**
+   * @notice Allows direct caller to create/accept/execute treasury proposal
+   *         to send ERC721 tokens from DAO diamond contract in one call.
+   * @param token Address of erc721 token contract, which should be sent.
+   * @param receiver Address, which should receive token.
+   * @param tokenId The id of erc721 token, which should be sent.
+   * @return result The proposal execution result, false if during execution call revert poped up.
+   */
   function sendERC721FromTreasuryBatchedExecution(
     address token,
     address receiver,
@@ -106,7 +191,17 @@ contract TreasuryActionsFacet is ITreasuryActions {
     result = executeTreasuryProposal(proposalId);
   }
 
-  // MULTI PROPOSALS
+  /*//////////////////////////////////////////////////////////////
+                    MULTI PROPOSALS FUNCTIONS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Method creates several treasury proposals.
+   * @param destinations An array of addresses to call from the DAO diamond.
+   * @param values An array of ETH amounts are being sent.
+   * @param callDatas An array of data payloads (with selector) for a functions from `destinations` contracts.
+   * @return An array of newly created treasury proposal ids.
+   */
   function createSeveralTreasuryProposals(
     address[] calldata destinations,
     uint256[] calldata values,
@@ -124,16 +219,26 @@ contract TreasuryActionsFacet is ITreasuryActions {
     return proposalIds;
   }
 
+  /**
+   * @notice Allows to decide on several treasury proposals.
+   * @param proposalIds An array of treasury proposal ids to decide on.
+   * @param decisions An array of booleans: True - for proposal, false - against proposal.
+   */
   function decideOnSeveralTreasuryProposals(
-    uint256[] calldata proposalsIds,
+    uint256[] calldata proposalIds,
     bool[] calldata decisions
   ) external override {
-    require(proposalsIds.length == decisions.length, "Different array length");
-    for (uint256 i = 0; i < proposalsIds.length; i++) {
-      decideOnTreasuryProposal(proposalsIds[i], decisions[i]);
+    require(proposalIds.length == decisions.length, "Different array length");
+    for (uint256 i = 0; i < proposalIds.length; i++) {
+      decideOnTreasuryProposal(proposalIds[i], decisions[i]);
     }
   }
 
+  /**
+   * @notice Allows to accept/reject several treasury proposals. Should be called when
+   *         decisions considered to be done based on rules of treasury current decision type.
+   * @param proposalIds An array of treasury proposal ids to accept/reject.
+   */
   function acceptOrRejectSeveralTreasuryProposals(
     uint256[] calldata proposalIds
   ) external override {
@@ -142,6 +247,12 @@ contract TreasuryActionsFacet is ITreasuryActions {
     }
   }
 
+  /**
+   * @notice Allows to execute several treasury accepted proposals. Should be
+   *         called at/after proposals execution timestamp.
+   * @param proposalIds An array of treasury proposal ids to execute.
+   * @return results An array of the proposal execution results: false if during execution call revert poped up.
+   */
   function executeSeveralTreasuryProposals(
     uint256[] memory proposalIds
   ) external override returns (bool[] memory results) {
@@ -151,6 +262,13 @@ contract TreasuryActionsFacet is ITreasuryActions {
     }
   }
 
+  /**
+   * @notice Allows direct caller to create/accept/execute several treasury proposals in one call.
+   * @param destinations An array of addresses to call from the DAO diamond.
+   * @param values An array of ETH amounts are being sent.
+   * @param callDatas An array of data payloads (with selector) for a functions from `destinations` contracts.
+   * @return results The proposal execution result, false if during execution call revert poped up.
+   */
   function batchedSeveralTreasuryProposalsExecution(
     address[] calldata destinations,
     uint256[] calldata values,

@@ -13,6 +13,10 @@ interface INFPositionManagerPoolDeploy {
   ) external payable returns (address pool);
 }
 
+/**
+ * @title ERC20Deployer - Allows to deploy a new erc20 token, the initial distributor contract and main uniV3 pools for it.
+ * @author @roleengineer
+ */
 contract ERC20Deployer {
   address weth = 0x4200000000000000000000000000000000000006;
   address nfPositionManager = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
@@ -22,6 +26,16 @@ contract ERC20Deployer {
     address indexed initialDistributor
   );
 
+  /**
+   * @notice Deploys a erc20 token, the initial distributor contract and main uniV3 pools for it on optimism.
+   * @param tokenName String represents erc20 token name.
+   * @param tokenSymbol String represents erc20 token symbol.
+   * @param totalSupply Sets fixed totalSupply (no minting after).
+   * @param _sqrtPricesX96 An array contains two initial prices for uniV3 pools (with weth as a pair). First price is used if new token is token0, second if new token is token1.
+   * @param initialDistributorOwner Address which is allowed to distribute token (by calling initialDistributor).
+   * @return Address of the new erc20 token contract.
+   *         Address of the new initial distributor contract.
+   */
   function deployERC20InitialDistributorMainPools(
     string memory tokenName,
     string memory tokenSymbol,
@@ -71,6 +85,11 @@ contract ERC20Deployer {
     return (address(hbt), address(initialDistributor));
   }
 
+  /**
+   * @notice Deploys the last main pool (which was not deployed, because of 15mln optimism gas limit).
+   * @param hbt Address of newly deployed erc20 token contract.
+   * @param _sqrtPricesX96 An array contains two initial prices for uniV3 pools (with weth as a pair). First price is used if hbt is token0, second if hbt is token1.
+   */
   function deployLastPool(address hbt, uint160[2] memory _sqrtPricesX96) external {
     if (hbt < weth) {
       INFPositionManagerPoolDeploy(nfPositionManager).createAndInitializePoolIfNecessary(
@@ -89,6 +108,12 @@ contract ERC20Deployer {
     }
   }
 
+  /**
+   * @notice Deploys three uniV3 pools (fees: 1%, 0.3%, 0.05%).
+   * @param hbt Address of newly deployed erc20 token contract.
+   * @param pairAddress Address of erc20 token - new pair.
+   * @param _sqrtPricesX96 An array contains two initial prices for uniV3 pools. First price is used if hbt is token0, second if hbt is token1.
+   */
   function deployThreePools(
     address hbt,
     address pairAddress,

@@ -12,7 +12,7 @@ const tickSpacing: { [key: string]: number } = {
   '10000': 200,
 };
 
-describe('Stake', function () {
+describe('Staking logic', function () {
   let accounts: any;
   let signer: any;
   let tester1: any;

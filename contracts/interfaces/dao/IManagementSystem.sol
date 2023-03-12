@@ -7,25 +7,24 @@ interface IManagementSystem {
   enum DecisionType {
     None,
     OnlyOwner,
-    VotingPowerManagerERC20, // stake contract
-    Signers // Gnosis
-    //ERC20PureVoting, // Compound
+    VotingPowerManagerERC20,
+    Signers
+    //ERC20PureVoting,
     //BountyCreation - gardener, worker, reviewer - 3 signers
   }
 
+  /// @dev nameMS is bytes32, so the string must be max 31 char
   struct ManagementSystem {
-    string nameMS; // very important that this item is bytes32, so the string is max 31 char
+    string nameMS;
     DecisionType decisionType;
     bytes32 dataPosition;
-    address currentDecider; // TODO remember to adjust modifier to protect new storage slots
+    address currentDecider;
   }
 
-  // this struct is stored at dataPosition slot
+  /// @dev MSData struct is stored at dataPosition slot
+  /// @dev maybe think about proposals protection
   struct MSData {
-    // decisionSystem => data
     mapping(DecisionType => bytes) decisionSpecificData;
-    // proposals
-    //mapping(uint256 => bytes) proposals; // ideally slots below has to be protected as well
     mapping(uint256 => IProposal.Proposal) proposals;
     uint256[] activeProposalsIds;
     uint256[] acceptedProposalsIds;

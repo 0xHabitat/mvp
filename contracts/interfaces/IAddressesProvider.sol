@@ -3,7 +3,7 @@ pragma solidity 0.8.9;
 
 /**
  * @title IAddressesProvider
- * @author HabitatDAO
+ * @author roleengineer
  * @notice Defines the basic interface for an Addresses Provider.
  **/
 interface IAddressesProvider {
