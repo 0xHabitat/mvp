@@ -3,7 +3,7 @@ pragma solidity 0.8.9;
 
 /**
  * @title IAddressesProvider
- * @author HabitatDAO
+ * @author roleengineer
  * @notice Defines the basic interface for an Addresses Provider.
  **/
 interface IAddressesProvider {
@@ -77,6 +77,13 @@ interface IAddressesProvider {
   event DAOViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
+   * @dev Emitted when the module viewer facet is updated.
+   * @param oldAddress The old address of the ModuleViewerFacet
+   * @param newAddress The new address of the ModuleViewerFacet
+   */
+  event ModuleViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
+
+  /**
    * @dev Emitted when the management system facet is updated.
    * @param oldAddress The old address of the ManagementSystemFacet
    * @param newAddress The new address of the ManagementSystemFacet
@@ -105,18 +112,14 @@ interface IAddressesProvider {
   event TreasuryActionsFacetUpdated(address indexed oldAddress, address indexed newAddress);
 
   /**
-   * @dev Emitted when the treasury viewer facet is updated.
-   * @param oldAddress The old address of the TreasuryViewerFacet
-   * @param newAddress The new address of the TreasuryViewerFacet
-   */
-  event TreasuryViewerFacetUpdated(address indexed oldAddress, address indexed newAddress);
-
-  /**
    * @dev Emitted when the treasury default callback handler facet is updated.
    * @param oldAddress The old address of the TreasuryDefaultCallbackHandlerFacet
    * @param newAddress The new address of the TreasuryDefaultCallbackHandlerFacet
    */
-  event TreasuryDefaultCallbackHandlerFacetUpdated(address indexed oldAddress, address indexed newAddress);
+  event TreasuryDefaultCallbackHandlerFacetUpdated(
+    address indexed oldAddress,
+    address indexed newAddress
+  );
 
   /**
    * @dev Emitted when the specific data facet is updated.
@@ -140,7 +143,7 @@ interface IAddressesProvider {
    * @param facet Facet address
    * @return The bool that describes facet address existence
    */
-  function facetAddressExist(address facet) external view returns(bool);
+  function facetAddressExist(address facet) external view returns (bool);
 
   /**
    * @notice Returns an array of facet selectors by facet address.
@@ -162,13 +165,13 @@ interface IAddressesProvider {
    * @notice Temporary init contract.
    * @return The address of the RemoveDiamondCutInit
    */
-  function getRemoveDiamondCutInit() external view returns(address);
+  function getRemoveDiamondCutInit() external view returns (address);
 
   /**
    * @notice Returns the address of the default diamond init contract.
    * @return The address of the DiamondInit
    */
-  function getDiamondInit() external view returns(address);
+  function getDiamondInit() external view returns (address);
 
   /**
    * @notice Returns the address of the dao init contract.
@@ -192,7 +195,7 @@ interface IAddressesProvider {
    * @notice Returns the address and function to call by HabitatDiamondFactory.
    * @return The address and functionSelector to call by HabitatDiamondFactory.
    */
-  function getAddressAndFunctionToCall(bytes32 nameOrType) external view returns (address,bytes4);
+  function getAddressAndFunctionToCall(bytes32 nameOrType) external view returns (address, bytes4);
 
   /**
    * @notice Returns the address of the diamond cut facet contract.
@@ -243,6 +246,18 @@ interface IAddressesProvider {
   function getDAOViewerFacet() external view returns (Facet memory);
 
   /**
+   * @notice Returns the address of the Module viewer facet contract.
+   * @return The address of the ModuleViewerFacet
+   */
+  function getModuleViewerFacetAddress() external view returns (address);
+
+  /**
+   * @notice Returns Facet (facet address and an array of the facet selectors).
+   * @return Facet struct of the ModuleViewerFacet
+   */
+  function getModuleViewerFacet() external view returns (Facet memory);
+
+  /**
    * @notice Returns the address of the management system facet contract.
    * @return The address of the ManagementSystemFacet
    */
@@ -289,18 +304,6 @@ interface IAddressesProvider {
    * @return Facet struct of the TreasuryActionsFacet
    */
   function getTreasuryActionsFacet() external view returns (Facet memory);
-
-  /**
-   * @notice Returns the address of the dao viewer facet contract.
-   * @return The address of the TreasuryViewerFacet
-   */
-  function getTreasuryViewerFacetAddress() external view returns (address);
-
-  /**
-   * @notice Returns Facet (facet address and an array of the facet selectors).
-   * @return Facet struct of the TreasuryViewerFacet
-   */
-  function getTreasuryViewerFacet() external view returns (Facet memory);
 
   /**
    * @notice Returns the address of the treasury default callback handler facet contract.
@@ -388,10 +391,19 @@ interface IAddressesProvider {
   function setDAOViewerFacet(address newDAOViewerFacet, bytes4[] memory selectors) external;
 
   /**
+   * @notice Updates the address of the Module viewer facet.
+   * @param newModuleViewerFacet The address of the new ModuleViewerFacet
+   */
+  function setModuleViewerFacet(address newModuleViewerFacet, bytes4[] memory selectors) external;
+
+  /**
    * @notice Updates the address of the management system facet.
    * @param newManagementSystemFacet The address of the new ManagementSystemFacet
    */
-  function setManagementSystemFacet(address newManagementSystemFacet, bytes4[] memory selectors) external;
+  function setManagementSystemFacet(
+    address newManagementSystemFacet,
+    bytes4[] memory selectors
+  ) external;
 
   /**
    * @notice Updates the address of the module manager facet.
@@ -409,19 +421,19 @@ interface IAddressesProvider {
    * @notice Updates the address of the treasury actions facet.
    * @param newTreasuryActionsFacet The address of the new TreasuryActionsFacet
    */
-  function setTreasuryActionsFacet(address newTreasuryActionsFacet, bytes4[] memory selectors) external;
-
-  /**
-   * @notice Updates the address of the treasury viewer facet.
-   * @param newTreasuryViewerFacet The address of the new TreasuryViewerFacet
-   */
-  function setTreasuryViewerFacet(address newTreasuryViewerFacet, bytes4[] memory selectors) external;
+  function setTreasuryActionsFacet(
+    address newTreasuryActionsFacet,
+    bytes4[] memory selectors
+  ) external;
 
   /**
    * @notice Updates the address of the treasury default callback handler facet.
    * @param newTreasuryDefaultCallbackHandlerFacet The address of the new TreasuryDefaultCallbackHandlerFacet
    */
-  function setTreasuryDefaultCallbackHandlerFacet(address newTreasuryDefaultCallbackHandlerFacet, bytes4[] memory selectors) external;
+  function setTreasuryDefaultCallbackHandlerFacet(
+    address newTreasuryDefaultCallbackHandlerFacet,
+    bytes4[] memory selectors
+  ) external;
 
   /**
    * @notice Updates the address of the specific data facet.

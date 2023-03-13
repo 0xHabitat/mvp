@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "build": "hardhat compile",
-    "test": "hardhat test",
-    "deploy": "hardhat run --network localhost scripts/deploy.js",
-    "deployDAO": "hardhat run --network localhost scripts/deployDAO.js",
+    "test": "hardhat test --network hardhat",
+    "start:node": "hardhat node --network hardhat",
+    "test:node": "hardhat test --network localhost",
+    "deployDAO": "hardhat run --network localhost scripts/deployDAO.ts",
     "tsc": "tsc && cp typechain/*.d.ts dist/typechain/",
     "clean": "hardhat clean && rm -rf dist",
     "lint::typescript": "eslint './**/*.ts' --ext .ts",
@@ -16,7 +17,6 @@
     "prettier::solidity": "prettier --write 'contracts/**/*.sol'",
     "lint": "yarn run lint::typescript && yarn run lint::solidity",
     "prettier": "yarn run prettier::typescript && yarn run prettier::solidity",
-    "start:node": "hardhat node",
     "diamond:init": "hardhat diamond:init"
   },
   "repository": {

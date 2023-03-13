@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import {IERC20} from "../libraries/openzeppelin/IERC20.sol";
 import {SafeERC20} from "../libraries/openzeppelin/SafeERC20.sol";
 import {IVotingPower} from "../interfaces/decisionSystem/IVotingPower.sol";
-
+// DEPRECATED
 contract StakeContractERC20UniV2 {
   using SafeERC20 for IERC20;
 
@@ -59,11 +59,10 @@ contract StakeContractERC20UniV2 {
     IERC20(_governanceToken).safeTransfer(msg.sender, _amount);
   }
 
-  function getStakedBalanceOfGovernanceToken(address holder, address _governanceToken)
-    external
-    view
-    returns (uint256 balance)
-  {
+  function getStakedBalanceOfGovernanceToken(
+    address holder,
+    address _governanceToken
+  ) external view returns (uint256 balance) {
     balance = stakedHoldings[holder][_governanceToken];
   }
 

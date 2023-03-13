@@ -3,8 +3,8 @@ pragma solidity ^0.8.9;
 
 contract MockVotingPowerHolder {
   address votingPowerManager;
-  mapping (address => uint) public votingPower;
-  mapping (address => bool) public voted;
+  mapping(address => uint256) public votingPower;
+  mapping(address => bool) public voted;
 
   function setVPM(address vpm) external {
     votingPowerManager = vpm;
@@ -14,12 +14,12 @@ contract MockVotingPowerHolder {
     voted[holder] = true;
   }
 
-  function increaseVotingPower(address holder, uint amount) external {
+  function increaseVotingPower(address holder, uint256 amount) external {
     require(msg.sender == votingPowerManager, "Only manager");
     votingPower[holder] += amount;
   }
 
-  function decreaseVotingPower(address holder, uint amount) external {
+  function decreaseVotingPower(address holder, uint256 amount) external {
     require(msg.sender == votingPowerManager, "Only manager");
     require(!voted[holder], "Cannot unstake until voted proposal is executed");
     votingPower[holder] -= amount;

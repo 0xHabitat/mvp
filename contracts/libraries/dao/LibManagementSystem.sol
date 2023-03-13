@@ -5,12 +5,14 @@ import {IManagementSystem} from "../../interfaces/dao/IManagementSystem.sol";
 import {IProposal} from "../../interfaces/IProposal.sol";
 
 interface IDecider {
-  function deciderType() external returns(IManagementSystem.DecisionType);
+  function deciderType() external returns (IManagementSystem.DecisionType);
 }
 
 library LibManagementSystem {
-  bytes32 constant MANAGEMENT_SYSTEMS_POSITION = keccak256("habitat.diamond.standard.management.systems.storage");
-/*
+  bytes32 constant MANAGEMENT_SYSTEMS_POSITION =
+    keccak256("habitat.diamond.standard.management.systems.storage");
+
+  /*
   struct ManagementSystem {
     string nameMS;
     DecisionType decisionType;
@@ -24,12 +26,26 @@ library LibManagementSystem {
   function _getManagementSystemsHR()
     internal
     view
-    returns(IManagementSystem.ManagementSystem[] memory msshr)
+    returns (IManagementSystem.ManagementSystem[] memory msshr)
   {
     bytes32[] memory msPositions = _getMSPositionsValues();
     msshr = new IManagementSystem.ManagementSystem[](msPositions.length);
-    for (uint i = 0; i < msPositions.length; i++) {
+    for (uint256 i = 0; i < msPositions.length; i++) {
       msshr[i] = _getManagementSystemByPosition(msPositions[i]);
+    }
+  }
+
+  function _getModuleNames() internal view returns (string[] memory moduleNames) {
+    bytes32[] memory msPositions = _getMSPositionsValues();
+    moduleNames = new string[](msPositions.length);
+    for (uint256 i = 0; i < msPositions.length; i++) {
+      bytes32 pos = msPositions[i];
+      bytes32 moduleName32;
+      assembly {
+        moduleName32 := sload(pos)
+      }
+      string memory moduleName = toString(moduleName32);
+      moduleNames[i] = moduleName;
     }
   }
 
@@ -39,7 +55,6 @@ library LibManagementSystem {
     IManagementSystem.DecisionType decisionType,
     address deciderAddress
   ) internal {
-
     bytes32 managementSystemsPosition = MANAGEMENT_SYSTEMS_POSITION;
 
     // check the length of name - must be 31bytes max
@@ -54,14 +69,19 @@ library LibManagementSystem {
     // check decider - must be correct decision type
     IManagementSystem.DecisionType _decisionType = IDecider(deciderAddress).deciderType();
     // maybe don't use a param, but instead take value directly from decider?
-    require(_decisionType == decisionType, "Decider contract has not the same decision type as declared.");
+    require(
+      _decisionType == decisionType,
+      "Decider contract has not the same decision type as declared."
+    );
 
-    uint numberOfManagementSystems;
+    uint256 numberOfManagementSystems;
     assembly {
       numberOfManagementSystems := sload(managementSystemsPosition)
     }
 
-    bytes32 positionOfNewMS = bytes32(uint256(MANAGEMENT_SYSTEMS_POSITION) + uint256(4 * numberOfManagementSystems + 1));
+    bytes32 positionOfNewMS = bytes32(
+      uint256(MANAGEMENT_SYSTEMS_POSITION) + uint256(4 * numberOfManagementSystems + 1)
+    );
     // store it's position
     bytes32 msName32;
     assembly {
@@ -74,7 +94,9 @@ library LibManagementSystem {
       sstore(slotStoringMSPos, positionOfNewMS)
     }
 
-    bytes32 dataPosition = keccak256(abi.encodePacked(address(this), "managementSystem", msName, numberOfManagementSystems));
+    bytes32 dataPosition = keccak256(
+      abi.encodePacked(address(this), "managementSystem", msName, numberOfManagementSystems)
+    );
 
     // store ms data
     assembly {
@@ -95,20 +117,19 @@ library LibManagementSystem {
   }
 
   // general function to remove management system (module)
-  function _removeManagementSystem(
-    string memory msName
-  ) internal {
-
+  function _removeManagementSystem(string memory msName) internal {
     bytes32 managementSystemsPosition = _getManagementSystemsPosition();
     bytes32 msPosition = _getManagementSystemPosition(msName);
 
-    uint numberOfManagementSystems;
+    uint256 numberOfManagementSystems;
     assembly {
       numberOfManagementSystems := sload(managementSystemsPosition)
     }
     require(numberOfManagementSystems != 0, "Nothing to remove, how do you get here?");
 
-    bytes32 msLastPosition = bytes32(uint256(managementSystemsPosition) + ((numberOfManagementSystems - 1) * 4) + 1);
+    bytes32 msLastPosition = bytes32(
+      uint256(managementSystemsPosition) + ((numberOfManagementSystems - 1) * 4) + 1
+    );
 
     // remove position value stored in slot
     bytes32 msName32;
@@ -143,9 +164,11 @@ library LibManagementSystem {
       assembly {
         lastMSName := sload(msLastPosition)
       }
-      bytes32 slotStoringPreviousLastMSPos = keccak256(bytes.concat(lastMSName, MANAGEMENT_SYSTEMS_POSITION));
+      bytes32 slotStoringPreviousLastMSPos = keccak256(
+        bytes.concat(lastMSName, MANAGEMENT_SYSTEMS_POSITION)
+      );
       assembly {
-        sstore(slotStoringPreviousLastMSPos,msPosition)
+        sstore(slotStoringPreviousLastMSPos, msPosition)
       }
 
       // need to get last ms and replace
@@ -175,21 +198,21 @@ library LibManagementSystem {
     }
   }
 
-  function _getManagementSystem(string memory msName)
-    internal
-    view
-    returns(IManagementSystem.ManagementSystem memory ms)
-  {
+  function _getManagementSystem(
+    string memory msName
+  ) internal view returns (IManagementSystem.ManagementSystem memory ms) {
     bytes32 msPosition = _getManagementSystemPosition(msName);
     ms = _getManagementSystemByPosition(msPosition);
   }
 
-  function _getDecisionType(string memory msName) internal view returns(IManagementSystem.DecisionType) {
+  function _getDecisionType(
+    string memory msName
+  ) internal view returns (IManagementSystem.DecisionType) {
     IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
     return ms.decisionType;
   }
 
-  function _getDecider(string memory msName) internal view returns(address) {
+  function _getDecider(string memory msName) internal view returns (address) {
     IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
     return ms.currentDecider;
   }
@@ -207,7 +230,9 @@ library LibManagementSystem {
     ms.currentDecider = newDeciderAddress;
   }
 
-  function _getMSDataByName(string memory msName) internal view returns(IManagementSystem.MSData storage msData) {
+  function _getMSDataByName(
+    string memory msName
+  ) internal view returns (IManagementSystem.MSData storage msData) {
     IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
     msData = _getMSDataByPosition(ms.dataPosition);
   }
@@ -222,14 +247,16 @@ library LibManagementSystem {
   }
 
   // check if this is needed - we also have LibDecisionSystemSpecificData
-  function _getMSDecisionTypeSpecificDataMemory(string memory msName) internal view returns(bytes memory specificData) {
+  function _getMSDecisionTypeSpecificDataMemory(
+    string memory msName
+  ) internal view returns (bytes memory specificData) {
     IManagementSystem.ManagementSystem memory ms = _getManagementSystem(msName);
     require(ms.dataPosition != bytes32(0), "Mananagement system is not set.");
     IManagementSystem.MSData storage msData = _getMSDataByPosition(ms.dataPosition);
     return msData.decisionSpecificData[ms.decisionType];
   }
 
-  function _getFreeProposalId(string memory msName) internal returns(uint256 proposalId) {
+  function _getFreeProposalId(string memory msName) internal returns (uint256 proposalId) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     require(msData.activeProposalsIds.length < 200, "No more proposals pls");
     msData.proposalsCounter = msData.proposalsCounter + uint128(1);
@@ -237,7 +264,10 @@ library LibManagementSystem {
     msData.activeProposalsIds.push(proposalId);
   }
 
-  function _getProposal(string memory msName, uint proposalId) internal view returns(IProposal.Proposal storage proposal) {
+  function _getProposal(
+    string memory msName,
+    uint256 proposalId
+  ) internal view returns (IProposal.Proposal storage proposal) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     proposal = msData.proposals[proposalId];
   }
@@ -252,40 +282,42 @@ library LibManagementSystem {
     delete proposal.executionTimestamp;
   }
 
-  function _getActiveProposalsIds(string memory msName) internal view returns(uint256[] storage) {
+  function _getActiveProposalsIds(string memory msName) internal view returns (uint256[] storage) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.activeProposalsIds;
   }
 
-  function _addProposalIdToAccepted(string memory msName, uint proposalId) internal {
-    uint[] storage acceptedProposalsIds = _getAcceptedProposalsIds(msName);
+  function _addProposalIdToAccepted(string memory msName, uint256 proposalId) internal {
+    uint256[] storage acceptedProposalsIds = _getAcceptedProposalsIds(msName);
     acceptedProposalsIds.push(proposalId);
   }
 
-  function _removeProposalIdFromAcceptedList(string memory msName, uint proposalId) internal {
-    uint[] storage acceptedProposalsIds = _getAcceptedProposalsIds(msName);
+  function _removeProposalIdFromAcceptedList(string memory msName, uint256 proposalId) internal {
+    uint256[] storage acceptedProposalsIds = _getAcceptedProposalsIds(msName);
     require(acceptedProposalsIds.length > 0, "No accepted proposals.");
     _removeElementFromUintArray(acceptedProposalsIds, proposalId);
   }
 
-  function _removeProposalIdFromActiveList(string memory msName, uint proposalId) internal {
-    uint[] storage activeProposalsIds = _getActiveProposalsIds(msName);
+  function _removeProposalIdFromActiveList(string memory msName, uint256 proposalId) internal {
+    uint256[] storage activeProposalsIds = _getActiveProposalsIds(msName);
     require(activeProposalsIds.length > 0, "No active proposals.");
     _removeElementFromUintArray(activeProposalsIds, proposalId);
   }
 
-  function _getAcceptedProposalsIds(string memory msName) internal view returns(uint256[] storage) {
+  function _getAcceptedProposalsIds(
+    string memory msName
+  ) internal view returns (uint256[] storage) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.acceptedProposalsIds;
   }
 
-  function _getProposalsCount(string memory msName) internal view returns(uint256) {
+  function _getProposalsCount(string memory msName) internal view returns (uint256) {
     IManagementSystem.MSData storage msData = _getMSDataByName(msName);
     return msData.proposalsCounter;
   }
 
   // helper function
-  function _removeElementFromUintArray(uint[] storage array, uint element) internal {
+  function _removeElementFromUintArray(uint256[] storage array, uint256 element) internal {
     if (array[array.length - 1] == element) {
       array.pop();
     } else {
@@ -305,13 +337,24 @@ library LibManagementSystem {
     }
   }
 
+  function toString(bytes32 source) internal pure returns (string memory result) {
+    uint8 length = uint8(source[31]) / uint8(2);
+    assembly {
+      result := mload(0x40)
+      // new "memory end" including padding (the string isn't larger than 32 bytes)
+      mstore(0x40, add(result, 0x40))
+      // store length in memory
+      mstore(result, length)
+      // write actual data
+      mstore(add(result, 0x20), source)
+    }
+  }
 
   // Core internal functions
 
   // function returns managementSystems position
 
-  function _getManagementSystemPosition(string memory msName) internal view returns(bytes32) {
-
+  function _getManagementSystemPosition(string memory msName) internal view returns (bytes32) {
     bytes32[] memory slots = _getAllSlotsStoringMSPositions();
 
     // calculate position
@@ -324,7 +367,7 @@ library LibManagementSystem {
 
     bool msContains;
 
-    for (uint i = 0; i < slots.length; i++) {
+    for (uint256 i = 0; i < slots.length; i++) {
       if (slotStoringMSPos == slots[i]) {
         msContains = true;
       }
@@ -337,21 +380,22 @@ library LibManagementSystem {
     return msPosition;
   }
 
-  function _getManagementSystemByPosition(bytes32 position) internal pure returns(IManagementSystem.ManagementSystem storage ms) {
+  function _getManagementSystemByPosition(
+    bytes32 position
+  ) internal pure returns (IManagementSystem.ManagementSystem storage ms) {
     assembly {
       ms.slot := position
     }
   }
 
-
-  function _getAllSlotsStoringMSPositions() internal view returns(bytes32[] memory slots) {
+  function _getAllSlotsStoringMSPositions() internal view returns (bytes32[] memory slots) {
     bytes32 position = _getManagementSystemsPosition();
-    uint numberOfManagementSystems;
+    uint256 numberOfManagementSystems;
     assembly {
       numberOfManagementSystems := sload(position)
     }
     slots = new bytes32[](numberOfManagementSystems);
-    for (uint i = 0; i < numberOfManagementSystems; i++) {
+    for (uint256 i = 0; i < numberOfManagementSystems; i++) {
       bytes32 msName;
 
       assembly {
@@ -361,10 +405,10 @@ library LibManagementSystem {
     }
   }
 
-  function _getMSPositionsValues() internal view returns(bytes32[] memory slotsValues) {
+  function _getMSPositionsValues() internal view returns (bytes32[] memory slotsValues) {
     bytes32[] memory slots = _getAllSlotsStoringMSPositions();
     slotsValues = new bytes32[](slots.length);
-    for (uint i = 0; i < slots.length; i++) {
+    for (uint256 i = 0; i < slots.length; i++) {
       bytes32 msPosition = slots[i];
       assembly {
         msPosition := sload(msPosition)
@@ -373,7 +417,9 @@ library LibManagementSystem {
     }
   }
 
-  function _getMSDataByPosition(bytes32 position) internal pure returns(IManagementSystem.MSData storage msData) {
+  function _getMSDataByPosition(
+    bytes32 position
+  ) internal pure returns (IManagementSystem.MSData storage msData) {
     assembly {
       msData.slot := position
     }
@@ -381,27 +427,27 @@ library LibManagementSystem {
 
   // general function to read managementSystems
   // return value is bytes memory
-  function _getManagementSystems() internal view returns(bytes memory managementSystems) {
+  function _getManagementSystems() internal view returns (bytes memory managementSystems) {
     bytes32 position = _getManagementSystemsPosition();
-    uint numberOfManagementSystems;
+    uint256 numberOfManagementSystems;
     assembly {
       numberOfManagementSystems := sload(position)
     }
-    uint length = 32 + (4 * 32 * numberOfManagementSystems);
+    uint256 length = 32 + (4 * 32 * numberOfManagementSystems);
     managementSystems = new bytes(length);
     assembly {
-      for {let i:=0} lt(mul(i, 0x20), length) {i := add(i, 0x01)} {
+      for {
+        let i := 0
+      } lt(mul(i, 0x20), length) {
+        i := add(i, 0x01)
+      } {
         let storedBlock32bytes := sload(add(position, i))
         mstore(add(managementSystems, add(0x20, mul(i, 0x20))), storedBlock32bytes)
       }
     }
   }
 
-  function _getManagementSystemsPosition()
-    internal
-    pure
-    returns (bytes32)
-  {
+  function _getManagementSystemsPosition() internal pure returns (bytes32) {
     return MANAGEMENT_SYSTEMS_POSITION;
   }
 }

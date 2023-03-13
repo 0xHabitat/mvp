@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2022 Uniswap. All rights reserved.
 pragma solidity ^0.8.9;
 
 library LibUniswapV3Math {
-  bytes32 internal constant POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
+  bytes32 internal constant POOL_INIT_CODE_HASH =
+    0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
   uint8 internal constant RESOLUTION = 96;
   uint256 internal constant Q96 = 0x1000000000000000000000000;
   /// @dev The minimum tick that may be passed to #getSqrtRatioAtTick computed from log base 1.0001 of 2**-128
@@ -10,20 +12,27 @@ library LibUniswapV3Math {
   /// @dev The maximum tick that may be passed to #getSqrtRatioAtTick computed from log base 1.0001 of 2**128
   int24 internal constant MAX_TICK = -MIN_TICK;
 
-  function computePoolAddress(address uniV3Factory, address token0, address token1, uint24 fee) internal pure returns (address pool) {
+  function computePoolAddress(
+    address uniV3Factory,
+    address token0,
+    address token1,
+    uint24 fee
+  ) internal pure returns (address pool) {
     require(token0 < token1);
-    pool = address(uint160(
+    pool = address(
+      uint160(
         uint256(
-            keccak256(
-                abi.encodePacked(
-                    hex'ff',
-                    uniV3Factory,
-                    keccak256(abi.encode(token0, token1, fee)),
-                    POOL_INIT_CODE_HASH
-                )
+          keccak256(
+            abi.encodePacked(
+              hex"ff",
+              uniV3Factory,
+              keccak256(abi.encode(token0, token1, fee)),
+              POOL_INIT_CODE_HASH
             )
+          )
         )
-    ));
+      )
+    );
   }
 
   function getAmount0ForLiquidity(
@@ -31,14 +40,12 @@ library LibUniswapV3Math {
     uint160 sqrtRatioBX96,
     uint128 liquidity
   ) internal pure returns (uint256 amount0) {
-    if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+    if (sqrtRatioAX96 > sqrtRatioBX96)
+      (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
 
     return
-        mulDiv(
-            uint256(liquidity) << RESOLUTION,
-            sqrtRatioBX96 - sqrtRatioAX96,
-            sqrtRatioBX96
-        ) / sqrtRatioAX96;
+      mulDiv(uint256(liquidity) << RESOLUTION, sqrtRatioBX96 - sqrtRatioAX96, sqrtRatioBX96) /
+      sqrtRatioAX96;
   }
 
   function getAmount1ForLiquidity(
@@ -46,16 +53,19 @@ library LibUniswapV3Math {
     uint160 sqrtRatioBX96,
     uint128 liquidity
   ) internal pure returns (uint256 amount1) {
-    if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+    if (sqrtRatioAX96 > sqrtRatioBX96)
+      (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
 
     return mulDiv(liquidity, sqrtRatioBX96 - sqrtRatioAX96, Q96);
   }
 
   function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPriceX96) {
     uint256 absTick = tick < 0 ? uint256(-int256(tick)) : uint256(int256(tick));
-    require(absTick <= uint256(int256(MAX_TICK)), 'T');
+    require(absTick <= uint256(int256(MAX_TICK)), "T");
 
-    uint256 ratio = absTick & 0x1 != 0 ? 0xfffcb933bd6fad37aa2d162d1a594001 : 0x100000000000000000000000000000000;
+    uint256 ratio = absTick & 0x1 != 0
+      ? 0xfffcb933bd6fad37aa2d162d1a594001
+      : 0x100000000000000000000000000000000;
     if (absTick & 0x2 != 0) ratio = (ratio * 0xfff97272373d413259a46990580e213a) >> 128;
     if (absTick & 0x4 != 0) ratio = (ratio * 0xfff2e50f5f656932ef12357cf3c7fdcc) >> 128;
     if (absTick & 0x8 != 0) ratio = (ratio * 0xffe5caca7e10e4e61c3624eaa0941cd0) >> 128;
@@ -85,9 +95,9 @@ library LibUniswapV3Math {
   }
 
   function mulDiv(
-      uint256 a,
-      uint256 b,
-      uint256 denominator
+    uint256 a,
+    uint256 b,
+    uint256 denominator
   ) internal pure returns (uint256 result) {
     // 512-bit multiply [prod1 prod0] = a * b
     // Compute the product mod 2**256 and mod 2**256 - 1
@@ -97,18 +107,18 @@ library LibUniswapV3Math {
     uint256 prod0; // Least significant 256 bits of the product
     uint256 prod1; // Most significant 256 bits of the product
     assembly {
-        let mm := mulmod(a, b, not(0))
-        prod0 := mul(a, b)
-        prod1 := sub(sub(mm, prod0), lt(mm, prod0))
+      let mm := mulmod(a, b, not(0))
+      prod0 := mul(a, b)
+      prod1 := sub(sub(mm, prod0), lt(mm, prod0))
     }
 
     // Handle non-overflow cases, 256 by 256 division
     if (prod1 == 0) {
-        require(denominator > 0);
-        assembly {
-            result := div(prod0, denominator)
-        }
-        return result;
+      require(denominator > 0);
+      assembly {
+        result := div(prod0, denominator)
+      }
+      return result;
     }
 
     // Make sure the result is less than 2**256.
@@ -123,12 +133,12 @@ library LibUniswapV3Math {
     // Compute remainder using mulmod
     uint256 remainder;
     assembly {
-        remainder := mulmod(a, b, denominator)
+      remainder := mulmod(a, b, denominator)
     }
     // Subtract 256 bit number from 512 bit number
     assembly {
-        prod1 := sub(prod1, gt(remainder, prod0))
-        prod0 := sub(prod0, remainder)
+      prod1 := sub(prod1, gt(remainder, prod0))
+      prod0 := sub(prod0, remainder)
     }
 
     // Factor powers of two out of denominator
@@ -138,23 +148,23 @@ library LibUniswapV3Math {
 
     // Divide denominator by power of two
     assembly {
-        denominator := div(denominator, twos)
+      denominator := div(denominator, twos)
     }
 
     // Divide [prod1 prod0] by the factors of two
     assembly {
-        prod0 := div(prod0, twos)
+      prod0 := div(prod0, twos)
     }
     // Shift in bits from prod1 into prod0. For this we need
     // to flip `twos` such that it is 2**256 / twos.
     // If twos is zero, then it becomes one
     assembly {
-        twos := add(div(sub(0, twos), twos), 1)
+      twos := add(div(sub(0, twos), twos), 1)
     }
     unchecked {
       prod0 |= prod1 * twos;
     }
-    
+
     // Invert denominator mod 2**256
     // Now that denominator is an odd number, it has an inverse
     // modulo 2**256 such that denominator * inv = 1 mod 2**256.
@@ -168,12 +178,12 @@ library LibUniswapV3Math {
     // Thanks to Hensel's lifting lemma, this also works in modular
     // arithmetic, doubling the correct bits in each step.
     unchecked {
-        inv *= 2 - denominator * inv; // inverse mod 2**8
-        inv *= 2 - denominator * inv; // inverse mod 2**16
-        inv *= 2 - denominator * inv; // inverse mod 2**32
-        inv *= 2 - denominator * inv; // inverse mod 2**64
-        inv *= 2 - denominator * inv; // inverse mod 2**128
-        inv *= 2 - denominator * inv; // inverse mod 2**256
+      inv *= 2 - denominator * inv; // inverse mod 2**8
+      inv *= 2 - denominator * inv; // inverse mod 2**16
+      inv *= 2 - denominator * inv; // inverse mod 2**32
+      inv *= 2 - denominator * inv; // inverse mod 2**64
+      inv *= 2 - denominator * inv; // inverse mod 2**128
+      inv *= 2 - denominator * inv; // inverse mod 2**256
     }
 
     // Because the division is now exact we can divide by multiplying
@@ -183,7 +193,7 @@ library LibUniswapV3Math {
     // We don't need to compute the high bits of the result and prod1
     // is no longer required.
     unchecked {
-        result = prod0 * inv;
+      result = prod0 * inv;
     }
 
     return result;
@@ -191,21 +201,21 @@ library LibUniswapV3Math {
 
   // for test
   function getAmountsForLiquidity(
-      uint160 sqrtRatioX96,
-      uint160 sqrtRatioAX96,
-      uint160 sqrtRatioBX96,
-      uint128 liquidity
+    uint160 sqrtRatioX96,
+    uint160 sqrtRatioAX96,
+    uint160 sqrtRatioBX96,
+    uint128 liquidity
   ) internal pure returns (uint256 amount0, uint256 amount1) {
-      if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+    if (sqrtRatioAX96 > sqrtRatioBX96)
+      (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
 
-      if (sqrtRatioX96 <= sqrtRatioAX96) {
-          amount0 = getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, liquidity);
-      } else if (sqrtRatioX96 < sqrtRatioBX96) {
-          amount0 = getAmount0ForLiquidity(sqrtRatioX96, sqrtRatioBX96, liquidity);
-          amount1 = getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioX96, liquidity);
-      } else {
-          amount1 = getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, liquidity);
-      }
+    if (sqrtRatioX96 <= sqrtRatioAX96) {
+      amount0 = getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, liquidity);
+    } else if (sqrtRatioX96 < sqrtRatioBX96) {
+      amount0 = getAmount0ForLiquidity(sqrtRatioX96, sqrtRatioBX96, liquidity);
+      amount1 = getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioX96, liquidity);
+    } else {
+      amount1 = getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, liquidity);
+    }
   }
-
 }

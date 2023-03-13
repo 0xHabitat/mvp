@@ -73,7 +73,7 @@ struct SubDAOStorage {
   function _isSubDAOOf(address _mainDAO) internal view returns (bool) {
     return _mainDAO == _getMainDAO();
   }
-/*
+  /*
   function _getManagementSystem()
     internal
     view

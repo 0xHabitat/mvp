@@ -4,7 +4,7 @@ node_modules
 cache
 artifacts
 .env
-alchemyToken.json
 *diamond.json
 deployedContracts.json
 habitatDiamondABI.json
+dist/
