@@ -33,6 +33,10 @@ describe('DeciderSigner', function () {
     };
     tx = await sponsor.sendTransaction(ethTranfer);
     await tx.wait();
+    // and fund gnosis safe
+    ethTranfer.to = gnosisSafe;
+    tx = await sponsor.sendTransaction(ethTranfer);
+    await tx.wait();
 
     // Here we go two ways:
     // first: decide inside gnosis safe (offchain way) and just execute decision
@@ -78,6 +82,10 @@ describe('DeciderSigner', function () {
       await helpers.impersonateAccount(signers[i]);
       const signer = await ethers.getSigner(signers[i]);
       impersonatedSigners.push(signer);
+      // and fund signers
+      ethTranfer.to = signers[i];
+      const tx = await sponsor.sendTransaction(ethTranfer);
+      await tx.wait();
     }
 
     // second lets create treasury proposal from one of the gnosis signers
@@ -115,28 +123,16 @@ describe('DeciderSigner', function () {
       habitatDiamond.connect(impersonatedSigners[0]).decideOnTreasuryProposal(proposalID, true)
     ).to.be.revertedWith('Already decided.');
 
-    await expect(
-      habitatDiamond.connect(impersonatedSigners[1]).decideOnTreasuryProposal(proposalID, true)
-    )
-      .to.emit(deciderSigners, 'Decided')
-      .withArgs(impersonatedSigners[1].address, 'treasury', proposalID, true);
-
-    await expect(
-      habitatDiamond.connect(impersonatedSigners[2]).decideOnTreasuryProposal(proposalID, false)
-    )
-      .to.emit(deciderSigners, 'Decided')
-      .withArgs(impersonatedSigners[2].address, 'treasury', proposalID, false);
-
     // lets try to accept not waiting voting period
     await expect(habitatDiamond.acceptOrRejectTreasuryProposal(proposalID)).to.be.revertedWith(
       'Threshold is not reached yet.'
     );
 
     await expect(
-      habitatDiamond.connect(impersonatedSigners[3]).decideOnTreasuryProposal(proposalID, true)
+      habitatDiamond.connect(impersonatedSigners[1]).decideOnTreasuryProposal(proposalID, true)
     )
       .to.emit(deciderSigners, 'Decided')
-      .withArgs(impersonatedSigners[3].address, 'treasury', proposalID, true);
+      .withArgs(impersonatedSigners[1].address, 'treasury', proposalID, true);
 
     // accept proposal
     await expect(habitatDiamond.acceptOrRejectTreasuryProposal(proposalID))

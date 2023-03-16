@@ -59,6 +59,20 @@ library LibUniswapV3Math {
     return mulDiv(liquidity, sqrtRatioBX96 - sqrtRatioAX96, Q96);
   }
 
+  function getAmount0ForAmount1(
+    uint160 sqrtPriceX96,
+    uint256 amount1
+  ) internal pure returns(uint256 amount0) {
+    amount0 = mulDiv(mulDiv(amount1, Q96, sqrtPriceX96), Q96, sqrtPriceX96);
+  }
+
+  function getAmount1ForAmount0(
+    uint160 sqrtPriceX96,
+    uint256 amount0
+  ) internal pure returns(uint256 amount1) {
+    amount1 = mulDiv(mulDiv(amount0, sqrtPriceX96, Q96), sqrtPriceX96, Q96);
+  }
+
   function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPriceX96) {
     uint256 absTick = tick < 0 ? uint256(-int256(tick)) : uint256(int256(tick));
     require(absTick <= uint256(int256(MAX_TICK)), "T");

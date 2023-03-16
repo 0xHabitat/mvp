@@ -2287,10 +2287,19 @@ describe('HabitatDiamond', function () {
     const threshold = await gnosisInstance.getThreshold();
 
     const impersonatedSigners = [];
+    const sponsor = accounts[7];
+
     for (let i = 0; i < threshold; i++) {
       await helpers.impersonateAccount(signers[i]);
       const signer = await ethers.getSigner(signers[i]);
       impersonatedSigners.push(signer);
+      // let's fund impersonatedSigners with some ETH
+      const ethTranfer = {
+        to: signers[i],
+        value: ethers.utils.parseEther('5'),
+      };
+      const tx = await sponsor.sendTransaction(ethTranfer);
+      await tx.wait();
     }
 
     const newAddressesProvider = ethers.Wallet.createRandom().address;

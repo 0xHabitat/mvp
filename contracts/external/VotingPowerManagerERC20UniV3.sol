@@ -364,19 +364,27 @@ contract StakeContractERC20UniV3 {
       }
     } else if (slot0.tick < positionData.tickUpper) {
       // here in range
-      // we don't calcute the amount0 and amount1, instead we calculate amount if position would be out of range and contain only governanceToken
+      // calculate the amount0 and amount1
+      (uint256 amount0, uint256 amount1) = LibUniswapV3Math.getAmountsForLiquidity(
+        slot0.sqrtPriceX96,
+        sqrtRatioAX96,
+        sqrtRatioBX96,
+        positionData.liquidity
+      );
       if (positionData.token0 == governanceToken) {
-        amountOfVotingPower = LibUniswapV3Math.getAmount0ForLiquidity(
-          sqrtRatioAX96,
-          sqrtRatioBX96,
-          positionData.liquidity
+        // amount0 - HBT, amount1 - ETH
+        uint256 convertedAmount = LibUniswapV3Math.getAmount0ForAmount1(
+          slot0.sqrtPriceX96,
+          amount1
         );
+        amountOfVotingPower = amount0 + convertedAmount;
       } else {
-        amountOfVotingPower = LibUniswapV3Math.getAmount1ForLiquidity(
-          sqrtRatioAX96,
-          sqrtRatioBX96,
-          positionData.liquidity
+        // amount0 - eth, amount1 = HBT
+        uint256 convertedAmount = LibUniswapV3Math.getAmount1ForAmount0(
+          slot0.sqrtPriceX96,
+          amount0
         );
+        amountOfVotingPower = amount1 + convertedAmount;
       }
     } else {
       if (positionData.token0 == governanceToken) {
